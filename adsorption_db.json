@@ -1,0 +1,404 @@
+[
+  {
+    "system": "isopropanol_on_Cu111",
+    "surface_cif": "inputs/Cu111.cif",
+    "molecule_cif": "inputs/isopropanol.cif",
+    "calculator": "5m_d3",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3,
+      "best_seed": 1
+    },
+    "E_surface_eV": -249.00120544433594,
+    "E_molecule_eV": -63.44729995727539,
+    "E_total_eV": -312.6626892089844,
+    "E_ads_eV": -0.21417236328125,
+    "E_ads_pre_relax": -0.209381103515625,
+    "best_individual": {
+      "position": [
+        -0.5360463525724181,
+        10.182526201606937,
+        21.069099957726095
+      ],
+      "orientation": [
+        -43.93511885440803,
+        254.69464690883174,
+        106.69151046533581
+      ],
+      "torsions": []
+    },
+    "outputs_dir": "results/batch_20260523_182951/isopropanol_on_Cu111",
+    "timestamp": "2026-05-23T18:37:47"
+  },
+  {
+    "system": "isopropanol_on_Cu100",
+    "surface_cif": "inputs/Cu100.cif",
+    "molecule_cif": "inputs/isopropanol.cif",
+    "calculator": "5m_d3",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3,
+      "best_seed": 0
+    },
+    "E_surface_eV": -244.065185546875,
+    "E_molecule_eV": -63.44729995727539,
+    "E_total_eV": -307.7710266113281,
+    "E_ads_eV": -0.258544921875,
+    "E_ads_pre_relax": -0.2518310546875,
+    "best_individual": {
+      "position": [
+        11.211569403870328,
+        -0.5126916910256727,
+        24.44061289449097
+      ],
+      "orientation": [
+        174.20645361804327,
+        323.85428311449647,
+        165.42240737758218
+      ],
+      "torsions": []
+    },
+    "outputs_dir": "results/batch_20260523_182951/isopropanol_on_Cu100",
+    "timestamp": "2026-05-23T18:45:16"
+  },
+  {
+    "system": "isopropanol_on_Cu111",
+    "surface_cif": "inputs/Cu111.cif",
+    "molecule_cif": "inputs/isopropanol.cif",
+    "calculator": "5m_d3",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3,
+      "best_seed": 0
+    },
+    "E_surface_eV": -249.00120544433594,
+    "E_molecule_eV": -63.44729995727539,
+    "E_total_eV": -312.70135498046875,
+    "E_ads_eV": -0.252838134765625,
+    "E_ads_pre_relax": -0.187835693359375,
+    "best_individual": {
+      "position": [
+        13.120486950675188,
+        4.969152293498999,
+        22.399783302788656
+      ],
+      "orientation": [
+        158.20839336244015,
+        313.29948651099244,
+        26.20468353324728
+      ],
+      "torsions": [
+        302.8309986243006,
+        325.26488096376494,
+        15.277581420386557
+      ]
+    },
+    "outputs_dir": "results/batch_20260525_074805/isopropanol_on_Cu111",
+    "timestamp": "2026-05-25T08:05:01"
+  },
+  {
+    "system": "isopropanol_on_Cu100",
+    "surface_cif": "inputs/Cu100.cif",
+    "molecule_cif": "inputs/isopropanol.cif",
+    "calculator": "5m_d3",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3,
+      "best_seed": 1
+    },
+    "E_surface_eV": -244.065185546875,
+    "E_molecule_eV": -63.44729995727539,
+    "E_total_eV": -307.8258361816406,
+    "E_ads_eV": -0.3133544921875,
+    "E_ads_pre_relax": -0.2423095703125,
+    "best_individual": {
+      "position": [
+        8.764322886628701,
+        7.389381042923262,
+        23.37041775089225
+      ],
+      "orientation": [
+        126.72551187277992,
+        253.09914378935434,
+        203.95352267498248
+      ],
+      "torsions": [
+        7.867624172670617,
+        39.90707752889442,
+        200.5517870392676
+      ]
+    },
+    "outputs_dir": "results/batch_20260525_074805/isopropanol_on_Cu100",
+    "timestamp": "2026-05-25T08:22:06"
+  },
+  {
+    "system": "isopropanol_on_Cu111",
+    "surface_cif": "inputs/Cu111.cif",
+    "molecule_cif": "inputs/isopropanol.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3,
+      "best_seed": 1
+    },
+    "E_surface_eV": -224.99172973632812,
+    "E_molecule_eV": -63.229557037353516,
+    "E_total_eV": -288.6492614746094,
+    "E_ads_eV": -0.4279747009277344,
+    "E_ads_pre_relax": -0.3716697692871094,
+    "best_individual": {
+      "position": [
+        10.106685099671907,
+        7.818229222264673,
+        24.952552999468153
+      ],
+      "orientation": [
+        158.71494854069695,
+        140.68778593555925,
+        136.18782435870668
+      ],
+      "torsions": [
+        352.4627207921432,
+        257.1658017751815,
+        266.9361939088014
+      ]
+    },
+    "outputs_dir": "results/batch_20260525_193426/isopropanol_on_Cu111",
+    "timestamp": "2026-05-25T21:14:11"
+  },
+  {
+    "system": "isopropanol_on_Cu111",
+    "surface_cif": "inputs/Cu111.cif",
+    "molecule_cif": "inputs/isopropanol.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3,
+      "best_seed": 1
+    },
+    "E_surface_eV": -224.99172973632812,
+    "E_molecule_eV": -63.22956085205078,
+    "E_total_eV": -288.6492614746094,
+    "E_ads_eV": -0.42797088623046875,
+    "E_ads_pre_relax": -0.37166595458984375,
+    "best_individual": {
+      "position": [
+        10.106685099671907,
+        7.818229222264673,
+        24.952552999468153
+      ],
+      "orientation": [
+        158.71494854069695,
+        140.68778593555925,
+        136.18782435870668
+      ],
+      "torsions": [
+        352.4627207921432,
+        257.1658017751815,
+        266.9361939088014
+      ]
+    },
+    "outputs_dir": "results/batch_20260526_063346/isopropanol_on_Cu111",
+    "timestamp": "2026-05-26T07:55:10"
+  },
+  {
+    "system": "isopropanol_on_Cu111",
+    "surface_cif": "inputs/Cu111.cif",
+    "molecule_cif": "inputs/isopropanol.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3,
+      "best_seed": 1
+    },
+    "E_surface_eV": -224.99172973632812,
+    "E_molecule_eV": -63.229557037353516,
+    "E_total_eV": -288.6492614746094,
+    "E_ads_eV": -0.4279747009277344,
+    "E_ads_pre_relax": -0.3716697692871094,
+    "best_individual": {
+      "position": [
+        10.106685099671907,
+        7.818229222264673,
+        24.952552999468153
+      ],
+      "orientation": [
+        158.71494854069695,
+        140.68778593555925,
+        136.18782435870668
+      ],
+      "torsions": [
+        352.4627207921432,
+        257.1658017751815,
+        266.9361939088014
+      ]
+    },
+    "outputs_dir": "results/batch_20260526_082213/isopropanol_on_Cu111",
+    "timestamp": "2026-05-26T09:44:52"
+  },
+  {
+    "system": "isopropanol_on_Cu100",
+    "surface_cif": "inputs/Cu100.cif",
+    "molecule_cif": "inputs/isopropanol.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3,
+      "best_seed": 1
+    },
+    "E_surface_eV": -220.37184143066406,
+    "E_molecule_eV": -63.229557037353516,
+    "E_total_eV": -284.14892578125,
+    "E_ads_eV": -0.5475273132324219,
+    "E_ads_pre_relax": -0.4576530456542969,
+    "best_individual": {
+      "position": [
+        7.914975460815239,
+        10.555498004665942,
+        23.825306267910587
+      ],
+      "orientation": [
+        110.56993798414922,
+        163.61606632975528,
+        216.32452970139155
+      ],
+      "torsions": [
+        12.73473344959666,
+        23.342735374441816,
+        249.0706276720935
+      ]
+    },
+    "outputs_dir": "results/batch_20260526_082213/isopropanol_on_Cu100",
+    "timestamp": "2026-05-26T11:07:15"
+  },
+  {
+    "system": "isopropanol_on_Cu111",
+    "surface_cif": "inputs/Cu111.cif",
+    "molecule_cif": "inputs/isopropanol.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3,
+      "best_seed": 2
+    },
+    "E_surface_eV": -224.99172973632812,
+    "E_molecule_eV": -63.229557037353516,
+    "E_total_eV": -288.64862060546875,
+    "E_ads_eV": -0.4273338317871094,
+    "E_ads_pre_relax": -0.3728599548339844,
+    "best_individual": {
+      "position": [
+        3.888489847235671,
+        2.0904692293584564,
+        22.69441314420931
+      ],
+      "orientation": [
+        208.2012038858217,
+        36.195294282321335,
+        15.298598746581385
+      ],
+      "torsions": [
+        88.66551008511239,
+        91.3061409153856,
+        250.89026007785608
+      ]
+    },
+    "outputs_dir": "results/batch_20260527_072938/isopropanol_on_Cu111",
+    "timestamp": "2026-05-27T08:51:13"
+  },
+  {
+    "system": "isopropanol_on_Cu100",
+    "surface_cif": "inputs/Cu100.cif",
+    "molecule_cif": "inputs/isopropanol.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3,
+      "best_seed": 2
+    },
+    "E_surface_eV": -220.37184143066406,
+    "E_molecule_eV": -63.229557037353516,
+    "E_total_eV": -284.149169921875,
+    "E_ads_eV": -0.5477714538574219,
+    "E_ads_pre_relax": -0.4611930847167969,
+    "best_individual": {
+      "position": [
+        2.316663792310531,
+        0.8964040124761976,
+        23.813476864432175
+      ],
+      "orientation": [
+        173.14163521004167,
+        30.213091681453864,
+        -5.89937612780386
+      ],
+      "torsions": [
+        99.11972796442019,
+        124.00859156237911,
+        116.39267839272283
+      ]
+    },
+    "outputs_dir": "results/batch_20260527_072938/isopropanol_on_Cu100",
+    "timestamp": "2026-05-27T10:15:11"
+  }
+]

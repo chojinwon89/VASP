@@ -1,0 +1,110 @@
+================================================================================
+Starting GOAD task 0
+{
+  "task_id": "0",
+  "surface": "Cu111",
+  "adsorbate": "isopropanol",
+  "seed": "0",
+  "calculator": "sevennet_omni"
+}
+================================================================================
+
+Cu(111): 64 atoms, cell = [10.21062192  8.84265797 36.25270342]
+Cu(100): 64 atoms, cell = [10.21062192 10.21062192 35.415     ]
+Isopropanol: 12 atoms (formula expected C3H8O = 12 atoms)
+2026-06-16 12:55:42,269 [INFO] batch: Output dir: results/batch_20260616_125542
+2026-06-16 12:55:42,270 [INFO] batch: Loading calculator: sevennet_omni
+2026-06-16 12:56:04,310 [INFO] goad_v1.calculator_manager: Loading SevenNet-OMNI (7net-mf-ompa, modal=omat24) on cpu...
+2026-06-16 12:56:23,841 [INFO] goad_v1.calculator_manager: ✓ SevenNet-OMNI (omat24) loaded successfully
+2026-06-16 12:56:23,843 [INFO] batch: ======================================================================
+2026-06-16 12:56:23,844 [INFO] batch: SYSTEM: isopropanol_on_Cu111
+2026-06-16 12:56:23,844 [INFO] batch: ======================================================================
+2026-06-16 12:56:23,885 [INFO] goad_v1.analysis.surface_analyzer: Analyzing surface structure...
+2026-06-16 12:56:23,885 [INFO] goad_v1.analysis.surface_analyzer:   Z-range: 6.25 Å
+2026-06-16 12:56:23,885 [INFO] goad_v1.analysis.surface_analyzer:   Cell height: 36.25 Å
+2026-06-16 12:56:23,885 [INFO] goad_v1.analysis.surface_analyzer:   Vacuum: 30.00 Å
+2026-06-16 12:56:23,885 [INFO] goad_v1.analysis.surface_analyzer:   Type: SLAB (detected)
+2026-06-16 12:56:23,887 [INFO] goad_v1.analysis.surface_analyzer:   Detected 4 atomic layers
+2026-06-16 12:56:23,888 [INFO] goad_v1.analysis.surface_analyzer:   Layer heights (Å): ['21.25', '19.17', '17.08', '15.00']
+2026-06-16 12:56:23,888 [INFO] goad_v1.analysis.molecule_analyzer: Analyzing molecule structure...
+2026-06-16 12:56:23,888 [INFO] batch: 
+============================================================
+SURFACE INFORMATION
+============================================================
+
+Surface Type: SLAB
+Number of atoms: 64
+Composition: Cu: 64
+
+SYSTEM DIMENSIONS:
+  X: 8.93 Å
+  Y: 8.11 Å
+  Z: 6.25 Å
+  Surface area (XY): 90.29 Ų
+
+ATOMIC LAYERS: 4 layers detected
+  Total height: 6.25 Å
+
+Layer positions (from top to bottom):
+  Layer 0: Z = 21.25 Å, Atoms = 16
+  Layer 1: Z = 19.17 Å, Atoms = 16
+  Layer 2: Z = 17.08 Å, Atoms = 16
+  Layer 3: Z = 15.00 Å, Atoms = 16
+
+2026-06-16 12:56:23,888 [INFO] batch: 
+============================================================
+MOLECULE INFORMATION
+============================================================
+
+Molecular formula: C3H8O
+Number of atoms: 12
+Size category: Medium
+Molecular mass: 60.10 amu
+
+ELEMENTAL COMPOSITION:
+  C: 3 atoms (25.0%)
+  H: 8 atoms (66.7%)
+  O: 1 atoms (8.3%)
+
+MOLECULAR DIMENSIONS:
+  X: 4.06 Å
+  Y: 3.35 Å
+  Z: 3.01 Å
+
+Center of mass:
+  X: 9.90 Å
+  Y: 10.29 Å
+  Z: 9.91 Å
+
+2026-06-16 12:56:23,888 [INFO] batch: Relaxing ref_surface (fmax=0.05, max steps=200) ...
+2026-06-16 13:02:13,583 [INFO] batch:   ref_surface: E = -224.991730 eV
+2026-06-16 13:02:13,589 [INFO] batch: Relaxing ref_molecule (fmax=0.05, max steps=200) ...
+2026-06-16 14:00:48,134 [INFO] batch:   ref_molecule: E = -63.229557 eV
+2026-06-16 14:00:48,150 [INFO] batch: 
+--- GA run 1/3 (seed=0) ---
+2026-06-16 14:00:48,150 [INFO] goad_v1.ga.genetic_algorithm: Surface Z range: 15.00 - 21.25 Å
+2026-06-16 14:00:48,150 [INFO] goad_v1.ga.genetic_algorithm: Surface center (XY): (4.47, 3.87)
+2026-06-16 14:00:48,150 [INFO] goad_v1.ga.genetic_algorithm: In-plane cell: |a|=10.21 Å  |b|=8.84 Å
+2026-06-16 14:00:48,150 [INFO] goad_v1.ga.genetic_algorithm: Search radius (lateral): 2.21 Å  [auto (1/4 of min in-plane cell)]
+2026-06-16 14:00:48,150 [INFO] goad_v1.ga.genetic_algorithm: Center-in-cell enforcement: True
+2026-06-16 14:00:48,998 [INFO] goad_v1.utils.torsion_handler: Detected 3 rotatable bonds:
+2026-06-16 14:00:48,998 [INFO] goad_v1.utils.torsion_handler:   Torsion 0: atoms 1-0
+2026-06-16 14:00:48,998 [INFO] goad_v1.utils.torsion_handler:   Torsion 1: atoms 2-1
+2026-06-16 14:00:48,998 [INFO] goad_v1.utils.torsion_handler:   Torsion 2: atoms 3-1
+2026-06-16 14:00:48,998 [INFO] goad_v1.ga.genetic_algorithm: Molecule has 3 rotatable bonds
+2026-06-16 14:00:48,998 [INFO] goad_v1.ga.genetic_algorithm: ============================================================
+2026-06-16 14:00:48,998 [INFO] goad_v1.ga.genetic_algorithm: GENETIC ALGORITHM - GOAD v1.0
+2026-06-16 14:00:48,998 [INFO] goad_v1.ga.genetic_algorithm: ============================================================
+2026-06-16 14:00:48,998 [INFO] goad_v1.ga.genetic_algorithm: Population: 40
+2026-06-16 14:00:48,998 [INFO] goad_v1.ga.genetic_algorithm: Generations: 80
+2026-06-16 14:00:48,998 [INFO] goad_v1.ga.genetic_algorithm: Surface: FIXED during GA search (will relax in post-GA BFGS)
+2026-06-16 14:00:48,998 [INFO] goad_v1.ga.genetic_algorithm: Molecule: FREE TO MOVE
+2026-06-16 14:00:48,998 [INFO] goad_v1.ga.genetic_algorithm: 
+Genome composition:
+2026-06-16 14:00:48,998 [INFO] goad_v1.ga.genetic_algorithm:   Position (X, Y, Z):     3 genes
+2026-06-16 14:00:48,998 [INFO] goad_v1.ga.genetic_algorithm:   Orientation (α, β, γ): 3 genes
+2026-06-16 14:00:48,998 [INFO] goad_v1.ga.genetic_algorithm:   Torsions:               3 genes
+2026-06-16 14:00:48,998 [INFO] goad_v1.ga.genetic_algorithm:   Total genes per individual: 9
+2026-06-16 14:00:48,999 [INFO] goad_v1.ga.genetic_algorithm: ============================================================
+
+2026-06-16 14:00:48,999 [INFO] goad_v1.ga.genetic_algorithm: Initializing population...

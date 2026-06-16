@@ -1,0 +1,11 @@
+# Core runtime dependencies
+ase
+numpy
+matplotlib
+mattersim
+
+# Note: RDKit is best installed via conda (conda-forge). Example:
+# conda install -c conda-forge rdkit
+
+# Optional/Dev
+pytest

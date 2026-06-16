@@ -1,0 +1,96 @@
+"""
+Calculator management for GOAD v1.0
+
+Handles different MatterSim and SevenNet calculator configurations
+"""
+
+import logging
+from typing import Optional
+
+logger = logging.getLogger(__name__)
+
+
+class CalculatorManager:
+    """Manage different ASE calculator configurations"""
+
+    # ---------------------- MatterSim ----------------------
+    @staticmethod
+    def get_mattersim_1m():
+        from mattersim.forcefield import MatterSimCalculator
+        logger.info("Loading MatterSim 1M calculator...")
+        calc = MatterSimCalculator()
+        logger.info("✓ MatterSim 1M loaded successfully")
+        return calc
+
+    @staticmethod
+    def get_mattersim_5m():
+        from mattersim.forcefield import MatterSimCalculator
+        logger.info("Loading MatterSim 5M calculator...")
+        calc = MatterSimCalculator(model_name="mattersim-v1.0.0-5M")
+        logger.info("✓ MatterSim 5M loaded successfully")
+        return calc
+
+    @staticmethod
+    def get_mattersim_5m_d3():
+        from mattersim.forcefield import MatterSimCalculator
+        logger.info("Loading MatterSim 5M + D3 calculator...")
+        try:
+            calc = MatterSimCalculator(model_name="mattersim-v1.0.0-5M", use_d3=True)
+            logger.info("✓ MatterSim 5M + D3 loaded successfully")
+            return calc
+        except Exception as e:
+            logger.error(f"MatterSim 5M+D3 failed: {e!r}", exc_info=True)
+            raise
+
+    # ---------------------- SevenNet ----------------------
+    @staticmethod
+    def get_sevennet_omni(modal: str = "omat24"):
+        """SevenNet-OMNI (7net-mf-ompa). modal='omat24' (PBE+D3) or 'mpa' (PBE)."""
+        from sevenn.sevennet_calculator import SevenNetCalculator
+        import torch
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        logger.info(f"Loading SevenNet-OMNI (7net-mf-ompa, modal={modal}) on {device}...")
+        calc = SevenNetCalculator("7net-mf-ompa", modal=modal, device=device)
+        logger.info(f"✓ SevenNet-OMNI ({modal}) loaded successfully")
+        return calc
+
+    @staticmethod
+    def get_sevennet_omat():
+        from sevenn.sevennet_calculator import SevenNetCalculator
+        import torch
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        logger.info(f"Loading SevenNet-OMat (7net-omat) on {device}...")
+        calc = SevenNetCalculator("7net-omat", device=device)
+        logger.info("✓ SevenNet-OMat loaded successfully")
+        return calc
+
+    # ---------------------- Dispatcher ----------------------
+    @staticmethod
+    def get_calculator(calculator_type: str = "1m"):
+        t = calculator_type.lower().strip().replace("+", "_").replace("-", "_")
+
+        if t in ("1m",):                            return CalculatorManager.get_mattersim_1m()
+        if t in ("5m",):                            return CalculatorManager.get_mattersim_5m()
+        if t in ("5m_d3", "5md3"):                  return CalculatorManager.get_mattersim_5m_d3()
+
+        if t in ("sevennet_omni", "7net_omni", "7net", "omni", "7net_mf_ompa",
+                 "sevennet_omni_omat24", "7net_omni_omat24"):
+            return CalculatorManager.get_sevennet_omni(modal="omat24")
+        if t in ("sevennet_omni_mpa", "7net_omni_mpa"):
+            return CalculatorManager.get_sevennet_omni(modal="mpa")
+        if t in ("sevennet_omat", "7net_omat"):
+            return CalculatorManager.get_sevennet_omat()
+
+        raise ValueError(f"Unknown calculator type: {calculator_type}")
+
+    @staticmethod
+    def get_calculator_info(calculator_type: str) -> dict:
+        info_map = {
+            "1m":                {"name": "MatterSim 1M",           "dispersion": "No"},
+            "5m":                {"name": "MatterSim 5M",           "dispersion": "No"},
+            "5m_d3":             {"name": "MatterSim 5M + D3",      "dispersion": "Yes (D3, post-hoc)"},
+            "sevennet_omni":     {"name": "SevenNet-OMNI (omat24)", "dispersion": "Yes (D3, native via OMat24)"},
+            "sevennet_omni_mpa": {"name": "SevenNet-OMNI (mpa)",    "dispersion": "No (PBE head)"},
+            "sevennet_omat":     {"name": "SevenNet-OMat",          "dispersion": "Yes (D3, native)"},
+        }
+        return info_map.get(calculator_type.lower().replace("+", "_").replace("-", "_"), {})

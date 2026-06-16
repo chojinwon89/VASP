@@ -1,80 +1,241 @@
-# GOAD-MLIP Adsorption Energy Workflow
+# GOAD (Global Optimization with Adsorbed species using ASE Design)
 
-Automated workflow for generating adsorption-energy databases of small molecules on metal surfaces using a **Genetic Algorithm global search** + **SevenNet-OMNI universal MLIP**.
+Welcome to GOAD v1 (Global Optimization with Adsorbed species using ASE Design), a comprehensive Python application for optimizing molecular adsorption configurations on crystal surfaces using genetic algorithms.
 
-## Overview
+## Quick Start
 
-- **Energy engine**: SevenNet-OMNI (`7net-mf-ompa`, `modal='omat24'`) — equivariant GNN potential trained on PBE+D3 (OMat24 dataset). No DFT at any step.
-- **Global search**: Genetic Algorithm (GA) encodes each pose as a genome of position (x,y,z) + orientation (α,β,γ) + torsions (τ₁…τₙ), evolves 40 individuals over 80 generations, repeated with 3 independent random seeds.
-- **Local refinement**: BFGS relaxation with molecule + top surface layers free, bottom 2 layers fixed, fmax = 0.05 eV/Å.
-- **Adsorption energy**: `E_ads = E_total − (E_surf + E_mol)`
+**New to GOAD?** Check out [`QUICK_START.md`](QUICK_START.md) for:
+- Installation instructions
+- Step-by-step workflow walkthrough
+- Troubleshooting tips
 
-## Repository Structure
-
-```
-VASP/
-├── prep_inputs.py              # Build surface slabs and gas-phase references
-├── batch_isopropanol.py        # Single-task GA search + relaxation (env-var driven)
-├── generate_molecules.py       # SMILES → RDKit 3D coords → molecules/*.xyz
-├── relax_gas_molecules.py      # MLIP relaxation of gas-phase molecules
-├── molecules.csv               # Molecule name + SMILES table
-├── molecules/                  # Raw RDKit geometries (.xyz)
-├── molecules_relaxed/          # MLIP-relaxed gas-phase geometries (.xyz)
-├── runs/                       # Per-task output directories
-├── slurm-logs/                 # Slurm stdout/stderr logs
-└── workflow/
-    ├── make_tasks.py           # Generate workflow/tasks.csv
-    ├── tasks.csv               # One row = one surface/adsorbate/seed task
-    ├── run_one_task.py         # Execute one row from tasks.csv
-    ├── collect_results.py      # Harvest results → workflow/summary.csv
-    └── goad_array_kestrel.slurm  # Slurm job-array submission script
-```
-
-## Quick Start on Kestrel
+## Quick Start
 
 ```bash
-# 1. Activate environment
-conda activate goad
+## Install dependencies
+pip install ase rdkit matplotlib numpy mattersim
 
-# 2. Generate molecule library from SMILES
-python generate_molecules.py
-python relax_gas_molecules.py
-
-# 3. Generate task table
-python workflow/make_tasks.py
-head workflow/tasks.csv
-
-# 4. Test one task interactively
-python workflow/run_one_task.py --task-id 0 --tasks-csv workflow/tasks.csv
-
-# 5. Submit full array to Slurm
-N=$(($(wc -l < workflow/tasks.csv) - 1))
-sbatch --array=0-$((N-1))%50 workflow/goad_array_kestrel.slurm
-
-# 6. Collect results after completion
-python workflow/collect_results.py
-column -s, -t < workflow/summary.csv | less -S
+## Run application
+python3 run_goad_v1.py
 ```
 
-## Workflow vs. Traditional VASP DFT
+## Key Features
 
-| Aspect | GOAD + SevenNet-OMNI | Traditional VASP DFT |
-|---|---|---|
-| Energy engine | Universal MLIP (PBE+D3) | Self-consistent DFT |
-| Cost per single-point | ~1–5 s (CPU), ~0.05 s (GPU) | ~10–60 min (64-atom slab) |
-| Configurational search | GA: ~9,600 poses/system | Manual: 3–10 hand-picked sites |
-| Wall time per system | ~6–10 h (16 CPU cores) | Days to weeks |
-| Accuracy (physisorption) | ~10–50 meV vs. PBE+D3 reference | The reference |
+### Structure Analysis & Visualization
+- Automatic surface type detection (slab vs porous)
+- Atomic layer identification and visualization
+- 3D visualization with bonds
+- Elemental composition analysis
 
-## Production Strategy
+### Reference Energy Calculation
+- Multiple calculator options (MatterSim 1M/5M/5M+D3)
+- Relaxation mode (0-1000 BFGS steps)
+- Single-point energy calculation
+- Configurable fixed layers
 
-1. Survey all systems with GOAD + SevenNet-OMNI (~5 systems/day on CPU)
-2. Validate top-K pose per system with VASP single-point or short BFGS
-3. Publish E_ads from DFT validation with GA-assured global minimum confidence
+### Genetic Algorithm
+- **Dual-genome**: 6 positioning genes + N torsion genes
+- Automatic rotatable bond detection
+- Population-based optimization
+- Real-time energy evolution tracking
+- Configurable parameters (generations, population, mutation rates)
 
-## Kestrel HPC Details
+### Final Optimization & Export
+- Optional full structure relaxation
+- Multiple output formats (CIF, trajectory, text)
+- Timestamped results directory
+- Comprehensive logs
 
-- Allocation: `ccpc`
-- Partition: `shared`
-- Per-task resources: 1 node, 16 cores, 64 GB RAM, 24 h wall time
-- Concurrency limit: 50 simultaneous array tasks (`%50`)
+## Workflow
+
+```
+┌─────────────────────────────────────────────┐
+│ Window 1: Structure Analysis                │
+│ • Load surface & molecule CIF files         │
+│ • Analyze properties & layers               │
+│ • 3D visualization                          │
+│ • Select fixed layers for slab surfaces     │
+└────────────────────┬────────────────────────┘
+                     ↓
+┌─────────────────────────────────────────────┐
+│ Window 2: Reference Energies                │
+│ • Choose calculator (1M/5M/5M+D3)           │
+│ • Relax or single-point mode                │
+│ • Calculate E_surface and E_molecule        │
+└────────────────────┬────────────────────────┘
+                     ↓
+┌─────────────────────────────────────────────┐
+│ Window 3: Genetic Algorithm                 │
+│ • Configure GA parameters                   │
+│ • Run optimization (position + torsions)    │
+│ • Monitor energy evolution                  │
+│ • View best solution genes                  │
+└────────────────────┬────────────────────────┘
+                     ↓
+┌─────────────────────────────────────────────┐
+│ Window 4: Final Optimization                │
+│ • Optional full relaxation                  │
+│ • Export optimized structure                │
+│ • Save to timestamped directory             │
+└─────────────────────────────────────────────┘
+```
+
+## Project Statistics
+
+- **Total Code**: ~3,048 lines of Python
+- **Modules**: 16 Python modules
+- **Classes**: 9 main classes
+- **Functions**: 50+ functions
+- **Documentation**: 37 KB of guides
+
+## Technology Stack
+
+| Component | Technology |
+|-----------|-----------|
+| GUI Framework | Tkinter |
+| Structure Manipulation | ASE (Atomic Simulation Environment) |
+| Molecular Analysis | RDKit |
+| Force Field Calculator | MatterSim |
+| Optimization | BFGS (via ASE) |
+| 3D Visualization | Matplotlib |
+| Numerical Computing | NumPy |
+
+## File Structure
+
+```
+goad_v1/
+├── run_goad_v1.py                    # Main launcher
+├── README.md                         # This file
+├── QUICK_START.md                    # User guide
+├── LICENSE                           # MIT License
+├── CITATION.cff                      # Citation metadata
+└── goad_v1/
+    ├── analysis/
+    │   ├── surface_analyzer.py       # Surface analysis
+    │   └── molecule_analyzer.py      # Molecular properties
+    ├── ga/
+    │   └── genetic_algorithm.py      # GA with dual genome
+    ├── gui/
+    │   ├── analysis_window.py        # Window 1
+    │   ├── reference_energies_window.py  # Window 2
+    │   ├── ga_window.py              # Window 3
+    │   ├── final_optimization_window.py  # Window 4
+    │   └── structure_viewer.py       # 3D visualization
+    └── utils/
+        ├── calculator_manager.py     # MatterSim factory
+        └── torsion_handler.py        # Rotatable bonds
+```
+
+## Recommended Next Steps
+
+### 1. Installation
+```bash
+pip install ase rdkit matplotlib numpy mattersim
+```
+
+### 2. First Run
+```bash
+python3 run_goad_v1.py
+```
+
+### 3. Test Workflow
+Load example structures (Cu111 slab + small molecule) and run through complete workflow
+
+### 4. Production Use
+Apply to your own structures and systems
+
+## FAQ
+
+**Q: How do I know if my surface is supported?**
+A: Slab surfaces (multi-layer crystals) are fully supported. Porous surfaces (MOFs) are detected but optimization is limited.
+
+**Q: What calculator should I use?**
+A: Start with MatterSim 1M (fast). Use 5M for better accuracy, 5M+D3 for highest accuracy with dispersion.
+
+**Q: How many generations should I run?**
+A: 20-50 for quick testing, 100+ for production. More generations = better results but slower.
+
+**Q: Can I use other force fields?**
+A: Currently only MatterSim. Future versions will support DFTB+, CP2K, etc.
+
+**Q: What does negative adsorption energy mean?**
+A: Favorable adsorption (molecule likes the surface). Positive = unfavorable.
+
+## Issues & Support
+
+If you encounter issues:
+
+1. Check [`QUICK_START.md`](QUICK_START.md#troubleshooting) troubleshooting section
+2. Review log messages in the application
+3. Verify input CIF files are valid
+4. Ensure all dependencies are installed
+5. Try with MatterSim 1M if other calculators fail
+
+## Citation
+
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17904742.svg)](https://doi.org/10.5281/zenodo.17904742)
+
+If you use GOAD in your research, please cite:
+
+**APA Format**:
+```
+Urbiztondo, M. A., Castro-Palacio, J. C., Grau-Crespo, R., & Hamad, S. (2025). 
+GOAD: Global Optimization with Adsorbed species using ASE Design (v1.0.2). 
+Zenodo. https://doi.org/10.5281/zenodo.17904742
+```
+
+**BibTeX**:
+```bibtex
+@software{goad_2025,
+  author       = {Urbiztondo, Miguel A. and 
+                  Castro-Palacio, Juan Carlos and 
+                  Grau-Crespo, Ricardo and 
+                  Hamad, Said},
+  title        = {{GOAD: Global Optimization with Adsorbed species using ASE Design}},
+  year         = 2025,
+  version      = {v1.0.2},
+  publisher    = {Zenodo},
+  doi          = {10.5281/zenodo.17904742},
+  url          = {https://doi.org/10.5281/zenodo.17904742},
+  note         = {GitHub repository: \url{https://github.com/shamgom/goad-global-optimization}}
+}
+```
+
+## License
+
+This project is licensed under the MIT License. See the LICENSE file for details.
+
+## Development
+
+### Code Quality
+- All Python syntax validated (py_compile verified)
+- No circular imports or missing dependencies
+- Comprehensive error handling throughout
+- Logging at critical points
+
+### Testing
+- Core functionality verified
+- Integration tests passed
+- Known working scenarios documented
+- All bug fixes verified
+
+### Documentation
+- 4 comprehensive guides
+- Code comments where needed
+- Inline docstrings for classes and functions
+- Clear architecture documentation
+
+## Learning Resources
+
+- [ASE Documentation](https://wiki.fysik.dtu.dk/ase/)
+- [RDKit Documentation](https://www.rdkit.org/docs/)
+- [MatterSim GitHub](https://github.com/gengqianyu/mattersim)
+
+---
+
+**Version**: 5.0 Final
+**Status**: Production Ready
+**Last Updated**: 2025-11-28
+**Language**: Python 3.8+
+
+**Ready to optimize molecular adsorption? Start with [`QUICK_START.md`](QUICK_START.md)!**
