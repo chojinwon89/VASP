@@ -34,6 +34,7 @@ for result_file in sorted(runs_dir.glob("*/result.json")):
     data = json.loads(result_file.read_text())
     status_file = run_dir / "status.json"
     status = json.loads(status_file.read_text()) if status_file.exists() else {}
+    resolved_run_dir = status.get("run_dir", str(run_dir))
 
     surface, adsorbate = parse_system(data.get("system", ""))
 
@@ -47,14 +48,20 @@ for result_file in sorted(runs_dir.glob("*/result.json")):
         "E_ads_eV": data.get("E_ads_eV", ""),
         "E_ads_pre_relax_eV": data.get("E_ads_pre_relax_eV", data.get("E_ads_pre_relax", "")),
         "best_seed": data.get("ga", {}).get("best_seed", ""),
-        "run_dir": str(run_dir),
+        "run_dir": resolved_run_dir,
         "started_at": status.get("started_at", ""),
         "finished_at": status.get("finished_at", ""),
     }
 
     rows.append(row)
 
-rows.sort(key=lambda row: (row["task_id"] == "", row["task_id"], row["run_dir"]))
+rows.sort(
+    key=lambda row: (
+        row["task_id"] == "",
+        int(row["task_id"]) if row["task_id"] != "" else 0,
+        row["run_dir"],
+    )
+)
 
 out_csv.parent.mkdir(exist_ok=True)
 
