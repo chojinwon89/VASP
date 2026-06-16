@@ -2,9 +2,9 @@ task_id,surface,adsorbate,seed,calculator
 0,Cu111,isopropanol,0,sevennet_omni
 1,Cu111,isopropanol,1,sevennet_omni
 2,Cu111,isopropanol,2,sevennet_omni
-3,Cu100,isopropanol,0,sevennet_omni
-4,Cu100,isopropanol,1,sevennet_omni
-5,Cu100,isopropanol,2,sevennet_omni
-6,Cu110,isopropanol,0,sevennet_omni
-7,Cu110,isopropanol,1,sevennet_omni
-8,Cu110,isopropanol,2,sevennet_omni
+3,Cu110,isopropanol,0,sevennet_omni
+4,Cu110,isopropanol,1,sevennet_omni
+5,Cu110,isopropanol,2,sevennet_omni
+6,Cu001,isopropanol,0,sevennet_omni
+7,Cu001,isopropanol,1,sevennet_omni
+8,Cu001,isopropanol,2,sevennet_omni

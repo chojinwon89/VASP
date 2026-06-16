@@ -6,8 +6,9 @@ from pathlib import Path
 # Edit these lists for your production database
 surfaces = [
     "Cu111",
-    "Cu100",
     "Cu110",
+    "Cu001",
+    #"Cu100",
     #"Pt111",
     #"Pt110",
     #"Pt100",

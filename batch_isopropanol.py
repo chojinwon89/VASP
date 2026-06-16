@@ -3,6 +3,7 @@ GOAD batch driver — isopropanol on Cu(111) and Cu(100).
 Bypasses the Tkinter GUI and calls the GOAD modules directly.
 """
 import os, json, datetime, logging, traceback
+from pathlib import Path
 import numpy as np
 from ase.io import read, write
 from ase.optimize import BFGS
@@ -14,7 +15,17 @@ from goad_v1.calculator_manager import CalculatorManager
 from goad_v1.ga.genetic_algorithm import GeneticAlgorithm
 
 # -------------------- config --------------------
-CALCULATOR_TYPE = "sevennet_omni"     # "1m" (fast smoke test) | "5m" | "5m_d3" (best for vdW)
+SURFACE         = os.environ.get("GOAD_SURFACE",   "Cu111")
+ADSORBATE       = os.environ.get("GOAD_ADSORBATE", "isopropanol")
+SEED            = int(os.environ.get("GOAD_SEED",  "0"))
+CALCULATOR_TYPE = os.environ.get("GOAD_CALC",      "sevennet_omni")
+RUN_DIR         = Path(os.environ.get(
+    "GOAD_RUN_DIR",
+    f"runs/{SURFACE}_{ADSORBATE}_seed{SEED}_{CALCULATOR_TYPE}"
+))
+
+RUN_DIR.mkdir(parents=True, exist_ok=True)
+
 N_FIXED_LAYERS  = 2           # bottom layers fixed
 RELAX_FMAX      = 0.05        # eV/Å for BFGS
 RELAX_STEPS_REF = 200
@@ -28,26 +39,19 @@ GA_KW = dict(
     elite_size      = 5,
     verbose         = True,
 )
-N_SEEDS = 3   # how many independent GA runs per system; keep best
+N_SEEDS = 1
 
 SYSTEMS = [
-    {"name": "isopropanol_on_Cu111",
-     "surface_cif":  "inputs/Cu111.cif",
-     "molecule_cif": "inputs/isopropanol.cif"},
-    {"name": "isopropanol_on_Cu100",
-     "surface_cif":  "inputs/Cu100.cif",
-     "molecule_cif": "inputs/isopropanol.cif"},
+    {
+        "name":         f"{ADSORBATE}_on_{SURFACE}",
+        "surface_cif":  f"inputs/{SURFACE}.cif",
+        "molecule_cif": f"inputs/{ADSORBATE}.cif",
+    }
 ]
-OUTROOT = f"results/batch_{datetime.datetime.now():%Y%m%d_%H%M%S}"
-DB_PATH = "adsorption_db.json"
+OUTROOT = str(RUN_DIR)
+DB_PATH = str(RUN_DIR / "result.json")
 # ------------------------------------------------
 
-os.makedirs(OUTROOT, exist_ok=True)
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-    handlers=[logging.FileHandler(f"{OUTROOT}/run.log"), logging.StreamHandler()],
-)
 log = logging.getLogger("batch")
 
 
@@ -98,32 +102,27 @@ def run_one_system(system, calc):
     molecule_relaxed, E_mol  = relax(molecule, calc, RELAX_FMAX, RELAX_STEPS_REF,
                                      "ref_molecule", sysdir)
 
-    # 3. GA — multiple seeds, keep best
-    best_overall = {"E_ads": np.inf, "structure": None, "seed": None,
-                    "history": None, "individual": None}
-
-    for seed in range(N_SEEDS):
-        np.random.seed(seed)
-        log.info(f"\n--- GA run {seed+1}/{N_SEEDS} (seed={seed}) ---")
-        ga = GeneticAlgorithm(
-            surface=surface_relaxed,
-            molecule=molecule_relaxed,
-            calculator=calc,
-            surface_energy=E_surf,
-            molecule_energy=E_mol,
-            n_fixed_layers=N_FIXED_LAYERS,
-            **GA_KW,
-        )
-        res = ga.run()
-        log.info(f"Seed {seed}: best E_ads (single-point) = {res['best_energy']:.4f} eV")
-        if res["best_energy"] < best_overall["E_ads"]:
-            best_overall.update(
-                E_ads      = res["best_energy"],
-                structure  = res["best_structure"],
-                seed       = seed,
-                history    = res["fitness_history"],
-                individual = res["best_individual"],
-            )
+    # 3. GA — one task uses one seed
+    np.random.seed(SEED)
+    log.info(f"\n--- GA run (seed={SEED}) ---")
+    ga = GeneticAlgorithm(
+        surface=surface_relaxed,
+        molecule=molecule_relaxed,
+        calculator=calc,
+        surface_energy=E_surf,
+        molecule_energy=E_mol,
+        n_fixed_layers=N_FIXED_LAYERS,
+        **GA_KW,
+    )
+    res = ga.run()
+    log.info(f"Seed {SEED}: best E_ads (single-point) = {res['best_energy']:.4f} eV")
+    best_overall = {
+        "E_ads":       res["best_energy"],
+        "structure":   res["best_structure"],
+        "seed":        SEED,
+        "history":     res["fitness_history"],
+        "individual":  res["best_individual"],
+    }
 
     log.info(f"\nBest GA seed: {best_overall['seed']}, "
              f"E_ads (pre-relax) = {best_overall['E_ads']:.4f} eV")
@@ -155,7 +154,7 @@ def run_one_system(system, calc):
         "E_molecule_eV":     float(E_mol),
         "E_total_eV":        float(E_total),
         "E_ads_eV":          float(E_ads_final),
-        "E_ads_pre_relax":   float(best_overall["E_ads"]),
+        "E_ads_pre_relax_eV": float(best_overall["E_ads"]),
         "best_individual":   {
             "position":    best_overall["individual"]["position"].tolist(),
             "orientation": best_overall["individual"]["orientation"].tolist(),
@@ -168,28 +167,34 @@ def run_one_system(system, calc):
 
 
 def main():
-    log.info(f"Output dir: {OUTROOT}")
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+        handlers=[
+            logging.FileHandler(str(RUN_DIR / "run.log")),
+            logging.StreamHandler(),
+        ],
+    )
+
+    log.info(f"Output dir: {RUN_DIR}")
     log.info(f"Loading calculator: {CALCULATOR_TYPE}")
     calc = CalculatorManager.get_calculator(CALCULATOR_TYPE)
 
-    db = []
-    if os.path.exists(DB_PATH):
-        with open(DB_PATH) as f:
-            db = json.load(f)
+    entries = []
 
     for system in SYSTEMS:
         try:
             entry = run_one_system(system, calc)
-            db.append(entry)
+            entries.append(entry)
             with open(DB_PATH, "w") as f:
-                json.dump(db, f, indent=2)
-            log.info(f"DB updated -> {DB_PATH}")
+                json.dump(entry, f, indent=2)
+            log.info(f"Result updated -> {DB_PATH}")
         except Exception as e:
             log.error(f"FAILED on {system['name']}: {e}")
             log.error(traceback.format_exc())
 
     log.info("\n=== SUMMARY ===")
-    for e in db[-len(SYSTEMS):]:
+    for e in entries:
         log.info(f"{e['system']}:  E_ads = {e['E_ads_eV']:.4f} eV  "
                  f"({e['calculator']})")
 
