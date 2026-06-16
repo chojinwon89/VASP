@@ -1,11 +1,9 @@
-# Core runtime dependencies
 ase
 numpy
 matplotlib
-mattersim
+sevenn
+# mattersim is optional; install separately if needed
+# rdkit: conda install -c conda-forge rdkit
 
-# Note: RDKit is best installed via conda (conda-forge). Example:
-# conda install -c conda-forge rdkit
-
-# Optional/Dev
+# Dev
 pytest
