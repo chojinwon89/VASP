@@ -1,33 +1,33 @@
 #!/usr/bin/env python
 """
-setup_slab_jobs.py
-==================
+setup_molecule_jobs.py
+======================
 Generate VASP input files (POSCAR, INCAR, KPOINTS, POTCAR, slm.vasp.kestrel)
-for bare-slab reference energy calculations.
+for gas-phase molecule reference energy calculations.
 
-These slab energies (E_surf) are needed to compute the DFT adsorption energy:
+These molecular energies (E_mol) are needed to compute the DFT adsorption energy:
     E_ads = E_total(slab+mol) - E_surf(slab) - E_mol(gas)
 
-The slabs are built from ASE using the same geometry as GOAD
-(4x4x4, 15 Ang vacuum). Bottom N layers are frozen via Selective Dynamics,
-matching the constraint used in batch_isopropanol.py.
+Molecules are placed in a 20×20×20 Å cubic box (Gamma-point only).
+The INCAR uses ISMEAR=0, SIGMA=0.01, and LREAL=.FALSE. — correct for
+isolated molecules in large cells.
 
 Output layout
 -------------
-    vasp_slab/
-        Cu111/
+    vasp_mol/
+        isopropanol/
             POSCAR  INCAR  KPOINTS  POTCAR  slm.vasp.kestrel
-        Cu110/
+        CO2/
             ...
-        Cu001/
-            ...
+        ...
 
 Usage
 -----
-    python setup_slab_jobs.py
-    python setup_slab_jobs.py --surfaces Cu111 Cu110 Cu001
-    python setup_slab_jobs.py --out-dir /scratch/jcho5/slab_jobs
-    python setup_slab_jobs.py --dry-run
+    python setup_molecule_jobs.py
+    python setup_molecule_jobs.py --molecules isopropanol CO2 ethanol
+    python setup_molecule_jobs.py --out-dir /scratch/jcho5/mol_jobs
+    python setup_molecule_jobs.py --single-point   # NSW=0, no relaxation
+    python setup_molecule_jobs.py --dry-run
 
 Prerequisites
 -------------
@@ -39,12 +39,12 @@ import argparse
 import os
 from pathlib import Path
 
-from ase.build import fcc111, fcc100, fcc110
+from ase.io import read
 from ase import Atoms
 
 
 # ---------------------------------------------------------------------------
-# INCAR — same settings as the adsorbed-system jobs
+# INCAR — molecule-specific settings
 # ---------------------------------------------------------------------------
 INCAR_TEMPLATE = """\
 SYSTEM = {system}
@@ -52,7 +52,7 @@ SYSTEM = {system}
 ! Startparameter
 NWRITE = 2
 ISTART = 0
-ISPIN  = 2
+ISPIN  = 1
 
 ! Electronic Relaxation
 ENCUT  = 450
@@ -65,29 +65,29 @@ EDIFFG = -5E-02
 GGA = RP
 
 ! Ionic Relaxation
-NSW    = 1000
-IBRION = 2
+NSW    = {nsw}
+IBRION = {ibrion}
 POTIM  = 0.3
 
-! DOS
-ISMEAR = 1
-SIGMA  = 0.05
+! DOS — Gaussian smearing, small sigma for molecules
+ISMEAR = 0
+SIGMA  = 0.01
 
-! Algorithmic
+! Algorithmic — LREAL must be .FALSE. for small cells
 IALGO  = 48
 LDIAG  = .TRUE.
-LREAL  = A
+LREAL  = .FALSE.
 LWAVE  = .FALSE.
 """
 
 # ---------------------------------------------------------------------------
-# KPOINTS — Monkhorst-Pack 2x2x1
+# KPOINTS — Gamma point only (1×1×1) for isolated molecules
 # ---------------------------------------------------------------------------
 KPOINTS_TEMPLATE = """\
-Monkhorst-Pack 2x2x1
+Gamma-point only
  0
-Monkhorst-Pack
-  2  2  1
+Gamma
+  1  1  1
   0  0  0
 """
 
@@ -96,10 +96,10 @@ Monkhorst-Pack
 # ---------------------------------------------------------------------------
 SLURM_TEMPLATE = """\
 #!/bin/bash
-#SBATCH --nodes=4
+#SBATCH --nodes=1
 #SBATCH --ntasks-per-node=17
 #SBATCH --cpus-per-task=6
-#SBATCH --time=48:00:00
+#SBATCH --time=12:00:00
 #SBATCH --account=ccpc
 #SBATCH --job-name={job_name}
 #SBATCH --output={job_name}.out
@@ -138,34 +138,18 @@ POTCAR_MAP = {
 }
 
 # ---------------------------------------------------------------------------
-# Slab builder registry
+# Molecule registry — maps name -> CIF path
 # ---------------------------------------------------------------------------
-SLAB_BUILDERS = {
-    # Cu
-    "Cu111": (fcc111, {"symbol": "Cu", "size": (4, 4, 4), "vacuum": 15.0, "orthogonal": True}),
-    "Cu110": (fcc110, {"symbol": "Cu", "size": (4, 4, 4), "vacuum": 15.0}),
-    "Cu100": (fcc100, {"symbol": "Cu", "size": (4, 4, 4), "vacuum": 15.0}),
-    "Cu001": (fcc100, {"symbol": "Cu", "size": (4, 4, 4), "vacuum": 15.0}),
-    # Pt
-    "Pt111": (fcc111, {"symbol": "Pt", "size": (4, 4, 4), "vacuum": 15.0, "orthogonal": True}),
-    "Pt110": (fcc110, {"symbol": "Pt", "size": (4, 4, 4), "vacuum": 15.0}),
-    "Pt100": (fcc100, {"symbol": "Pt", "size": (4, 4, 4), "vacuum": 15.0}),
-    # Pd
-    "Pd111": (fcc111, {"symbol": "Pd", "size": (4, 4, 4), "vacuum": 15.0, "orthogonal": True}),
-    "Pd110": (fcc110, {"symbol": "Pd", "size": (4, 4, 4), "vacuum": 15.0}),
-    "Pd100": (fcc100, {"symbol": "Pd", "size": (4, 4, 4), "vacuum": 15.0}),
-    # Ni
-    "Ni111": (fcc111, {"symbol": "Ni", "size": (4, 4, 4), "vacuum": 15.0, "orthogonal": True}),
-    "Ni110": (fcc110, {"symbol": "Ni", "size": (4, 4, 4), "vacuum": 15.0}),
-    "Ni100": (fcc100, {"symbol": "Ni", "size": (4, 4, 4), "vacuum": 15.0}),
-    # Ag
-    "Ag111": (fcc111, {"symbol": "Ag", "size": (4, 4, 4), "vacuum": 15.0, "orthogonal": True}),
-    "Ag110": (fcc110, {"symbol": "Ag", "size": (4, 4, 4), "vacuum": 15.0}),
-    "Ag100": (fcc100, {"symbol": "Ag", "size": (4, 4, 4), "vacuum": 15.0}),
-    # Au
-    "Au111": (fcc111, {"symbol": "Au", "size": (4, 4, 4), "vacuum": 15.0, "orthogonal": True}),
-    "Au110": (fcc110, {"symbol": "Au", "size": (4, 4, 4), "vacuum": 15.0}),
-    "Au100": (fcc100, {"symbol": "Au", "size": (4, 4, 4), "vacuum": 15.0}),
+MOLECULE_REGISTRY = {
+    "isopropanol": "inputs/isopropanol.cif",
+    "CO2":         "inputs/CO2.cif",
+    "ethanol":     "inputs/ethanol.cif",
+    "ethene":      "inputs/ethene.cif",
+    "ethane":      "inputs/ethane.cif",
+    "propane":     "inputs/propane.cif",
+    "propene":     "inputs/propene.cif",
+    "propanol":    "inputs/propanol.cif",
+    "glycerol":    "inputs/glycerol.cif",
 }
 
 
@@ -173,41 +157,8 @@ SLAB_BUILDERS = {
 # Helpers
 # ---------------------------------------------------------------------------
 
-def build_slab(surface_name):
-    """Build and return the ASE slab for a given surface name."""
-    if surface_name not in SLAB_BUILDERS:
-        raise ValueError(
-            f"Unknown surface '{surface_name}'. "
-            f"Available: {list(SLAB_BUILDERS.keys())}"
-        )
-    func, kwargs = SLAB_BUILDERS[surface_name]
-    return func(**kwargs)
-
-
-def get_layer_z_values(atoms, tol=0.5):
-    """
-    Return sorted list of unique Z coordinates representing atomic layers,
-    from bottom (lowest Z) to top (highest Z).
-    """
-    z_coords = sorted(atoms.get_positions()[:, 2])
-    layers = []
-    current = [z_coords[0]]
-    for z in z_coords[1:]:
-        if z - current[-1] < tol:
-            current.append(z)
-        else:
-            layers.append(sum(current) / len(current))
-            current = [z]
-    layers.append(sum(current) / len(current))
-    return layers
-
-
-def make_selective_dynamics_poscar(atoms, n_fixed_bottom, comment=""):
-    """
-    Return a VASP5 POSCAR string with Selective Dynamics.
-    Bottom n_fixed_bottom layers are frozen (F F F); top layers are free (T T T).
-    """
-    # Sort atoms by species (Cu only for bare slab, but keep general)
+def make_poscar(atoms, comment=""):
+    """Return a VASP5 POSCAR string (Cartesian, no Selective Dynamics)."""
     symbols = atoms.get_chemical_symbols()
     seen = []
     for s in symbols:
@@ -218,20 +169,16 @@ def make_selective_dynamics_poscar(atoms, n_fixed_bottom, comment=""):
         sorted_idx.extend(i for i, s in enumerate(symbols) if s == el)
     atoms = atoms[sorted_idx]
 
-    layer_zs = get_layer_z_values(atoms)
-    fixed_z_cutoff = layer_zs[n_fixed_bottom - 1] + 0.3
-
     positions = atoms.get_positions()
     cell = atoms.get_cell()
 
     lines = []
-    lines.append(comment or atoms.get_chemical_formula() + " slab")
+    lines.append(comment or atoms.get_chemical_formula() + " molecule")
     lines.append("   1.00000000000000")
 
     for vec in cell:
         lines.append(f"  {vec[0]:20.16f}  {vec[1]:20.16f}  {vec[2]:20.16f}")
 
-    # Species and counts
     species_list = []
     counts = []
     for el in seen:
@@ -241,14 +188,9 @@ def make_selective_dynamics_poscar(atoms, n_fixed_bottom, comment=""):
     lines.append("  " + "  ".join(species_list))
     lines.append("  " + "  ".join(counts))
 
-    lines.append("Selective dynamics")
     lines.append("Cartesian")
-
     for pos in positions:
-        flag = "F  F  F" if pos[2] <= fixed_z_cutoff else "T  T  T"
-        lines.append(
-            f"  {pos[0]:20.16f}  {pos[1]:20.16f}  {pos[2]:20.16f}  {flag}"
-        )
+        lines.append(f"  {pos[0]:20.16f}  {pos[1]:20.16f}  {pos[2]:20.16f}")
 
     return "\n".join(lines) + "\n"
 
@@ -282,47 +224,52 @@ def build_potcar(species, pp_root, out_path, dry_run=False):
 
 
 # ---------------------------------------------------------------------------
-# Per-surface setup
+# Per-molecule setup
 # ---------------------------------------------------------------------------
 
-def setup_slab_dir(surface_name, out_dir, pp_root, n_fixed, dry_run=False):
-    """Build slab and write all VASP input files into out_dir/surface_name/."""
+def setup_mol_dir(mol_name, cif_path, out_dir, pp_root,
+                  single_point=False, dry_run=False):
+    """Load molecule CIF and write all VASP input files into out_dir/mol_name/."""
 
-    job_dir = out_dir / surface_name
+    job_dir = out_dir / mol_name
     if not dry_run:
         job_dir.mkdir(parents=True, exist_ok=True)
 
-    try:
-        slab = build_slab(surface_name)
-    except ValueError as e:
-        return {"status": "error", "reason": str(e)}
+    if not Path(cif_path).exists():
+        return {"status": "error", "reason": f"CIF not found: {cif_path}"}
 
-    n_atoms = len(slab)
-    species = list(dict.fromkeys(slab.get_chemical_symbols()))
-    layer_zs = get_layer_z_values(slab)
-    n_layers = len(layer_zs)
+    atoms = read(cif_path)
+
+    # Ensure 20×20×20 Å box and center
+    atoms.set_cell([20.0, 20.0, 20.0])
+    atoms.set_pbc(True)
+    atoms.center()
+
+    n_atoms = len(atoms)
+    species = list(dict.fromkeys(atoms.get_chemical_symbols()))
 
     status = {
-        "surface":  surface_name,
+        "molecule": mol_name,
         "n_atoms":  n_atoms,
-        "n_layers": n_layers,
         "species":  species,
         "status":   "ok",
         "warnings": [],
     }
 
+    nsw    = 0 if single_point else 500
+    ibrion = -1 if single_point else 2
+
     # POSCAR
-    comment = (
-        f"{surface_name} slab | {n_atoms} atoms | "
-        f"{n_layers} layers | bottom {n_fixed} fixed"
-    )
-    poscar_text = make_selective_dynamics_poscar(slab, n_fixed, comment)
+    comment = f"{mol_name} molecule | {n_atoms} atoms | 20x20x20 A box"
+    poscar_text = make_poscar(atoms, comment)
     if not dry_run:
         (job_dir / "POSCAR").write_text(poscar_text)
 
     # INCAR
     if not dry_run:
-        (job_dir / "INCAR").write_text(INCAR_TEMPLATE.format(system=surface_name))
+        (job_dir / "INCAR").write_text(
+            INCAR_TEMPLATE.format(system=mol_name, nsw=nsw, ibrion=ibrion)
+        )
 
     # KPOINTS
     if not dry_run:
@@ -341,7 +288,7 @@ def setup_slab_dir(surface_name, out_dir, pp_root, n_fixed, dry_run=False):
             for el in species
         )
         helper = (
-            f"# Build POTCAR for {surface_name}\n"
+            f"# Build POTCAR for {mol_name}\n"
             f"# Set VASP_PP_PATH first, then run:\n"
             f"cat {cat_cmd} > POTCAR\n"
         )
@@ -355,7 +302,7 @@ def setup_slab_dir(surface_name, out_dir, pp_root, n_fixed, dry_run=False):
     # Slurm
     slurm_path = job_dir / "slm.vasp.kestrel"
     if not dry_run:
-        slurm_path.write_text(SLURM_TEMPLATE.format(job_name=surface_name[:40]))
+        slurm_path.write_text(SLURM_TEMPLATE.format(job_name=mol_name[:40]))
         slurm_path.chmod(0o755)
 
     return status
@@ -366,25 +313,27 @@ def setup_slab_dir(surface_name, out_dir, pp_root, n_fixed, dry_run=False):
 # ---------------------------------------------------------------------------
 
 def main():
+    all_mol_names = list(MOLECULE_REGISTRY.keys())
+
     parser = argparse.ArgumentParser(
-        description="Generate VASP inputs for bare-slab reference energy calculations."
+        description="Generate VASP inputs for gas-phase molecule reference energy calculations."
     )
     parser.add_argument(
-        "--surfaces", nargs="+",
-        default=["Cu111","Cu110","Cu001","Pt111","Pt110","Pt100","Pd111","Pd110","Pd100","Ni111","Ni110","Ni100","Ag111","Ag110","Ag100","Au111","Au110","Au100"],
-        help="Surface names to set up (default: all 18 surfaces)"
+        "--molecules", nargs="+",
+        default=all_mol_names,
+        help=f"Molecule names to set up (default: all {len(all_mol_names)} molecules)"
     )
     parser.add_argument(
-        "--out-dir", default="vasp_slab",
-        help="Output root directory (default: ./vasp_slab)"
+        "--out-dir", default="vasp_mol",
+        help="Output root directory (default: ./vasp_mol)"
     )
     parser.add_argument(
         "--pp-path", default=None,
         help="Path to VASP PBE PAW library (overrides VASP_PP_PATH env var)"
     )
     parser.add_argument(
-        "--n-fixed", type=int, default=2,
-        help="Number of bottom layers to freeze in POSCAR (default: 2)"
+        "--single-point", action="store_true",
+        help="Write NSW=0 INCAR (single-point only, no ionic relaxation)"
     )
     parser.add_argument(
         "--dry-run", action="store_true",
@@ -392,8 +341,6 @@ def main():
     )
     args = parser.parse_args()
 
-    # Resolve n_fixed as a plain local variable — no global needed
-    n_fixed = args.n_fixed
     out_dir = Path(args.out_dir)
 
     # Resolve POTCAR library
@@ -408,20 +355,27 @@ def main():
         print(f"Using POTCAR library: {pp_root}")
         print()
 
-    print(f"Surfaces:          {args.surfaces}")
+    mode = "single-point" if args.single_point else "full relaxation"
+    print(f"Molecules:         {args.molecules}")
     print(f"Output directory:  {out_dir}/")
-    print(f"Fixed bottom layers: {n_fixed}")
+    print(f"Calculation mode:  {mode}")
     print()
 
     all_ok = True
-    for surface in args.surfaces:
-        action = "[DRY-RUN]" if args.dry_run else "writing"
-        print(f"  {action}: {out_dir / surface}/")
+    for mol_name in args.molecules:
+        if mol_name not in MOLECULE_REGISTRY:
+            print(f"  ERROR: '{mol_name}' not in MOLECULE_REGISTRY. Skipping.")
+            all_ok = False
+            continue
 
-        result = setup_slab_dir(
-            surface, out_dir,
+        cif_path = MOLECULE_REGISTRY[mol_name]
+        action = "[DRY-RUN]" if args.dry_run else "writing"
+        print(f"  {action}: {out_dir / mol_name}/")
+
+        result = setup_mol_dir(
+            mol_name, cif_path, out_dir,
             pp_root=pp_root,
-            n_fixed=n_fixed,
+            single_point=args.single_point,
             dry_run=args.dry_run,
         )
 
@@ -431,11 +385,10 @@ def main():
             continue
 
         print(f"    atoms:    {result['n_atoms']}")
-        print(f"    layers:   {result['n_layers']}  (bottom {n_fixed} fixed)")
         print(f"    species:  {' '.join(result['species'])}")
 
         if not args.dry_run:
-            files = ["POSCAR (SD)", "INCAR", "KPOINTS", "slm.vasp.kestrel"]
+            files = ["POSCAR", "INCAR", "KPOINTS", "slm.vasp.kestrel"]
             if result["status"] == "ok":
                 files.insert(3, "POTCAR")
             print(f"    written:  {', '.join(files)}")
@@ -455,22 +408,22 @@ def main():
         print("1. Build POTCARs:")
         print()
         print("     export VASP_PP_PATH=/home/jcho5/project/paw64/potpaw_PBE_64")
-        print("     python setup_slab_jobs.py    # re-run to build POTCARs")
+        print("     python setup_molecule_jobs.py    # re-run to build POTCARs")
         print()
         step = 2
     else:
         step = 1
 
-    print(f"{step}. Submit slab jobs:")
+    print(f"{step}. Submit molecule jobs:")
     print()
-    for s in args.surfaces:
-        print(f"     cd {out_dir}/{s} && sbatch slm.vasp.kestrel && cd -")
+    for mol in args.molecules:
+        print(f"     cd {out_dir}/{mol} && sbatch slm.vasp.kestrel && cd -")
     print()
     step += 1
-    print(f"{step}. After jobs finish, extract E_surf from OUTCAR:")
+    print(f"{step}. After jobs finish, extract E_mol from OUTCAR:")
     print()
-    for s in args.surfaces:
-        print(f"     grep 'free  energy' {out_dir}/{s}/OUTCAR | tail -1")
+    for mol in args.molecules:
+        print(f"     grep 'free  energy' {out_dir}/{mol}/OUTCAR | tail -1")
     print()
     step += 1
     print(f"{step}. Compute DFT adsorption energy:")

@@ -31,14 +31,20 @@ RELAX_FMAX      = 0.05        # eV/Å for BFGS
 RELAX_STEPS_REF = 200
 RELAX_STEPS_FINAL = 300
 
-GA_KW = dict(
-    generations     = 80,
-    population_size = 40,
-    mutation_rate   = 0.3,
-    crossover_rate  = 0.7,
-    elite_size      = 5,
-    verbose         = True,
+# Adaptive GA parameters: larger/more flexible molecules need bigger search
+MOLECULE_GA_OVERRIDES = {
+    "glycerol":    {"generations": 100, "population_size": 60},
+    "propanol":    {"generations": 100, "population_size": 50},
+    "isopropanol": {"generations": 80,  "population_size": 40},
+}
+# Default for all other molecules
+DEFAULT_GA_KW = dict(
+    generations=80, population_size=40,
+    mutation_rate=0.3, crossover_rate=0.7,
+    elite_size=5, verbose=True,
 )
+
+GA_KW = {**DEFAULT_GA_KW, **MOLECULE_GA_OVERRIDES.get(ADSORBATE, {})}
 N_SEEDS = 1
 
 SYSTEMS = [
