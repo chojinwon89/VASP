@@ -29,36 +29,40 @@ def main():
     tasks_csv = repo / args.tasks_csv
     task = load_task(tasks_csv, args.task_id)
 
-    surface = task["surface"]
-    adsorbate = task["adsorbate"]
-    seed = int(task["seed"])
+    surface    = task["surface"]
+    adsorbate  = task["adsorbate"]
+    seed       = int(task["seed"])
     calculator = task["calculator"]
 
     run_name = f"{surface}_{adsorbate}_seed{seed}_{calculator}"
-    run_dir = repo / "runs" / run_name
+    run_dir  = repo / "runs" / run_name
     run_dir.mkdir(parents=True, exist_ok=True)
 
     status_file = run_dir / "status.json"
-    log_file = run_dir / "run.log"
+    log_file    = run_dir / "run.log"
 
     status = {
-        "task_id": args.task_id,
-        "surface": surface,
-        "adsorbate": adsorbate,
-        "seed": seed,
+        "task_id":    args.task_id,
+        "surface":    surface,
+        "adsorbate":  adsorbate,
+        "seed":       seed,
         "calculator": calculator,
-        "run_dir": str(run_dir),
+        "run_dir":    str(run_dir),
         "started_at": datetime.now().isoformat(),
-        "state": "running",
+        "state":      "running",
     }
     status_file.write_text(json.dumps(status, indent=2))
 
     env = os.environ.copy()
-    env["GOAD_SURFACE"] = surface
+    env["GOAD_SURFACE"]   = surface
     env["GOAD_ADSORBATE"] = adsorbate
-    env["GOAD_SEED"] = str(seed)
-    env["GOAD_CALC"] = calculator
-    env["GOAD_RUN_DIR"] = str(run_dir)
+    env["GOAD_SEED"]      = str(seed)
+    env["GOAD_CALC"]      = calculator
+    env["GOAD_RUN_DIR"]   = str(run_dir)
+
+    # Pass per-task GA overrides (only present in tasks_custom.csv)
+    env["GOAD_POPULATION_SIZE"] = task.get("population_size", "")
+    env["GOAD_GENERATIONS"]     = task.get("generations", "")
 
     try:
         with log_file.open("w") as log:
@@ -68,8 +72,6 @@ def main():
             log.write("=" * 80 + "\n\n")
             log.flush()
 
-            # If prep_inputs.py is lightweight and safe to repeat, keep it here.
-            # Later, for large production, we can run prep_inputs.py once before submission.
             subprocess.run(
                 [sys.executable, "prep_inputs.py"],
                 cwd=repo,
@@ -88,12 +90,12 @@ def main():
                 check=True,
             )
 
-        status["state"] = "finished"
+        status["state"]       = "finished"
         status["finished_at"] = datetime.now().isoformat()
 
     except subprocess.CalledProcessError as e:
-        status["state"] = "failed"
-        status["returncode"] = e.returncode
+        status["state"]       = "failed"
+        status["returncode"]  = e.returncode
         status["finished_at"] = datetime.now().isoformat()
 
     status_file.write_text(json.dumps(status, indent=2))

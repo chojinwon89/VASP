@@ -31,20 +31,33 @@ RELAX_FMAX      = 0.05        # eV/Å for BFGS
 RELAX_STEPS_REF = 200
 RELAX_STEPS_FINAL = 300
 
-# Adaptive GA parameters: larger/more flexible molecules need bigger search
+# Molecule-level GA defaults (baseline overrides by flexibility)
 MOLECULE_GA_OVERRIDES = {
     "glycerol":    {"generations": 100, "population_size": 60},
     "propanol":    {"generations": 100, "population_size": 50},
     "isopropanol": {"generations": 80,  "population_size": 40},
 }
-# Default for all other molecules
+
+# Base defaults for all molecules
 DEFAULT_GA_KW = dict(
     generations=80, population_size=40,
     mutation_rate=0.3, crossover_rate=0.7,
     elite_size=5, verbose=True,
 )
 
+# Build GA_KW: base -> molecule override -> task-level override (highest priority)
 GA_KW = {**DEFAULT_GA_KW, **MOLECULE_GA_OVERRIDES.get(ADSORBATE, {})}
+
+# Task-level overrides from run_one_task.py (set via tasks_custom.csv)
+_pop = os.environ.get("GOAD_POPULATION_SIZE", "").strip()
+_gen = os.environ.get("GOAD_GENERATIONS",     "").strip()
+if _pop:
+    GA_KW["population_size"] = int(_pop)
+    print(f"[task override] population_size = {_pop}")
+if _gen:
+    GA_KW["generations"] = int(_gen)
+    print(f"[task override] generations = {_gen}")
+
 N_SEEDS = 1
 
 SYSTEMS = [
@@ -72,7 +85,6 @@ def fix_bottom_layers(atoms, surface_analyzer, n_fixed):
 
 def relax(atoms, calc, fmax, steps, label, outdir):
     atoms = atoms.copy()
-    # re-apply any pre-existing constraints (FixAtoms is preserved by .copy())
     atoms.calc = calc
     traj = f"{outdir}/{label}.traj"
     log.info(f"Relaxing {label} (fmax={fmax}, max steps={steps}) ...")
@@ -110,7 +122,7 @@ def run_one_system(system, calc):
 
     # 3. GA — one task uses one seed
     np.random.seed(SEED)
-    log.info(f"\n--- GA run (seed={SEED}) ---")
+    log.info(f"\n--- GA run (seed={SEED}, pop={GA_KW['population_size']}, gen={GA_KW['generations']}) ---")
     ga = GeneticAlgorithm(
         surface=surface_relaxed,
         molecule=molecule_relaxed,
@@ -133,10 +145,8 @@ def run_one_system(system, calc):
     log.info(f"\nBest GA seed: {best_overall['seed']}, "
              f"E_ads (pre-relax) = {best_overall['E_ads']:.4f} eV")
 
-    # 4. Final relaxation of the best adsorbed configuration
+    # 4. Final relaxation of best adsorbed configuration
     best_struct = best_overall["structure"].copy()
-    # GA fixes ALL surface atoms; for the final relaxation we only fix the bottom layers
-    # so that surface relaxation under the adsorbate is captured.
     fix_bottom_layers(best_struct, sa, N_FIXED_LAYERS)
     final, E_total = relax(best_struct, calc, RELAX_FMAX, RELAX_STEPS_FINAL,
                            "final_adsorbed", sysdir)
@@ -183,6 +193,8 @@ def main():
     )
 
     log.info(f"Output dir: {RUN_DIR}")
+    log.info(f"Surface: {SURFACE} | Adsorbate: {ADSORBATE} | Seed: {SEED}")
+    log.info(f"GA params: population={GA_KW['population_size']}, generations={GA_KW['generations']}")
     log.info(f"Loading calculator: {CALCULATOR_TYPE}")
     calc = CalculatorManager.get_calculator(CALCULATOR_TYPE)
 

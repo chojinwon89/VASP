@@ -36,9 +36,16 @@ echo "=========================================="
 
 python -c "import torch; print('torch:', torch.__version__, '| cuda:', torch.cuda.is_available())"
 
+# Accept optional custom CSV as first positional argument
+# Default: workflow/tasks.csv
+# Custom:  sbatch --array=0-N goad_array_kestrel.slurm workflow/tasks_custom.csv
+TASKS_CSV="${1:-workflow/tasks.csv}"
+
+echo "Tasks CSV: ${TASKS_CSV}"
+
 python workflow/run_one_task.py \
     --task-id "${SLURM_ARRAY_TASK_ID}" \
-    --tasks-csv workflow/tasks.csv
+    --tasks-csv "${TASKS_CSV}"
 
 echo "=========================================="
 echo "Task ${SLURM_ARRAY_TASK_ID} finished: $(date)"
