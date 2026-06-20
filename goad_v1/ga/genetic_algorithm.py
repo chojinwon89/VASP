@@ -7,6 +7,9 @@ The molecule is kept inside the central unit cell so it doesn't
 wrap to the edges via PBC.
 """
 
+import os
+from concurrent.futures import ProcessPoolExecutor
+
 import numpy as np
 from ase import Atoms
 from ase.optimize import BFGS
@@ -14,9 +17,112 @@ from ase.constraints import FixAtoms
 from typing import Dict, List, Optional, Tuple
 import logging
 
+from ..calculator_manager import CalculatorManager
 from ..utils.torsion_handler import TorsionHandler
 
 logger = logging.getLogger(__name__)
+
+
+_WORKER_SURFACE: Optional[Atoms] = None
+_WORKER_MOLECULE: Optional[Atoms] = None
+_WORKER_TORSION_HANDLER: Optional[TorsionHandler] = None
+_WORKER_SURFACE_ENERGY: Optional[float] = None
+_WORKER_MOLECULE_ENERGY: Optional[float] = None
+_WORKER_CENTER_IN_CELL: bool = True
+_WORKER_CALCULATOR = None
+
+
+def _init_energy_worker(surface: Atoms, molecule: Atoms,
+                        surface_energy: float, molecule_energy: float,
+                        center_in_cell: bool, calculator_type: str):
+    """Initialize per-process worker state and calculator."""
+    global _WORKER_SURFACE, _WORKER_MOLECULE, _WORKER_TORSION_HANDLER
+    global _WORKER_SURFACE_ENERGY, _WORKER_MOLECULE_ENERGY, _WORKER_CENTER_IN_CELL
+    global _WORKER_CALCULATOR
+
+    _WORKER_SURFACE = surface.copy()
+    _WORKER_SURFACE.calc = None
+    _WORKER_MOLECULE = molecule.copy()
+    _WORKER_MOLECULE.calc = None
+    _WORKER_TORSION_HANDLER = TorsionHandler(_WORKER_MOLECULE)
+    _WORKER_SURFACE_ENERGY = surface_energy
+    _WORKER_MOLECULE_ENERGY = molecule_energy
+    _WORKER_CENTER_IN_CELL = center_in_cell
+    _WORKER_CALCULATOR = CalculatorManager.get_calculator(calculator_type)
+
+
+def _apply_rotation_worker(atoms: Atoms, euler_angles: np.ndarray):
+    """Rotate atoms in place using ZYX Euler angles (degrees)."""
+    angles_rad = np.deg2rad(euler_angles)
+    alpha, beta, gamma = angles_rad
+
+    Rx = np.array([
+        [1, 0, 0],
+        [0, np.cos(alpha), -np.sin(alpha)],
+        [0, np.sin(alpha), np.cos(alpha)]
+    ])
+    Ry = np.array([
+        [np.cos(beta), 0, np.sin(beta)],
+        [0, 1, 0],
+        [-np.sin(beta), 0, np.cos(beta)]
+    ])
+    Rz = np.array([
+        [np.cos(gamma), -np.sin(gamma), 0],
+        [np.sin(gamma), np.cos(gamma), 0],
+        [0, 0, 1]
+    ])
+    R = Rz @ Ry @ Rx
+
+    com = atoms.get_center_of_mass()
+    positions = atoms.get_positions()
+    relative_pos = positions - com
+    rotated_pos = relative_pos @ R.T
+    atoms.set_positions(rotated_pos + com)
+
+
+def _evaluate_individual_worker(task: Tuple[int, Dict]) -> Tuple[int, float, Optional[Atoms]]:
+    """Evaluate one individual in a worker process."""
+    idx, individual = task
+    try:
+        surface_copy = _WORKER_SURFACE.copy()
+        molecule_copy = _WORKER_MOLECULE.copy()
+
+        if _WORKER_TORSION_HANDLER.n_torsions > 0:
+            molecule_copy = _WORKER_TORSION_HANDLER.apply_torsions(
+                molecule_copy,
+                individual['torsions']
+            )
+
+        molecule_copy.translate(individual['position'] - molecule_copy.get_center_of_mass())
+        _apply_rotation_worker(molecule_copy, individual['orientation'])
+
+        if _WORKER_CENTER_IN_CELL:
+            cell = np.array(surface_copy.get_cell())
+            A2 = cell[:2, :2]
+            com = molecule_copy.get_center_of_mass()
+            try:
+                inv = np.linalg.inv(A2)
+                frac_xy = inv @ com[:2]
+                frac_xy = frac_xy % 1.0
+                new_xy = A2 @ frac_xy
+                shift = np.array([new_xy[0] - com[0],
+                                  new_xy[1] - com[1],
+                                  0.0])
+                molecule_copy.translate(shift)
+            except np.linalg.LinAlgError:
+                pass
+
+        system = surface_copy + molecule_copy
+        fixed_indices = list(range(len(surface_copy)))
+        system.set_constraint(FixAtoms(indices=fixed_indices))
+        system.calc = _WORKER_CALCULATOR
+
+        energy = system.get_potential_energy()
+        e_ads = energy - (_WORKER_SURFACE_ENERGY + _WORKER_MOLECULE_ENERGY)
+        return idx, e_ads, system
+    except Exception as e:
+        logger.warning(f"Energy calculation failed in worker: {e}")
+        return idx, 1000.0, None
 
 
 class GeneticAlgorithm:
@@ -32,12 +138,14 @@ class GeneticAlgorithm:
 
     def __init__(self, surface: Atoms, molecule: Atoms, calculator,
                  surface_energy: float, molecule_energy: float,
+                 calculator_type: Optional[str] = None,
                  n_fixed_layers: int = 1,
                  generations: int = 50, population_size: int = 30,
                  mutation_rate: float = 0.3, crossover_rate: float = 0.7,
                  elite_size: int = 5, verbose: bool = True,
                  search_radius: Optional[float] = None,
-                 center_in_cell: bool = True):
+                 center_in_cell: bool = True,
+                 n_workers: Optional[int] = None):
         """
         Initialize GA.
 
@@ -45,6 +153,8 @@ class GeneticAlgorithm:
             surface: Surface structure
             molecule: Molecule structure
             calculator: ASE calculator
+            calculator_type: CalculatorManager calculator type string.
+                            Required for parallel population evaluation workers.
             surface_energy: Reference energy of surface
             molecule_energy: Reference energy of molecule
             n_fixed_layers: Number of layers to keep fixed (info only, all surface fixed in GA)
@@ -60,10 +170,15 @@ class GeneticAlgorithm:
             center_in_cell: If True, snap the molecule's center-of-mass back into
                             the central unit cell after every placement, so it
                             never wraps to an edge via PBC.
+            n_workers: Number of evaluation workers. If None, uses
+                       SLURM_CPUS_PER_TASK (when set) or os.cpu_count().
         """
-        self.surface = surface
-        self.molecule = molecule
+        self.surface = surface.copy()
+        self.surface.calc = None
+        self.molecule = molecule.copy()
+        self.molecule.calc = None
         self.calculator = calculator
+        self.calculator_type = calculator_type
         self.surface_energy = surface_energy
         self.molecule_energy = molecule_energy
         self.n_fixed_layers = n_fixed_layers
@@ -79,6 +194,7 @@ class GeneticAlgorithm:
         # Cell-centering controls
         self.center_in_cell = center_in_cell
         self._user_search_radius = search_radius   # may be None
+        self.n_workers = self._resolve_worker_count(n_workers)
 
         # Surface properties (also resolves self.search_radius)
         self._analyze_surface()
@@ -209,14 +325,65 @@ class GeneticAlgorithm:
     # ------------------------------------------------------------------
     def _evaluate_population(self):
         """Evaluate fitness of all individuals."""
-        for individual in self.population:
-            if individual['energy'] is None:
-                individual['energy'] = self._calculate_energy(individual)
-                self.fitness_history.append(individual['energy'])
+        pending = [(idx, individual) for idx, individual in enumerate(self.population)
+                   if individual['energy'] is None]
+        if not pending:
+            return
 
-                if individual['energy'] < self.best_energy:
-                    self.best_energy = individual['energy']
-                    self.best_individual = individual.copy()
+        if self.n_workers == 1 or not self.calculator_type:
+            self._evaluate_population_serial(pending)
+            return
+
+        try:
+            with ProcessPoolExecutor(
+                max_workers=self.n_workers,
+                initializer=_init_energy_worker,
+                initargs=(
+                    self.surface,
+                    self.molecule,
+                    self.surface_energy,
+                    self.molecule_energy,
+                    self.center_in_cell,
+                    self.calculator_type,
+                )
+            ) as executor:
+                for idx, energy, structure in executor.map(_evaluate_individual_worker, pending):
+                    individual = self.population[idx]
+                    individual['energy'] = energy
+                    individual['structure'] = structure
+                    self.fitness_history.append(energy)
+                    if energy < self.best_energy:
+                        self.best_energy = energy
+                        self.best_individual = individual.copy()
+        except Exception as e:
+            logger.warning(f"Parallel evaluation failed, falling back to serial: {e}")
+            self._evaluate_population_serial(pending)
+
+    @staticmethod
+    def _resolve_worker_count(n_workers: Optional[int]) -> int:
+        """Resolve worker count from explicit value, SLURM, or local CPU count."""
+        if n_workers is not None:
+            return max(1, int(n_workers))
+
+        slurm_cpus = os.environ.get("SLURM_CPUS_PER_TASK")
+        if slurm_cpus:
+            try:
+                return max(1, int(slurm_cpus))
+            except ValueError:
+                logger.warning(f"Invalid SLURM_CPUS_PER_TASK={slurm_cpus!r}, using os.cpu_count()")
+
+        return max(1, os.cpu_count() or 1)
+
+    def _evaluate_population_serial(self, pending: List[Tuple[int, Dict]]):
+        """Serial evaluation fallback."""
+        for idx, individual in pending:
+            energy = self._calculate_energy(individual)
+            individual['energy'] = energy
+            self.population[idx] = individual
+            self.fitness_history.append(energy)
+            if energy < self.best_energy:
+                self.best_energy = energy
+                self.best_individual = individual.copy()
 
     def _calculate_energy(self, individual: Dict) -> float:
         """Calculate adsorption energy of a single placement."""
