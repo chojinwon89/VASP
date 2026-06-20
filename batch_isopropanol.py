@@ -127,6 +127,7 @@ def run_one_system(system, calc):
         surface=surface_relaxed,
         molecule=molecule_relaxed,
         calculator=calc,
+        calculator_type=CALCULATOR_TYPE,
         surface_energy=E_surf,
         molecule_energy=E_mol,
         n_fixed_layers=N_FIXED_LAYERS,
