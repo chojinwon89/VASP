@@ -21,7 +21,8 @@ export MKL_NUM_THREADS=$SLURM_CPUS_PER_TASK
 export TORCH_NUM_THREADS=$SLURM_CPUS_PER_TASK
 export NUMEXPR_NUM_THREADS=$SLURM_CPUS_PER_TASK
 
-cd ~/goad-global-optimization
+# Always cd to the directory where sbatch was submitted from
+cd $SLURM_SUBMIT_DIR
 
 mkdir -p slurm-logs runs
 
@@ -31,6 +32,7 @@ echo "Host:      $(hostname)"
 echo "Job ID:    ${SLURM_JOB_ID}"
 echo "Array ID:  ${SLURM_ARRAY_TASK_ID}"
 echo "CPUs:      ${SLURM_CPUS_PER_TASK}"
+echo "Work dir:  $(pwd)"
 echo "Started:   $(date)"
 echo "=========================================="
 
