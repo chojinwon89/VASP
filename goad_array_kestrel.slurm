@@ -1,11 +1,11 @@
 #!/bin/bash
 #SBATCH --job-name=goad_array
 #SBATCH --account=ccpc
-#SBATCH --partition=shared
-#SBATCH --nodes=1
-#SBATCH --ntasks=1
-#SBATCH --cpus-per-task=16
-#SBATCH --mem=64G
+#SBATCH --partition=standard
+#SBATCH --nodes=4
+#SBATCH --ntasks=4                      # 1 task per node
+#SBATCH --cpus-per-task=104             # full 104 cores per node
+#SBATCH --mem=0                         # use all available memory on each node
 #SBATCH --time=12:00:00
 #SBATCH --output=slurm-logs/goad_array-%A_%a.out
 #SBATCH --error=slurm-logs/goad_array-%A_%a.err
@@ -31,7 +31,8 @@ echo "GOAD Array Task ${SLURM_ARRAY_TASK_ID}"
 echo "Host:      $(hostname)"
 echo "Job ID:    ${SLURM_JOB_ID}"
 echo "Array ID:  ${SLURM_ARRAY_TASK_ID}"
-echo "CPUs:      ${SLURM_CPUS_PER_TASK}"
+echo "Nodes:     ${SLURM_NNODES}"
+echo "CPUs/task: ${SLURM_CPUS_PER_TASK}"
 echo "Work dir:  $(pwd)"
 echo "Started:   $(date)"
 echo "=========================================="
