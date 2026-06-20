@@ -8,47 +8,43 @@ Generate a custom tasks CSV with per-pair control over:
   - GA generations
   - calculator (sevennet_omni, mattersim, etc.)
 
-Use this when you want to:
-  - Add more seeds to uncertain/flexible systems
-  - Rerun specific surface+molecule pairs with larger GA settings
-  - Run the same pairs with multiple calculators for benchmarking
-  - Append extra tasks without regenerating all 486
+Two ways to define CUSTOM_TASKS:
+
+  1. Manual list (this file) — explicit entry per surface+molecule+calculator
+  2. Loop builder             — see workflow/Custom_Tasks.py for a cleaner
+                                approach when running many surfaces/molecules
 
 Output: workflow/tasks_custom.csv
 
 Usage
 -----
-    # 1. Edit CUSTOM_TASKS below
     python workflow/make_tasks_custom.py
-
-    # 2. Submit (N = total rows - 1 printed at end of script)
     sbatch --array=0-<N>%20 goad_array_kestrel.slurm workflow/tasks_custom.csv
 
-NOTE: To run two calculators on the same pair, add two separate entries
-      with different "calculator" values — one value per entry only.
+NOTE: one calculator value per entry only.
+      To run two calculators, add two separate entries.
 """
 
 import csv
 from pathlib import Path
 
 # ---------------------------------------------------------------------------
-# DEFAULT GA settings (used when not overridden per pair)
+# DEFAULT GA settings (fallback when not overridden per entry)
 # ---------------------------------------------------------------------------
 DEFAULT = {
     "seeds":           [0, 1, 2, 3, 4, 5],
     "population_size": 60,
     "generations":     100,
-    "calculator":      "sevennet_omni",   # one value only
+    "calculator":      "sevennet_omni",
 }
 
 # ---------------------------------------------------------------------------
-# CUSTOM TASKS — edit this list
+# CUSTOM TASKS — edit this list manually
 # Each entry: (surface, adsorbate, overrides_dict)
 # Leave overrides={} to use all defaults
-# To run two calculators: add two entries with different "calculator" values
 # ---------------------------------------------------------------------------
 CUSTOM_TASKS = [
-    # --- sevennet_omni runs ---
+    # --- sevennet_omni ---
     ("Cu111", "isopropanol", {"seeds": [0,1,2,3,4,5], "calculator": "sevennet_omni"}),
     ("Cu111", "glycerol",    {"seeds": [0,1,2,3,4,5], "population_size": 60, "generations": 120, "calculator": "sevennet_omni"}),
     ("Cu110", "glycerol",    {"seeds": [0,1,2,3,4,5], "population_size": 60, "generations": 120, "calculator": "sevennet_omni"}),
@@ -56,7 +52,7 @@ CUSTOM_TASKS = [
     ("Cu111", "propanol",    {"seeds": [0,1,2], "population_size": 60, "generations": 100, "calculator": "sevennet_omni"}),
     ("Pt111", "propanol",    {"seeds": [0,1,2], "population_size": 60, "generations": 100, "calculator": "sevennet_omni"}),
 
-    # --- mattersim runs — same pairs for benchmarking ---
+    # --- mattersim (same pairs for benchmarking) ---
     ("Cu111", "isopropanol", {"seeds": [0,1,2,3,4,5], "calculator": "mattersim"}),
     ("Cu111", "glycerol",    {"seeds": [0,1,2,3,4,5], "population_size": 60, "generations": 120, "calculator": "mattersim"}),
     ("Cu110", "glycerol",    {"seeds": [0,1,2,3,4,5], "population_size": 60, "generations": 120, "calculator": "mattersim"}),
