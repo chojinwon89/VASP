@@ -2,13 +2,19 @@
 #SBATCH --job-name=goad_array
 #SBATCH --account=ccpc
 #SBATCH --partition=standard
-#SBATCH --nodes=4
-#SBATCH --ntasks=4                      # 1 task per node
-#SBATCH --cpus-per-task=104             # full 104 cores per node
-#SBATCH --mem=0                         # use all available memory on each node
+#SBATCH --nodes=1                       # 1 node per task (GA is single-node)
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=104             # full 104 cores per node for threading
+#SBATCH --mem=0                         # use all available memory on node
 #SBATCH --time=12:00:00
 #SBATCH --output=slurm-logs/goad_array-%A_%a.out
 #SBATCH --error=slurm-logs/goad_array-%A_%a.err
+
+# NOTE: The GA in this code is single-node (no MPI/multiprocessing).
+# To use multiple nodes, increase the array throttle limit (e.g. %40)
+# so more tasks run simultaneously on separate nodes:
+#   sbatch --array=0-107%40 goad_array_kestrel.slurm workflow/tasks_custom.csv
+#   ↑ This runs 40 independent tasks at once, each on its own node (= 40 nodes)
 
 set -euo pipefail
 
@@ -31,7 +37,6 @@ echo "GOAD Array Task ${SLURM_ARRAY_TASK_ID}"
 echo "Host:      $(hostname)"
 echo "Job ID:    ${SLURM_JOB_ID}"
 echo "Array ID:  ${SLURM_ARRAY_TASK_ID}"
-echo "Nodes:     ${SLURM_NNODES}"
 echo "CPUs/task: ${SLURM_CPUS_PER_TASK}"
 echo "Work dir:  $(pwd)"
 echo "Started:   $(date)"
@@ -41,7 +46,7 @@ python -c "import torch; print('torch:', torch.__version__, '| cuda:', torch.cud
 
 # Accept optional custom CSV as first positional argument
 # Default: workflow/tasks.csv
-# Custom:  sbatch --array=0-N goad_array_kestrel.slurm workflow/tasks_custom.csv
+# Custom:  sbatch --array=0-N%<throttle> goad_array_kestrel.slurm workflow/tasks_custom.csv
 TASKS_CSV="${1:-workflow/tasks.csv}"
 
 echo "Tasks CSV: ${TASKS_CSV}"
