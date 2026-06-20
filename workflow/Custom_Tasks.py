@@ -13,6 +13,12 @@ and MOL_SETTINGS), then run:
 This generates workflow/tasks_custom.csv, ready for:
 
     sbatch --array=0-<N>%20 goad_array_kestrel.slurm workflow/tasks_custom.csv
+
+Available calculators:
+    sevennet_omni   — SevenNet-OMNI (omat24, PBE+D3)
+    5m              — MatterSim 5M
+    5m_d3           — MatterSim 5M + D3 dispersion
+    1m              — MatterSim 1M
 """
 
 import csv
@@ -30,7 +36,9 @@ SURFACES = [
 
 CALCS = [
     "sevennet_omni",
-    "mattersim",
+    "5m",           # MatterSim 5M
+    # "5m_d3",      # MatterSim 5M + D3 dispersion
+    # "1m",         # MatterSim 1M
 ]
 
 SEEDS = [0, 1, 2, 3, 4, 5]
@@ -58,10 +66,10 @@ CUSTOM_TASKS = [
 # ---------------------------------------------------------------------------
 # Preview what will be generated
 # ---------------------------------------------------------------------------
-print(f"Surfaces:   {SURFACES}")
-print(f"Molecules:  {list(MOL_SETTINGS.keys())}")
-print(f"Calculators:{CALCS}")
-print(f"Seeds:      {SEEDS}")
+print(f"Surfaces:    {SURFACES}")
+print(f"Molecules:   {list(MOL_SETTINGS.keys())}")
+print(f"Calculators: {CALCS}")
+print(f"Seeds:       {SEEDS}")
 print(f"Total entries in CUSTOM_TASKS: {len(CUSTOM_TASKS)}")
 print(f"Total tasks (rows in CSV):     {len(CUSTOM_TASKS) * len(SEEDS)}")
 print()

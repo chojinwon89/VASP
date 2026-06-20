@@ -6,13 +6,17 @@ Generate a custom tasks CSV with per-pair control over:
   - which seeds to run
   - GA population_size
   - GA generations
-  - calculator (sevennet_omni, mattersim, etc.)
+  - calculator
+
+Available calculators:
+    sevennet_omni   — SevenNet-OMNI (omat24, PBE+D3)
+    5m              — MatterSim 5M
+    5m_d3           — MatterSim 5M + D3 dispersion
+    1m              — MatterSim 1M
 
 Two ways to define CUSTOM_TASKS:
-
   1. Manual list (this file) — explicit entry per surface+molecule+calculator
-  2. Loop builder             — see workflow/Custom_Tasks.py for a cleaner
-                                approach when running many surfaces/molecules
+  2. Loop builder             — see workflow/Custom_Tasks.py
 
 Output: workflow/tasks_custom.csv
 
@@ -52,13 +56,13 @@ CUSTOM_TASKS = [
     ("Cu111", "propanol",    {"seeds": [0,1,2], "population_size": 60, "generations": 100, "calculator": "sevennet_omni"}),
     ("Pt111", "propanol",    {"seeds": [0,1,2], "population_size": 60, "generations": 100, "calculator": "sevennet_omni"}),
 
-    # --- mattersim (same pairs for benchmarking) ---
-    ("Cu111", "isopropanol", {"seeds": [0,1,2,3,4,5], "calculator": "mattersim"}),
-    ("Cu111", "glycerol",    {"seeds": [0,1,2,3,4,5], "population_size": 60, "generations": 120, "calculator": "mattersim"}),
-    ("Cu110", "glycerol",    {"seeds": [0,1,2,3,4,5], "population_size": 60, "generations": 120, "calculator": "mattersim"}),
-    ("Cu001", "glycerol",    {"seeds": [0,1,2,3,4,5], "population_size": 60, "generations": 120, "calculator": "mattersim"}),
-    ("Cu111", "propanol",    {"seeds": [0,1,2], "population_size": 60, "generations": 100, "calculator": "mattersim"}),
-    ("Pt111", "propanol",    {"seeds": [0,1,2], "population_size": 60, "generations": 100, "calculator": "mattersim"}),
+    # --- MatterSim 5M (same pairs for benchmarking) ---
+    ("Cu111", "isopropanol", {"seeds": [0,1,2,3,4,5], "calculator": "5m"}),
+    ("Cu111", "glycerol",    {"seeds": [0,1,2,3,4,5], "population_size": 60, "generations": 120, "calculator": "5m"}),
+    ("Cu110", "glycerol",    {"seeds": [0,1,2,3,4,5], "population_size": 60, "generations": 120, "calculator": "5m"}),
+    ("Cu001", "glycerol",    {"seeds": [0,1,2,3,4,5], "population_size": 60, "generations": 120, "calculator": "5m"}),
+    ("Cu111", "propanol",    {"seeds": [0,1,2], "population_size": 60, "generations": 100, "calculator": "5m"}),
+    ("Pt111", "propanol",    {"seeds": [0,1,2], "population_size": 60, "generations": 100, "calculator": "5m"}),
 ]
 
 # ---------------------------------------------------------------------------
