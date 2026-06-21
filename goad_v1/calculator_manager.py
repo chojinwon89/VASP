@@ -1,7 +1,7 @@
 """
 Calculator management for GOAD v1.0
 
-Handles different MatterSim and SevenNet calculator configurations
+Handles different MatterSim, SevenNet, CHGNet, and MACE calculator configurations
 """
 
 import logging
@@ -64,6 +64,44 @@ class CalculatorManager:
         logger.info("✓ SevenNet-OMat loaded successfully")
         return calc
 
+    # ---------------------- CHGNet ----------------------
+    @staticmethod
+    def get_chgnet():
+        """CHGNet universal interatomic potential (v0.3.0)."""
+        from chgnet.model.dynamics import CHGNetCalculator
+        logger.info("Loading CHGNet calculator...")
+        calc = CHGNetCalculator()
+        logger.info("✓ CHGNet loaded successfully")
+        return calc
+
+    # ---------------------- MACE ----------------------
+    @staticmethod
+    def get_mace_mp():
+        """MACE-MP-0 universal potential (medium model, no dispersion)."""
+        from mace.calculators import mace_mp
+        logger.info("Loading MACE-MP-0 (medium) calculator...")
+        calc = mace_mp(model="medium", dispersion=False, default_dtype="float32")
+        logger.info("✓ MACE-MP-0 loaded successfully")
+        return calc
+
+    @staticmethod
+    def get_mace_mp_d3():
+        """MACE-MP-0 universal potential (medium model) + D3 dispersion."""
+        from mace.calculators import mace_mp
+        logger.info("Loading MACE-MP-0 (medium) + D3 calculator...")
+        calc = mace_mp(model="medium", dispersion=True, default_dtype="float32")
+        logger.info("✓ MACE-MP-0 + D3 loaded successfully")
+        return calc
+
+    @staticmethod
+    def get_mace_off():
+        """MACE-OFF23 organic force field (medium model)."""
+        from mace.calculators import mace_off
+        logger.info("Loading MACE-OFF23 (medium) calculator...")
+        calc = mace_off(model="medium", default_dtype="float32")
+        logger.info("✓ MACE-OFF23 loaded successfully")
+        return calc
+
     # ---------------------- Dispatcher ----------------------
     @staticmethod
     def get_calculator(calculator_type: str = "1m"):
@@ -81,16 +119,30 @@ class CalculatorManager:
         if t in ("sevennet_omat", "7net_omat"):
             return CalculatorManager.get_sevennet_omat()
 
-        raise ValueError(f"Unknown calculator type: {calculator_type}")
+        if t in ("chgnet",):                        return CalculatorManager.get_chgnet()
+
+        if t in ("mace", "mace_mp", "mace_mp0"):   return CalculatorManager.get_mace_mp()
+        if t in ("mace_d3", "mace_mp_d3"):          return CalculatorManager.get_mace_mp_d3()
+        if t in ("mace_off", "mace_off23"):         return CalculatorManager.get_mace_off()
+
+        raise ValueError(
+            f"Unknown calculator type: {calculator_type!r}\n"
+            f"Available: 1m, 5m, 5m_d3, sevennet_omni, sevennet_omni_mpa, "
+            f"sevennet_omat, chgnet, mace_mp, mace_mp_d3, mace_off"
+        )
 
     @staticmethod
     def get_calculator_info(calculator_type: str) -> dict:
         info_map = {
-            "1m":                {"name": "MatterSim 1M",           "dispersion": "No"},
-            "5m":                {"name": "MatterSim 5M",           "dispersion": "No"},
-            "5m_d3":             {"name": "MatterSim 5M + D3",      "dispersion": "Yes (D3, post-hoc)"},
-            "sevennet_omni":     {"name": "SevenNet-OMNI (omat24)", "dispersion": "Yes (D3, native via OMat24)"},
-            "sevennet_omni_mpa": {"name": "SevenNet-OMNI (mpa)",    "dispersion": "No (PBE head)"},
-            "sevennet_omat":     {"name": "SevenNet-OMat",          "dispersion": "Yes (D3, native)"},
+            "1m":                {"name": "MatterSim 1M",             "dispersion": "No"},
+            "5m":                {"name": "MatterSim 5M",             "dispersion": "No"},
+            "5m_d3":             {"name": "MatterSim 5M + D3",        "dispersion": "Yes (D3, post-hoc)"},
+            "sevennet_omni":     {"name": "SevenNet-OMNI (omat24)",   "dispersion": "Yes (D3, native via OMat24)"},
+            "sevennet_omni_mpa": {"name": "SevenNet-OMNI (mpa)",      "dispersion": "No (PBE head)"},
+            "sevennet_omat":     {"name": "SevenNet-OMat",            "dispersion": "Yes (D3, native)"},
+            "chgnet":            {"name": "CHGNet",                   "dispersion": "No"},
+            "mace_mp":           {"name": "MACE-MP-0 (medium)",       "dispersion": "No"},
+            "mace_mp_d3":        {"name": "MACE-MP-0 (medium) + D3",  "dispersion": "Yes (D3)"},
+            "mace_off":          {"name": "MACE-OFF23 (medium)",      "dispersion": "No"},
         }
         return info_map.get(calculator_type.lower().replace("+", "_").replace("-", "_"), {})
