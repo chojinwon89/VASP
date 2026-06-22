@@ -14,7 +14,7 @@ set -euo pipefail
 # ---------- activate conda (same as your interactive shell) ----------
 module purge
 module load conda
-conda activate goad
+conda activate /scratch/jcho5/envs/goad
 
 # ---------- thread control (CPU-bound) ----------
 export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
@@ -23,7 +23,7 @@ export TORCH_NUM_THREADS=$SLURM_CPUS_PER_TASK
 export NUMEXPR_NUM_THREADS=$SLURM_CPUS_PER_TASK
 
 # ---------- workdir ----------
-cd ~/goad-global-optimization
+cd /scratch/jcho5/goad-global-optimization
 
 # ---------- run info ----------
 echo "Host=$(hostname)  Job=$SLURM_JOB_ID  Partition=$SLURM_JOB_PARTITION  CPUs=$SLURM_CPUS_PER_TASK"

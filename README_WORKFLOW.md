@@ -10,7 +10,7 @@
 ## Supported surfaces (18 total)
 
 | Metal | (111) | (110) | (100/001) |
-|-------|-------|-------|-----------|
+|-------|-------|-------|----------|
 | Cu    | Cu111 | Cu110 | Cu001     |
 | Pt    | Pt111 | Pt110 | Pt100     |
 | Pd    | Pd111 | Pd110 | Pd100     |
@@ -46,6 +46,7 @@ All slabs: 4×4×4, 15 Å vacuum, built with ASE default lattice constants.
 
 ### Step 1 — Generate input structures
 ```bash
+cd /scratch/jcho5/goad-global-optimization
 python prep_inputs.py
 ```
 Builds all 18 surface CIFs and all 9 molecule CIFs under `inputs/`.
