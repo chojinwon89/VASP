@@ -2,6 +2,13 @@
 Calculator management for GOAD v1.0
 
 Handles different MatterSim, SevenNet, CHGNet, and MACE calculator configurations
+
+MatterSim v1.2.3 note
+---------------------
+In v1.2.3, Potential.from_checkpoint only accepts model_name="m3gnet".
+The 5M checkpoint must be selected via load_path, not model_name.
+    1M: MatterSimCalculator()                                    (default)
+    5M: MatterSimCalculator(load_path="mattersim-v1.0.0-5M")
 """
 
 import logging
@@ -26,7 +33,8 @@ class CalculatorManager:
     def get_mattersim_5m():
         from mattersim.forcefield import MatterSimCalculator
         logger.info("Loading MatterSim 5M calculator...")
-        calc = MatterSimCalculator(model_name="mattersim-v1.0.0-5M")
+        # v1.2.3: model_name must be "m3gnet"; select 5M via load_path
+        calc = MatterSimCalculator(load_path="mattersim-v1.0.0-5M")
         logger.info("✓ MatterSim 5M loaded successfully")
         return calc
 
@@ -35,7 +43,7 @@ class CalculatorManager:
         from mattersim.forcefield import MatterSimCalculator
         logger.info("Loading MatterSim 5M + D3 calculator...")
         try:
-            calc = MatterSimCalculator(model_name="mattersim-v1.0.0-5M", use_d3=True)
+            calc = MatterSimCalculator(load_path="mattersim-v1.0.0-5M", use_d3=True)
             logger.info("✓ MatterSim 5M + D3 loaded successfully")
             return calc
         except Exception as e:
