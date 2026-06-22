@@ -43,27 +43,49 @@ DEFAULT = {
 }
 
 # ---------------------------------------------------------------------------
-# CUSTOM TASKS — edit this list manually
-# Each entry: (surface, adsorbate, overrides_dict)
-# Leave overrides={} to use all defaults
+# Helper: build entries for a list of surfaces × molecules × calculators
 # ---------------------------------------------------------------------------
-CUSTOM_TASKS = [
-    # --- sevennet_omni ---
-    ("Cu111", "isopropanol", {"seeds": [0,1,2,3,4,5], "calculator": "sevennet_omni"}),
-    ("Cu111", "glycerol",    {"seeds": [0,1,2,3,4,5], "population_size": 60, "generations": 120, "calculator": "sevennet_omni"}),
-    ("Cu110", "glycerol",    {"seeds": [0,1,2,3,4,5], "population_size": 60, "generations": 120, "calculator": "sevennet_omni"}),
-    ("Cu001", "glycerol",    {"seeds": [0,1,2,3,4,5], "population_size": 60, "generations": 120, "calculator": "sevennet_omni"}),
-    ("Cu111", "propanol",    {"seeds": [0,1,2], "population_size": 60, "generations": 100, "calculator": "sevennet_omni"}),
-    ("Pt111", "propanol",    {"seeds": [0,1,2], "population_size": 60, "generations": 100, "calculator": "sevennet_omni"}),
+def make_entries(surfaces, molecules, calculators, seeds=None, pop=60):
+    seeds = seeds or DEFAULT["seeds"]
+    entries = []
+    for surf in surfaces:
+        for mol, gen in molecules.items():
+            for calc in calculators:
+                entries.append(
+                    (surf, mol, {"seeds": seeds, "population_size": pop,
+                                 "generations": gen, "calculator": calc})
+                )
+    return entries
 
-    # --- MatterSim 5M (same pairs for benchmarking) ---
-    ("Cu111", "isopropanol", {"seeds": [0,1,2,3,4,5], "calculator": "5m"}),
-    ("Cu111", "glycerol",    {"seeds": [0,1,2,3,4,5], "population_size": 60, "generations": 120, "calculator": "5m"}),
-    ("Cu110", "glycerol",    {"seeds": [0,1,2,3,4,5], "population_size": 60, "generations": 120, "calculator": "5m"}),
-    ("Cu001", "glycerol",    {"seeds": [0,1,2,3,4,5], "population_size": 60, "generations": 120, "calculator": "5m"}),
-    ("Cu111", "propanol",    {"seeds": [0,1,2], "population_size": 60, "generations": 100, "calculator": "5m"}),
-    ("Pt111", "propanol",    {"seeds": [0,1,2], "population_size": 60, "generations": 100, "calculator": "5m"}),
-]
+
+# ---------------------------------------------------------------------------
+# MOLECULES with their generation counts
+# ---------------------------------------------------------------------------
+MOLECULES = {
+    "glycerol":    120,
+    "propanol":    100,
+    "isopropanol": 100,
+}
+
+CALCS = ["sevennet_omni", "5m"]
+
+# ---------------------------------------------------------------------------
+# CUSTOM TASKS
+# ---------------------------------------------------------------------------
+CUSTOM_TASKS = (
+    # Cu surfaces
+    make_entries(["Cu111", "Cu110", "Cu001"], MOLECULES, CALCS) +
+    # Pt surfaces
+    make_entries(["Pt111", "Pt110", "Pt100"], MOLECULES, CALCS) +
+    # Pd surfaces
+    make_entries(["Pd111", "Pd110", "Pd100"], MOLECULES, CALCS) +
+    # Ni surfaces
+    make_entries(["Ni111", "Ni110", "Ni100"], MOLECULES, CALCS) +
+    # Ag surfaces
+    make_entries(["Ag111", "Ag110", "Ag100"], MOLECULES, CALCS) +
+    # Au surfaces
+    make_entries(["Au111", "Au110", "Au100"], MOLECULES, CALCS)
+)
 
 # ---------------------------------------------------------------------------
 # Generate CSV
@@ -98,6 +120,12 @@ with out.open("w", newline="") as f:
     writer.writerows(rows)
 
 print(f"Wrote {task_id} tasks to {out}")
+print()
+# Show breakdown by metal
+from collections import Counter
+metals = Counter(r["surface"][:2] for r in rows)
+for metal, count in sorted(metals.items()):
+    print(f"  {metal}: {count} tasks")
 print()
 print("Submit with:")
 print(f"  sbatch --array=0-{task_id-1}%20 goad_array_kestrel.slurm workflow/tasks_custom.csv")
