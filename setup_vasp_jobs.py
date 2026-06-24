@@ -5,43 +5,30 @@ setup_vasp_jobs.py
 After running extract_poscar.py, this script populates each POSCAR directory
 with the remaining VASP input files needed for DFT verification:
 
-    INCAR        -- your settings from the GOAD-MLIP meeting
-    KPOINTS      -- Monkhorst-Pack 2x2x1
-    POTCAR       -- concatenated PBE PAW potentials, species order from POSCAR
+    INCAR            -- relaxation settings
+    KPOINTS          -- Monkhorst-Pack 2x2x1
+    POTCAR           -- concatenated PBE PAW potentials (species order from POSCAR)
     slm.vasp.kestrel -- Kestrel Slurm submission script
 
 Usage
 -----
-    # Generate inputs for the best-seed POSCARs (recommended):
-    python setup_vasp_jobs.py
+    # Point --poscar-dir at whichever folder holds the POSCAR subdirectories:
+    python setup_vasp_jobs.py --poscar-dir /scratch/jcho5/.../poscar/best
+    python setup_vasp_jobs.py --poscar-dir /scratch/jcho5/.../poscar/best2
+    python setup_vasp_jobs.py --poscar-dir /scratch/jcho5/.../poscar/best3
 
-    # Generate inputs for ALL per-seed POSCARs as well:
-    python setup_vasp_jobs.py --all-seeds
-
-    # Specify a different poscar/ directory:
-    python setup_vasp_jobs.py --poscar-dir /path/to/poscar
-
-    # Dry-run: print what would be done without writing anything:
-    python setup_vasp_jobs.py --dry-run
+    # Dry-run: see what would be written without touching any files:
+    python setup_vasp_jobs.py --poscar-dir /scratch/jcho5/.../poscar/best --dry-run
 
 Prerequisites
 -------------
-The VASP PBE PAW pseudopotential library must be available on the machine.
-Set the environment variable VASP_PP_PATH to the root of your POTCAR library,
-e.g. in your ~/.bashrc:
+Set VASP_PP_PATH to the root of your POTCAR library, e.g.:
 
     export VASP_PP_PATH=/projects/vasp/pps/PBE54
 
-The script looks for pseudopotentials in:
-    $VASP_PP_PATH/<Element>/POTCAR        (preferred)
-    $VASP_PP_PATH/<Element>_pv/POTCAR     (high-valence variant)
-    $VASP_PP_PATH/<Element>_sv/POTCAR     (semi-core variant)
+Or pass it explicitly:
 
-POTCAR element mapping (PBE recommended PAW sets for common elements):
-    Cu  -> Cu   (or Cu_pv for more accurate d-bands)
-    C   -> C
-    H   -> H
-    O   -> O
+    python setup_vasp_jobs.py --poscar-dir ... --pp-path /projects/vasp/pps/PBE54
 """
 
 import argparse
@@ -51,7 +38,7 @@ from pathlib import Path
 
 
 # ---------------------------------------------------------------------------
-# INCAR template  (settings from your research group)
+# INCAR template
 # ---------------------------------------------------------------------------
 INCAR_TEMPLATE = """\
 SYSTEM = {system}
@@ -99,7 +86,7 @@ Monkhorst-Pack
 """
 
 # ---------------------------------------------------------------------------
-# Slurm template  (Kestrel, your exact header)
+# Slurm template  (Kestrel)
 # ---------------------------------------------------------------------------
 SLURM_TEMPLATE = """\
 #!/bin/bash
@@ -125,8 +112,6 @@ srun vasp_std
 
 # ---------------------------------------------------------------------------
 # POTCAR element name mapping
-# Keys: chemical symbol  Values: preferred PAW-PBE folder names (in order of
-# preference — first one that exists on disk is used)
 # ---------------------------------------------------------------------------
 POTCAR_MAP = {
     "Cu": ["Cu_pv", "Cu"],
@@ -152,30 +137,20 @@ POTCAR_MAP = {
 # ---------------------------------------------------------------------------
 
 def read_species_from_poscar(poscar_path: Path) -> list:
-    """
-    Parse the element species line from a VASP5 POSCAR.
-    Line 6 (0-indexed: line 5) lists element symbols.
-    Returns e.g. ['Cu', 'C', 'H', 'O']
-    """
+    """Return the list of element symbols from line 6 of a VASP5 POSCAR."""
     lines = poscar_path.read_text().splitlines()
     if len(lines) < 6:
         raise ValueError(f"POSCAR too short: {poscar_path}")
     species = lines[5].split()
-    # Validate: should be element symbols (start with uppercase letter)
     if not all(re.match(r"^[A-Z][a-z]?$", s) for s in species):
         raise ValueError(
             f"Could not parse species from POSCAR line 6: '{lines[5]}'\n"
-            f"Check that vasp5=True was used when writing the POSCAR."
+            "Check that vasp5=True was used when writing the POSCAR."
         )
     return species
 
 
 def find_potcar(element: str, pp_root: Path) -> Path:
-    """
-    Find the POTCAR file for a given element under pp_root.
-    Tries each folder in POTCAR_MAP[element] in order.
-    Raises FileNotFoundError if none found.
-    """
     candidates = POTCAR_MAP.get(element, [element])
     tried = []
     for folder in candidates:
@@ -184,49 +159,37 @@ def find_potcar(element: str, pp_root: Path) -> Path:
         if p.exists():
             return p
     raise FileNotFoundError(
-        f"POTCAR for element '{element}' not found under {pp_root}.\n"
+        f"POTCAR for '{element}' not found under {pp_root}.\n"
         f"Tried: {tried}\n"
-        f"Set VASP_PP_PATH correctly or add '{element}' to POTCAR_MAP."
+        "Set VASP_PP_PATH correctly or add the element to POTCAR_MAP."
     )
 
 
 def build_potcar(species: list, pp_root: Path, out_path: Path,
                  dry_run: bool = False) -> bool:
-    """
-    Concatenate individual element POTCAR files into a combined POTCAR.
-    Returns True on success, False if any element POTCAR is missing.
-    """
-    potcar_parts = []
+    parts = []
     for el in species:
         try:
-            p = find_potcar(el, pp_root)
-            potcar_parts.append(p)
+            parts.append(find_potcar(el, pp_root))
         except FileNotFoundError as exc:
             print(f"  WARNING: {exc}")
             return False
-
     if not dry_run:
         with out_path.open("w") as fout:
-            for p in potcar_parts:
+            for p in parts:
                 fout.write(p.read_text())
-
     return True
 
 
 def setup_job_dir(job_dir: Path, system_name: str,
                   pp_root: Path, dry_run: bool = False) -> dict:
-    """
-    Write INCAR, KPOINTS, POTCAR, slm.vasp.kestrel into job_dir.
-    job_dir must already contain a POSCAR.
-    Returns a status dict.
-    """
+    """Write INCAR, KPOINTS, POTCAR, slm.vasp.kestrel into job_dir."""
     poscar = job_dir / "POSCAR"
     if not poscar.exists():
         return {"status": "skipped", "reason": "no POSCAR"}
 
     status = {"dir": str(job_dir), "status": "ok", "warnings": []}
 
-    # ---- Parse species from POSCAR ------------------------------------------
     try:
         species = read_species_from_poscar(poscar)
     except ValueError as e:
@@ -234,17 +197,10 @@ def setup_job_dir(job_dir: Path, system_name: str,
 
     status["species"] = species
 
-    # ---- INCAR ---------------------------------------------------------------
-    incar_path = job_dir / "INCAR"
     if not dry_run:
-        incar_path.write_text(INCAR_TEMPLATE.format(system=system_name))
+        (job_dir / "INCAR").write_text(INCAR_TEMPLATE.format(system=system_name))
+        (job_dir / "KPOINTS").write_text(KPOINTS_TEMPLATE)
 
-    # ---- KPOINTS -------------------------------------------------------------
-    kpoints_path = job_dir / "KPOINTS"
-    if not dry_run:
-        kpoints_path.write_text(KPOINTS_TEMPLATE)
-
-    # ---- POTCAR -------------------------------------------------------------
     potcar_path = job_dir / "POTCAR"
     if pp_root is not None:
         ok = build_potcar(species, pp_root, potcar_path, dry_run=dry_run)
@@ -255,14 +211,13 @@ def setup_job_dir(job_dir: Path, system_name: str,
             )
             status["status"] = "partial"
     else:
-        # No pp_root set — write a helper script instead
         cat_cmd = " ".join(
             f"$VASP_PP_PATH/{POTCAR_MAP.get(el, [el])[0]}/POTCAR"
             for el in species
         )
         note = (
-            f"# POTCAR not generated automatically.\n"
-            f"# Set VASP_PP_PATH and run:\n"
+            "# POTCAR not generated automatically.\n"
+            "# Set VASP_PP_PATH and run:\n"
             f"cat {cat_cmd} > {potcar_path}\n"
         )
         if not dry_run:
@@ -273,13 +228,10 @@ def setup_job_dir(job_dir: Path, system_name: str,
         )
         status["status"] = "partial"
 
-    # ---- Slurm script -------------------------------------------------------
     job_name = system_name.replace(" ", "_").replace("+", "")[:40]
     slurm_path = job_dir / "slm.vasp.kestrel"
     if not dry_run:
-        slurm_path.write_text(
-            SLURM_TEMPLATE.format(job_name=job_name)
-        )
+        slurm_path.write_text(SLURM_TEMPLATE.format(job_name=job_name))
         slurm_path.chmod(0o755)
 
     return status
@@ -294,34 +246,38 @@ def main():
         description=(
             "Populate VASP job directories (from extract_poscar.py output) "
             "with INCAR, KPOINTS, POTCAR, and slm.vasp.kestrel."
-        )
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument(
-        "--poscar-dir", default="poscar",
-        help="Root of the poscar/ directory written by extract_poscar.py (default: ./poscar)"
-    )
-    parser.add_argument(
-        "--all-seeds", action="store_true",
-        help="Also set up per-seed directories, not just poscar/best/"
+        "--poscar-dir",
+        required=True,
+        metavar="DIR",
+        help=(
+            "Directory whose immediate subdirectories each contain a POSCAR. "
+            "Point this directly at the folder you want to process, e.g.:\n"
+            "  poscar/best    poscar/best2    poscar/best3    poscar/best4"
+        ),
     )
     parser.add_argument(
         "--pp-path", default=None,
         help="Path to VASP PBE PAW pseudopotential library root "
-             "(overrides VASP_PP_PATH env var)"
+             "(overrides VASP_PP_PATH env var)",
     )
     parser.add_argument(
         "--dry-run", action="store_true",
-        help="Print what would be done without writing any files"
+        help="Print what would be done without writing any files",
     )
     args = parser.parse_args()
 
-    poscar_root = Path(args.poscar_dir)
-    if not poscar_root.exists():
-        print(f"ERROR: poscar directory not found: {poscar_root}")
-        print("Run extract_poscar.py first.")
+    poscar_dir = Path(args.poscar_dir)
+    if not poscar_dir.exists():
+        print(f"ERROR: directory not found: {poscar_dir}")
         raise SystemExit(1)
 
-    # Resolve POTCAR library path
+    print(f"Processing POSCAR subdirectories in: {poscar_dir}")
+
+    # ---- Resolve POTCAR library path -----------------------------------------
     pp_path_str = args.pp_path or os.environ.get("VASP_PP_PATH", "")
     pp_root = Path(pp_path_str) if pp_path_str else None
     if pp_root is None:
@@ -332,25 +288,16 @@ def main():
     else:
         print(f"Using POTCAR library: {pp_root}")
 
-    # Collect job directories to process
-    job_dirs = []
-
-    # Always include poscar/best/
-    best_dir = poscar_root / "best"
-    if best_dir.exists():
-        for d in sorted(best_dir.iterdir()):
-            if d.is_dir() and (d / "POSCAR").exists():
-                job_dirs.append(d)
-
-    # Optionally include per-seed directories
-    if args.all_seeds:
-        for d in sorted(poscar_root.iterdir()):
-            if d.is_dir() and d.name != "best" and (d / "POSCAR").exists():
-                job_dirs.append(d)
+    # ---- Collect job directories (all immediate subdirs with a POSCAR) -------
+    job_dirs = [
+        d for d in sorted(poscar_dir.iterdir())
+        if d.is_dir() and (d / "POSCAR").exists()
+    ]
 
     if not job_dirs:
-        print(f"No POSCAR directories found under {poscar_root}.")
-        print("Run extract_poscar.py first to generate POSCAR files.")
+        print(f"No subdirectories containing a POSCAR found under {poscar_dir}.")
+        print("Make sure --poscar-dir points at the folder with the POSCAR subdirs,")
+        print("e.g. poscar/best  or  poscar/best2")
         raise SystemExit(0)
 
     print(f"Setting up {len(job_dirs)} VASP job director(y/ies):")
@@ -358,7 +305,7 @@ def main():
 
     all_ok = True
     for job_dir in job_dirs:
-        system_name = job_dir.name   # e.g. Cu111_isopropanol
+        system_name = job_dir.name
         action = "[DRY-RUN]" if args.dry_run else "writing"
         print(f"  {action}: {job_dir}/")
 
@@ -368,8 +315,7 @@ def main():
             dry_run=args.dry_run,
         )
 
-        species_str = " ".join(result.get("species", []))
-        print(f"    species:  {species_str}")
+        print(f"    species:  {' '.join(result.get('species', []))}")
 
         if not args.dry_run:
             files = ["INCAR", "KPOINTS", "slm.vasp.kestrel"]
@@ -392,19 +338,17 @@ def main():
     print("   in each job directory, or set VASP_PP_PATH and re-run:")
     print()
     print("     export VASP_PP_PATH=/projects/vasp/pps/PBE54")
-    print("     python setup_vasp_jobs.py")
+    print(f"     python setup_vasp_jobs.py --poscar-dir {poscar_dir}")
     print()
     print("2. Submit each job:")
     print()
-    print("     cd poscar/best/Cu111_isopropanol")
-    print("     sbatch slm.vasp.kestrel")
+    print(f"     for d in {poscar_dir}/*/; do")
+    print("       (cd \"$d\" && sbatch slm.vasp.kestrel)")
+    print("     done")
     print()
     print("3. After VASP finishes, compute E_ads from OUTCAR:")
     print()
     print("     grep 'free  energy' OUTCAR | tail -1")
-    print()
-    print("   Compare that total energy with E_surf + E_mol")
-    print("   from your GOAD result.json to validate E_ads.")
     print()
     if not all_ok:
         print("Some warnings were raised — see above.")
