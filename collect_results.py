@@ -18,10 +18,20 @@ python collect_results.py \\
     --runs-dir /kfs3/scratch/jcho5/goad-global-optimization/runs \\
     --out workflow/summary_all.csv
 
+# Normalize stale run_dir paths recorded in status.json
+python collect_results.py \\
+    --runs-dir /scratch/jcho5/goad-global-optimization/runs \\
+    --canonical-prefix /home/jcho5=/scratch/jcho5 \\
+    --out workflow/summary.csv
+
 Arguments
 ---------
---runs-dir / -r   Path to a runs directory. Repeatable for multiple locations.
---out      / -o   Output CSV path (directory will be created if needed).
+--runs-dir        / -r  Path to a runs directory. Repeatable for multiple locations.
+--out             / -o  Output CSV path (directory will be created if needed).
+--canonical-prefix      OLD=NEW substitution applied to every run_dir value before
+                        writing to CSV.  Repeatable.  Useful when status.json was
+                        written with a different base path than where the files
+                        currently live (e.g. /home -> /scratch migration).
 """
 
 import argparse
@@ -56,7 +66,41 @@ def parse_args():
             "Parent directories are created automatically."
         ),
     )
+    parser.add_argument(
+        "--canonical-prefix",
+        dest="canonical_prefixes",
+        action="append",
+        default=[],
+        metavar="OLD=NEW",
+        help=(
+            "Replace a path prefix in every run_dir value written to the CSV. "
+            "Format: OLD=NEW, e.g. /home/jcho5=/scratch/jcho5. "
+            "May be repeated to apply multiple substitutions."
+        ),
+    )
     return parser.parse_args()
+
+
+def build_prefix_map(canonical_prefixes: list[str]) -> list[tuple[str, str]]:
+    """Parse a list of 'OLD=NEW' strings into (old, new) tuples."""
+    prefix_map = []
+    for entry in canonical_prefixes:
+        if "=" not in entry:
+            raise ValueError(
+                f"--canonical-prefix value must be in OLD=NEW format, got: {entry!r}"
+            )
+        old, _, new = entry.partition("=")
+        prefix_map.append((old, new))
+    return prefix_map
+
+
+def normalize_run_dir(run_dir: str, prefix_map: list[tuple[str, str]]) -> str:
+    """Apply prefix substitutions to a run_dir path string."""
+    for old, new in prefix_map:
+        if run_dir.startswith(old):
+            run_dir = new + run_dir[len(old):]
+            break  # apply at most one substitution
+    return run_dir
 
 
 def parse_system(system_name: str) -> tuple[str, str]:
@@ -78,7 +122,7 @@ def format_table(rows, fieldnames):
         print("  ".join(value.ljust(widths[idx]) for idx, value in enumerate(line)))
 
 
-def collect(runs_dirs: list[Path]) -> list[dict]:
+def collect(runs_dirs: list[Path], prefix_map: list[tuple[str, str]]) -> list[dict]:
     rows = []
     seen_run_dirs: set[str] = set()
 
@@ -99,7 +143,11 @@ def collect(runs_dirs: list[Path]) -> list[dict]:
             data = json.loads(result_file.read_text())
             status_file = run_dir / "status.json"
             status = json.loads(status_file.read_text()) if status_file.exists() else {}
-            resolved_run_dir = status.get("run_dir", str(run_dir))
+
+            # Normalize the run_dir: prefer status.json value but apply any
+            # canonical-prefix substitutions so stale home/scratch paths are fixed.
+            raw_run_dir = status.get("run_dir", str(run_dir))
+            resolved_run_dir = normalize_run_dir(raw_run_dir, prefix_map)
 
             surface, adsorbate = parse_system(data.get("system", ""))
 
@@ -149,7 +197,13 @@ def main():
     args = parse_args()
     out_csv = Path(args.out)
 
-    rows = collect(args.runs_dirs)
+    prefix_map = build_prefix_map(args.canonical_prefixes)
+    if prefix_map:
+        print("Applying run_dir prefix substitutions:")
+        for old, new in prefix_map:
+            print(f"  {old!r}  ->  {new!r}")
+
+    rows = collect(args.runs_dirs, prefix_map)
 
     out_csv.parent.mkdir(parents=True, exist_ok=True)
     with out_csv.open("w", newline="") as f:
