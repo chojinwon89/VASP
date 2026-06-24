@@ -13,28 +13,49 @@ Directory layout written by batch_isopropanol.py:
             final_adsorbed.traj     <- ASE trajectory (alternative source)
             result.json             <- E_ads metadata
 
-Output:
+Output (default, without --best-only):
 
     poscar/
         Cu111_isopropanol_seed0/POSCAR
         Cu110_isopropanol_seed0/POSCAR
-        Cu001_isopropanol_seed0/POSCAR
         ...
-    poscar/best/
-        Cu111_isopropanol/POSCAR    <- lowest E_ads across all seeds per surface
+        best/
+            Cu111_isopropanol/POSCAR    <- lowest E_ads across all seeds per surface
+            Cu110_isopropanol/POSCAR
+            ...
+
+Output with --best-only (best POSCARs written directly into --out-dir):
+
+    poscar/best2/
+        Cu111_isopropanol/POSCAR
         Cu110_isopropanol/POSCAR
-        Cu001_isopropanol/POSCAR
+        ...
 
 Usage
 -----
-    python extract_poscar.py                          # default: reads ./runs, writes ./poscar
-    python extract_poscar.py --runs-dir /path/to/runs
-    python extract_poscar.py --best-only              # only write best-seed per surface
+    # Default: reads ./runs, writes per-seed + best/ into ./poscar
+    python extract_poscar.py
+
+    # Custom runs dir
+    python extract_poscar.py --runs-dir /scratch/jcho5/.../runs
+
+    # Best POSCARs only, directly into a named directory (no extra best/ level)
+    python extract_poscar.py \\
+        --runs-dir /scratch/jcho5/.../runs \\
+        --out-dir  /scratch/jcho5/.../poscar/best2 \\
+        --best-only
+
+    # All seeds + best, everything under a custom root
+    python extract_poscar.py \\
+        --runs-dir /scratch/jcho5/.../runs \\
+        --out-dir  /scratch/jcho5/.../poscar
+
     python extract_poscar.py --verbose
 """
 
 import argparse
 import json
+import io
 from pathlib import Path
 
 from ase.io import read, write
@@ -113,10 +134,6 @@ def write_poscar(atoms: Atoms, out_path: Path,
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
-    # Write to a temporary string buffer first, then prepend the comment line.
-    # ASE writes the system name as the first line of the POSCAR;
-    # we overwrite it with our informative comment.
-    import io
     buf = io.StringIO()
     write(buf, atoms, format="vasp", vasp5=True)
     poscar_text = buf.getvalue()
@@ -215,16 +232,36 @@ def main():
     parser = argparse.ArgumentParser(
         description="Extract final GOAD geometries as VASP POSCAR files."
     )
-    parser.add_argument("--runs-dir", default="runs",
-                        help="Path to the GOAD runs/ directory (default: ./runs)")
-    parser.add_argument("--out-dir",  default="poscar",
-                        help="Output directory for POSCAR files (default: ./poscar)")
-    parser.add_argument("--best-only", action="store_true",
-                        help="Only write the best-seed POSCAR per (surface, adsorbate)")
-    parser.add_argument("--no-sort", action="store_true",
-                        help="Do NOT sort atoms by species (default: sort, VASP convention)")
-    parser.add_argument("--verbose", action="store_true",
-                        help="Print one line per POSCAR written")
+    parser.add_argument(
+        "--runs-dir", default="runs",
+        help="Path to the GOAD runs/ directory (default: ./runs)",
+    )
+    parser.add_argument(
+        "--out-dir", default="poscar",
+        help=(
+            "Output root directory for POSCAR files (default: ./poscar). "
+            "Without --best-only, per-seed POSCARs go into OUT_DIR/<label>/POSCAR "
+            "and best POSCARs go into OUT_DIR/best/<label>/POSCAR. "
+            "With --best-only, best POSCARs are written directly into "
+            "OUT_DIR/<label>/POSCAR with NO extra best/ subdirectory."
+        ),
+    )
+    parser.add_argument(
+        "--best-only", action="store_true",
+        help=(
+            "Only write the best-seed POSCAR per (surface, adsorbate). "
+            "POSCARs are placed directly in --out-dir/<system>/POSCAR "
+            "(no extra best/ subdirectory)."
+        ),
+    )
+    parser.add_argument(
+        "--no-sort", action="store_true",
+        help="Do NOT sort atoms by species (default: sort, VASP convention)",
+    )
+    parser.add_argument(
+        "--verbose", action="store_true",
+        help="Print one line per POSCAR written",
+    )
     args = parser.parse_args()
 
     runs_dir     = Path(args.runs_dir)
@@ -259,8 +296,12 @@ def main():
             written += 1
 
     # ---- Best-seed POSCARs -------------------------------------------------
-    best     = select_best_per_system(entries)
-    best_dir = out_dir / "best"
+    best = select_best_per_system(entries)
+
+    # When --best-only: write directly into out_dir (no best/ subdirectory).
+    # When writing both per-seed and best: nest under out_dir/best/ to avoid
+    # collisions with the per-seed directories.
+    best_dir = out_dir if args.best_only else out_dir / "best"
 
     for key, e in sorted(best.items()):
         label   = f"{e['surface']}_{e['adsorbate']}"
@@ -275,11 +316,14 @@ def main():
     # ---- Summary -----------------------------------------------------------
     print(f"\nWrote {written} POSCAR file(s) under {out_dir}/")
     print()
-    print("Per-seed layout:   poscar/<surface>_<adsorbate>_seed<N>/POSCAR")
-    print("Best-seed layout:  poscar/best/<surface>_<adsorbate>/POSCAR  <- use for DFT")
+    if args.best_only:
+        print(f"Best-seed layout:  {out_dir}/<surface>_<adsorbate>/POSCAR")
+    else:
+        print(f"Per-seed layout:   {out_dir}/<surface>_<adsorbate>_seed<N>/POSCAR")
+        print(f"Best-seed layout:  {out_dir}/best/<surface>_<adsorbate>/POSCAR  <- use for DFT")
     print()
     print("Next steps:")
-    print("  1. cp poscar/best/<system>/POSCAR  ~/vasp-jobs/<system>/")
+    print("  1. cp <out-dir>/<system>/POSCAR  ~/vasp-jobs/<system>/")
     print("  2. Add INCAR, KPOINTS, POTCAR")
     print("  3. NSW=0 (single-point) or NSW=20 IBRION=2 (short relax)")
     print("  4. Compare VASP E_ads with GOAD E_ads_eV in result.json")
