@@ -7,7 +7,7 @@
 #SBATCH --cpus-per-task=16          # Enough threads to feed the GPU; no need for 104
 #SBATCH --mem=0                     # use all available memory on node
 #SBATCH --gpus=1                    # 1 GPU per task
-#SBATCH --time=04:00:00             # GPU tasks finish ~10-20x faster than CPU
+#SBATCH --time=12:00:00             # increased: some heavy tasks (glycerol/Pt) exceed 4h
 #SBATCH --output=slurm-logs/goad_gpu-%A_%a.out
 #SBATCH --error=slurm-logs/goad_gpu-%A_%a.err
 
