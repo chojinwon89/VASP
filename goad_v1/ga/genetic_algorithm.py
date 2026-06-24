@@ -125,12 +125,21 @@ def _evaluate_individual_worker(task: Tuple[int, Dict]) -> Tuple[int, float, Opt
         return idx, 1000.0, None
 
 
+def _cuda_is_available() -> bool:
+    """Return True if a CUDA device is visible to this process."""
+    try:
+        import torch
+        return torch.cuda.is_available()
+    except ImportError:
+        return False
+
+
 class GeneticAlgorithm:
     """
     Genetic Algorithm for molecular adsorption on surfaces.
 
     Key features for v1.0:
-    - Surface atoms are COMPLETELY FIXED during GA
+    - Surface atoms are COMPLETELY FIXED during GA search (will relax in post-GA BFGS)
     - Only molecule position and orientation vary
     - Support for molecular torsions
     - Molecule kept inside the central unit cell (no edge-wrapping)
@@ -170,8 +179,10 @@ class GeneticAlgorithm:
             center_in_cell: If True, snap the molecule's center-of-mass back into
                             the central unit cell after every placement, so it
                             never wraps to an edge via PBC.
-            n_workers: Number of evaluation workers. If None, uses
-                       SLURM_CPUS_PER_TASK (when set) or os.cpu_count().
+            n_workers: Number of evaluation workers. If None, checks (in order):
+                       GOAD_N_WORKERS env var, SLURM_CPUS_PER_TASK, os.cpu_count().
+                       NOTE: always forced to 1 when a CUDA device is present to
+                       avoid ProcessPoolExecutor / CUDA context deadlocks.
         """
         self.surface = surface.copy()
         self.surface.calc = None
@@ -324,13 +335,25 @@ class GeneticAlgorithm:
     # Fitness evaluation
     # ------------------------------------------------------------------
     def _evaluate_population(self):
-        """Evaluate fitness of all individuals."""
+        """Evaluate fitness of all individuals.
+
+        Always runs serially when:
+          - n_workers == 1, or
+          - no calculator_type is set, or
+          - a CUDA device is present (ProcessPoolExecutor + CUDA = deadlock).
+        """
         pending = [(idx, individual) for idx, individual in enumerate(self.population)
                    if individual['energy'] is None]
         if not pending:
             return
 
-        if self.n_workers == 1 or not self.calculator_type:
+        use_serial = (
+            self.n_workers == 1
+            or not self.calculator_type
+            or _cuda_is_available()
+        )
+
+        if use_serial:
             self._evaluate_population_serial(pending)
             return
 
@@ -361,14 +384,37 @@ class GeneticAlgorithm:
 
     @staticmethod
     def _resolve_worker_count(n_workers: Optional[int]) -> int:
-        """Resolve worker count from explicit value, SLURM, or local CPU count."""
+        """Resolve worker count from explicit value, env vars, or local CPU count.
+
+        Priority order:
+          1. Explicit ``n_workers`` argument (not None)
+          2. ``GOAD_N_WORKERS`` environment variable  ← checked first so GPU
+             jobs can set ``export GOAD_N_WORKERS=1`` in the SLURM script
+          3. ``SLURM_CPUS_PER_TASK`` (set by SLURM for CPU jobs)
+          4. ``os.cpu_count()``
+
+        Note: even if this returns > 1, ``_evaluate_population`` will still
+        force serial execution when a CUDA device is detected.
+        """
         if n_workers is not None:
             return max(1, int(n_workers))
+
+        # Explicit GOAD override (e.g. export GOAD_N_WORKERS=1 for GPU jobs)
+        goad_workers = os.environ.get("GOAD_N_WORKERS")
+        if goad_workers:
+            try:
+                count = max(1, int(goad_workers))
+                logger.debug(f"n_workers={count} from GOAD_N_WORKERS")
+                return count
+            except ValueError:
+                logger.warning(f"Invalid GOAD_N_WORKERS={goad_workers!r}, ignoring")
 
         slurm_cpus = os.environ.get("SLURM_CPUS_PER_TASK")
         if slurm_cpus:
             try:
-                return max(1, int(slurm_cpus))
+                count = max(1, int(slurm_cpus))
+                logger.debug(f"n_workers={count} from SLURM_CPUS_PER_TASK")
+                return count
             except ValueError:
                 logger.warning(f"Invalid SLURM_CPUS_PER_TASK={slurm_cpus!r}, using os.cpu_count()")
 
