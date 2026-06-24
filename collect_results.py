@@ -56,6 +56,19 @@ def parse_args():
             "Parent directories are created automatically."
         ),
     )
+    parser.add_argument(
+        "--normalize-prefix",
+        action="append",
+        dest="prefix_pairs",
+        default=[],
+        metavar="OLD=NEW",
+        help=(
+            "Rewrite run_dir paths that start with OLD to start with NEW instead. "
+            "Example: --normalize-prefix /home/jcho5/goad-global-optimization="
+            "/scratch/jcho5/goad-global-optimization  "
+            "May be repeated for multiple replacements."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -78,9 +91,19 @@ def format_table(rows, fieldnames):
         print("  ".join(value.ljust(widths[idx]) for idx, value in enumerate(line)))
 
 
-def collect(runs_dirs: list[Path]) -> list[dict]:
+def normalize_run_dir(run_dir: str, prefix_map: dict[str, str]) -> str:
+    """Replace any matching old path prefix with the canonical new prefix."""
+    for old, new in prefix_map.items():
+        if run_dir.startswith(old):
+            return new + run_dir[len(old):]
+    return run_dir
+
+
+def collect(runs_dirs: list[Path], prefix_map: dict[str, str] | None = None) -> list[dict]:
     rows = []
     seen_run_dirs: set[str] = set()
+    if prefix_map is None:
+        prefix_map = {}
 
     for base in runs_dirs:
         base = Path(base)
@@ -99,7 +122,9 @@ def collect(runs_dirs: list[Path]) -> list[dict]:
             data = json.loads(result_file.read_text())
             status_file = run_dir / "status.json"
             status = json.loads(status_file.read_text()) if status_file.exists() else {}
-            resolved_run_dir = status.get("run_dir", str(run_dir))
+            resolved_run_dir = normalize_run_dir(
+                status.get("run_dir", str(run_dir)), prefix_map
+            )
 
             surface, adsorbate = parse_system(data.get("system", ""))
 
@@ -149,7 +174,20 @@ def main():
     args = parse_args()
     out_csv = Path(args.out)
 
-    rows = collect(args.runs_dirs)
+    # Build the prefix normalisation map from --normalize-prefix OLD=NEW pairs
+    prefix_map: dict[str, str] = {}
+    for pair in args.prefix_pairs:
+        if "=" not in pair:
+            print(f"WARNING: ignoring malformed --normalize-prefix value: {pair!r}")
+            continue
+        old, _, new = pair.partition("=")
+        prefix_map[old] = new
+    if prefix_map:
+        print("Path prefix normalisation map:")
+        for old, new in prefix_map.items():
+            print(f"  {old!r}  →  {new!r}")
+
+    rows = collect(args.runs_dirs, prefix_map=prefix_map)
 
     out_csv.parent.mkdir(parents=True, exist_ok=True)
     with out_csv.open("w", newline="") as f:

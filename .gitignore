@@ -1,0 +1,13 @@
+# Generated figures (run analyze_binding_energies.py to regenerate)
+figures/*.png
+
+# Generated result tables (run analyze_binding_energies.py to regenerate)
+results/*.csv
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+dist/
+build/
