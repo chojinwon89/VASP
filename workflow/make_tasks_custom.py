@@ -60,11 +60,26 @@ def make_entries(surfaces, molecules, calculators, seeds=None, pop=60):
 
 # ---------------------------------------------------------------------------
 # MOLECULES with their generation counts
+# All 9 molecules included:
+#   Heavy oxygenates  — glycerol, propanol, isopropanol, ethanol
+#   Alkanes           — propane, ethane
+#   Alkenes           — propene, ethene
+#   Other             — CO2
 # ---------------------------------------------------------------------------
 MOLECULES = {
+    # Heavy oxygenates (more rotatable bonds → more generations needed)
     "glycerol":    120,
     "propanol":    100,
     "isopropanol": 100,
+    "ethanol":      80,
+    # Alkanes
+    "propane":      80,
+    "ethane":       60,
+    # Alkenes
+    "propene":      80,
+    "ethene":       60,
+    # Other
+    "CO2":          60,
 }
 
 CALCS = ["sevennet_omni", "5m"]
@@ -121,8 +136,13 @@ with out.open("w", newline="") as f:
 
 print(f"Wrote {task_id} tasks to {out}")
 print()
-# Show breakdown by metal
+print("Molecule breakdown:")
 from collections import Counter
+mols = Counter(r["adsorbate"] for r in rows)
+for mol, count in sorted(mols.items()):
+    print(f"  {mol:<15}: {count} tasks")
+print()
+print("Metal breakdown:")
 metals = Counter(r["surface"][:2] for r in rows)
 for metal, count in sorted(metals.items()):
     print(f"  {metal}: {count} tasks")
