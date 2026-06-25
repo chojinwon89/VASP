@@ -2,7 +2,13 @@
 """
 plot_dft_vs_sevennet.py
 =======================
-Compare DFT adsorption energies with one or more SevenNet calculator predictions.
+Compare DFT adsorption energies with one or more ML calculator predictions.
+
+Supported calculator names (as they appear in workflow/summary.csv):
+    sevennet_omni   -- SevenNet-OMNI
+    5m              -- MatterSim 5M
+    5m_d3           -- MatterSim 5M + D3
+    1m              -- MatterSim 1M
 
 Reads:
   - dft_binding_energies.csv   (from calc_binding_energy.py)
@@ -15,23 +21,15 @@ Running jobs (state != finished) are automatically skipped.
 
 Usage
 -----
-    # Single calculator (default)
+    # SevenNet-OMNI only (default)
     python plot_dft_vs_sevennet.py
 
-    # Both calculators on one parity plot
-    python plot_dft_vs_sevennet.py \\
-        --calculators sevennet_omni sevennet_5m \\
-        --output dft_vs_both.png
+    # MatterSim 5M only
+    python plot_dft_vs_sevennet.py --calculators 5m --output dft_vs_5m.png
 
-    # Each separately
-    python plot_dft_vs_sevennet.py --calculators sevennet_omni --output dft_vs_omni.png
-    python plot_dft_vs_sevennet.py --calculators sevennet_5m   --output dft_vs_5m.png
-
-    # Full options
+    # Both on one parity plot
     python plot_dft_vs_sevennet.py \\
-        --dft  dft_binding_energies.csv \\
-        --ml   workflow/summary.csv \\
-        --calculators sevennet_omni sevennet_5m \\
+        --calculators sevennet_omni 5m \\
         --output dft_vs_both.png \\
         --csv-out results/comparison_both.csv
 """
@@ -46,6 +44,32 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
+
+# ---------------------------------------------------------------------------
+# Display name mapping  (CSV value -> human-readable label)
+# ---------------------------------------------------------------------------
+CALC_LABELS = {
+    "sevennet_omni": "SevenNet-OMNI",
+    "5m":            "MatterSim-5M",
+    "5m_d3":         "MatterSim-5M+D3",
+    "1m":            "MatterSim-1M",
+}
+
+# Per-calculator fill style: SevenNet = filled, MatterSim = hollow
+CALC_FILL = {
+    "sevennet_omni": "full",
+    "5m":            "none",
+    "5m_d3":         "none",
+    "1m":            "none",
+}
+
+# Hollow markers need a thicker edge to be visible
+CALC_LINEWIDTH = {
+    "sevennet_omni": 0.5,
+    "5m":            1.2,
+    "5m_d3":         1.2,
+    "1m":            1.2,
+}
 
 # ---------------------------------------------------------------------------
 # Color / marker dictionaries
@@ -70,18 +94,6 @@ MOLECULE_MARKERS = {
     "propene":     "X",
     "ethene":      "*",
     "CO2":         "h",
-}
-
-# Per-calculator fill style: omni = filled, 5m = open (hollow)
-CALC_FILL = {
-    "sevennet_omni": "full",
-    "sevennet_5m":   "none",
-}
-
-# Per-calculator edge width to make hollow markers visible
-CALC_LINEWIDTH = {
-    "sevennet_omni": 0.5,
-    "sevennet_5m":   1.2,
 }
 
 
@@ -167,8 +179,8 @@ def make_plot(calc_pairs: dict, dft_vals: dict, ml_data: dict,
 
     # ---- Scatter points ----
     for calc, pairs in calc_pairs.items():
-        fill    = CALC_FILL.get(calc, "full")
-        lw      = CALC_LINEWIDTH.get(calc, 0.5)
+        fill = CALC_FILL.get(calc, "full")
+        lw   = CALC_LINEWIDTH.get(calc, 0.5)
         for (surf, mol) in pairs:
             metal  = surf[:2]
             color  = METAL_COLORS.get(metal, "grey")
@@ -201,7 +213,7 @@ def make_plot(calc_pairs: dict, dft_vals: dict, ml_data: dict,
         if not pairs:
             continue
         mae, rmse, r2 = compute_stats(dft_vals, ml_data[calc], pairs)
-        label = calc.replace("sevennet_", "")   # "omni" or "5m"
+        label = CALC_LABELS.get(calc, calc)
         stat_lines.append(
             f"[{label}]  MAE={mae:.3f}  RMSE={rmse:.3f}  $R^2$={r2:.3f}"
         )
@@ -216,8 +228,8 @@ def make_plot(calc_pairs: dict, dft_vals: dict, ml_data: dict,
     for calc, pairs in calc_pairs.items():
         if not pairs:
             continue
-        fill = CALC_FILL.get(calc, "full")
-        label = calc.replace("sevennet_", "SevenNet-")
+        fill  = CALC_FILL.get(calc, "full")
+        label = CALC_LABELS.get(calc, calc)
         if fill == "none":
             h = plt.Line2D([0], [0], marker="o", color="w",
                            markerfacecolor="none", markeredgecolor="grey",
@@ -259,11 +271,10 @@ def make_plot(calc_pairs: dict, dft_vals: dict, ml_data: dict,
     ax.add_artist(leg_mol)
 
     # Titles and formatting
-    calc_labels = " vs ".join(c.replace("sevennet_", "SevenNet-")
-                               for c in calc_pairs)
+    calc_labels_str = " vs ".join(CALC_LABELS.get(c, c) for c in calc_pairs)
     ax.set_xlabel("DFT  $E_{ads}$ (eV)", fontsize=12)
-    ax.set_ylabel(f"{calc_labels}  $E_{{ads}}$ (eV)", fontsize=12)
-    ax.set_title(f"DFT vs {calc_labels} Adsorption Energies", fontsize=13)
+    ax.set_ylabel(f"{calc_labels_str}  $E_{{ads}}$ (eV)", fontsize=12)
+    ax.set_title(f"DFT vs {calc_labels_str} Adsorption Energies", fontsize=13)
     ax.set_xlim(lo, hi)
     ax.set_ylim(lo, hi)
     ax.set_aspect("equal")
@@ -281,8 +292,15 @@ def make_plot(calc_pairs: dict, dft_vals: dict, ml_data: dict,
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Plot DFT vs SevenNet adsorption energies (one or more calculators).",
+        description="Plot DFT vs ML adsorption energies (one or more calculators).",
         formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=(
+            "Calculator names (as stored in workflow/summary.csv):\n"
+            "  sevennet_omni  -- SevenNet-OMNI\n"
+            "  5m             -- MatterSim 5M\n"
+            "  5m_d3          -- MatterSim 5M + D3\n"
+            "  1m             -- MatterSim 1M\n"
+        ),
     )
     parser.add_argument("--dft", default="dft_binding_energies.csv",
                         help="DFT reference CSV (default: dft_binding_energies.csv)")
@@ -292,9 +310,10 @@ def main():
                         default=["sevennet_omni"],
                         metavar="CALC",
                         help=(
-                            "Calculator name(s) to plot. May be repeated. "
-                            "Default: sevennet_omni. "
-                            "Example: --calculators sevennet_omni sevennet_5m"
+                            "Calculator name(s) to plot. Default: sevennet_omni. "
+                            "Examples:\n"
+                            "  --calculators 5m\n"
+                            "  --calculators sevennet_omni 5m"
                         ))
     parser.add_argument("--output", default="dft_vs_sevennet.png",
                         help="Output PNG path (default: dft_vs_sevennet.png)")
@@ -310,7 +329,7 @@ def main():
             print(f"ERROR: {p} not found.")
             raise SystemExit(1)
 
-    print(f"Calculators: {args.calculators}")
+    print(f"Calculators: {[CALC_LABELS.get(c, c) for c in args.calculators]}")
     print()
 
     dft_data = load_dft(dft_path)
@@ -319,23 +338,21 @@ def main():
     # Build per-calculator matched pairs
     calc_pairs = {}
     for calc in args.calculators:
-        common = sorted(set(dft_data) & set(ml_data[calc]))
+        common   = sorted(set(dft_data) & set(ml_data[calc]))
         calc_pairs[calc] = common
         ml_only  = len(ml_data[calc]) - len(common)
         dft_only = len(dft_data) - len(common)
-        print(f"[{calc}]  matched={len(common)}  DFT-only={dft_only}  ML-only={ml_only}")
+        label    = CALC_LABELS.get(calc, calc)
+        print(f"[{label}]  matched={len(common)}  DFT-only={dft_only}  ML-only={ml_only}")
 
         if not common:
-            print(f"  WARNING: No matching pairs for {calc} — check calculator name.")
+            print(f"  WARNING: No matching pairs — check calculator name in summary.csv.")
             continue
 
-        # Per-calculator stats
         mae, rmse, r2 = compute_stats(dft_data, ml_data[calc], common)
         print(f"  MAE  = {mae:.4f} eV")
         print(f"  RMSE = {rmse:.4f} eV")
         print(f"  R²   = {r2:.4f}")
-
-        # Print table
         print()
         print(f"  {'System':<30} {'DFT (eV)':>10} {'ML (eV)':>10} {'Diff (eV)':>10}")
         print("  " + "-" * 64)
@@ -345,7 +362,6 @@ def main():
             print(f"  {surf+'_'+mol:<30} {d:>10.4f} {m:>10.4f} {m-d:>10.4f}")
         print()
 
-    # Check at least one calculator has data
     if all(len(p) == 0 for p in calc_pairs.values()):
         print("No data to plot for any calculator.")
         raise SystemExit(1)
@@ -354,6 +370,7 @@ def main():
 
     # Optional CSV — all calculators merged
     if args.csv_out:
+        Path(args.csv_out).parent.mkdir(parents=True, exist_ok=True)
         with Path(args.csv_out).open("w", newline="") as f:
             writer = csv.writer(f)
             writer.writerow(["calculator", "surface", "molecule",
