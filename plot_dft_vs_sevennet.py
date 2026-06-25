@@ -132,16 +132,16 @@ def make_plot(pairs, dft_vals, ml_vals, output_path: Path):
     hi = max(all_vals) + 0.1
     ax.plot([lo, hi], [lo, hi], "k--", lw=1.2, label="y = x", zorder=2)
 
-    # MAE / RMSE annotation
+    # MAE / RMSE / R2 annotation — top-right corner
     dft_arr = np.array([dft_vals[k] for k in pairs])
     ml_arr  = np.array([ml_vals[k]  for k in pairs])
     mae  = np.mean(np.abs(ml_arr - dft_arr))
     rmse = np.sqrt(np.mean((ml_arr - dft_arr) ** 2))
     r2   = np.corrcoef(dft_arr, ml_arr)[0, 1] ** 2
 
-    ax.text(0.04, 0.96,
+    ax.text(0.96, 0.96,
             f"MAE  = {mae:.3f} eV\nRMSE = {rmse:.3f} eV\n$R^2$   = {r2:.3f}",
-            transform=ax.transAxes, va="top", ha="left",
+            transform=ax.transAxes, va="top", ha="right",
             fontsize=9, family="monospace",
             bbox=dict(boxstyle="round,pad=0.3", fc="white", alpha=0.7))
 
