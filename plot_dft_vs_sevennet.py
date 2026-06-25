@@ -2,23 +2,38 @@
 """
 plot_dft_vs_sevennet.py
 =======================
-Compare DFT adsorption energies with SevenNet-OMNI predictions.
+Compare DFT adsorption energies with one or more SevenNet calculator predictions.
 
 Reads:
   - dft_binding_energies.csv   (from calc_binding_energy.py)
-  - workflow/summary.csv       (from GOAD runs, sevennet_omni calculator)
+  - workflow/summary.csv       (from GOAD runs)
 
-For each surface+molecule pair, takes the best (lowest) SevenNet E_ads
-across all seeds and plots it against the DFT reference.
+For each surface+molecule pair, takes the best (lowest) E_ads across all
+finished seeds per calculator and plots against the DFT reference.
 
-Output: dft_vs_sevennet.png  (and optionally dft_vs_sevennet.csv)
+Running jobs (state != finished) are automatically skipped.
 
 Usage
 -----
+    # Single calculator (default)
     python plot_dft_vs_sevennet.py
-    python plot_dft_vs_sevennet.py --dft dft_binding_energies.csv \\
-                                   --ml  workflow/summary.csv \\
-                                   --output dft_vs_sevennet.png
+
+    # Both calculators on one parity plot
+    python plot_dft_vs_sevennet.py \\
+        --calculators sevennet_omni sevennet_5m \\
+        --output dft_vs_both.png
+
+    # Each separately
+    python plot_dft_vs_sevennet.py --calculators sevennet_omni --output dft_vs_omni.png
+    python plot_dft_vs_sevennet.py --calculators sevennet_5m   --output dft_vs_5m.png
+
+    # Full options
+    python plot_dft_vs_sevennet.py \\
+        --dft  dft_binding_energies.csv \\
+        --ml   workflow/summary.csv \\
+        --calculators sevennet_omni sevennet_5m \\
+        --output dft_vs_both.png \\
+        --csv-out results/comparison_both.csv
 """
 
 import argparse
@@ -30,58 +45,20 @@ import numpy as np
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-import matplotlib.cm as cm
 
 
 # ---------------------------------------------------------------------------
-# Helpers
+# Color / marker dictionaries
 # ---------------------------------------------------------------------------
 
-def load_dft(path: Path) -> dict:
-    """
-    Returns {(surface, molecule): E_ads_eV} for status=='ok' rows.
-    """
-    data = {}
-    with path.open() as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            if row["status"] != "ok":
-                continue
-            key = (row["surface"], row["molecule"])
-            try:
-                data[key] = float(row["E_ads"])
-            except ValueError:
-                pass
-    return data
-
-
-def load_sevennet_best(path: Path) -> dict:
-    """
-    Returns {(surface, molecule): best_E_ads_eV} — minimum E_ads over all
-    seeds for calculator == sevennet_omni with status == finished.
-    """
-    best = defaultdict(lambda: float("inf"))
-    with path.open() as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            if row.get("calculator", "").strip() != "sevennet_omni":
-                continue
-            if row.get("state", row.get("status", "")).strip() != "finished":
-                continue
-            key = (row["surface"], row["adsorbate"])
-            try:
-                e = float(row["E_ads_eV"])
-                if e < best[key]:
-                    best[key] = e
-            except ValueError:
-                pass
-    # Remove unset entries
-    return {k: v for k, v in best.items() if v != float("inf")}
-
-
-# ---------------------------------------------------------------------------
-# Plot
-# ---------------------------------------------------------------------------
+METAL_COLORS = {
+    "Cu": "#D55E00",   # orange-red
+    "Pt": "#0072B2",   # blue
+    "Pd": "#009E73",   # green
+    "Ni": "#CC79A7",   # pink
+    "Ag": "#F0E442",   # yellow
+    "Au": "#56B4E9",   # light blue
+}
 
 MOLECULE_MARKERS = {
     "glycerol":    "o",
@@ -95,83 +72,198 @@ MOLECULE_MARKERS = {
     "CO2":         "h",
 }
 
-METAL_COLORS = {
-    "Cu": "#D55E00",   # orange-red
-    "Pt": "#0072B2",   # blue
-    "Pd": "#009E73",   # green
-    "Ni": "#CC79A7",   # pink
-    "Ag": "#F0E442",   # yellow
-    "Au": "#56B4E9",   # light blue
+# Per-calculator fill style: omni = filled, 5m = open (hollow)
+CALC_FILL = {
+    "sevennet_omni": "full",
+    "sevennet_5m":   "none",
+}
+
+# Per-calculator edge width to make hollow markers visible
+CALC_LINEWIDTH = {
+    "sevennet_omni": 0.5,
+    "sevennet_5m":   1.2,
 }
 
 
-def make_plot(pairs, dft_vals, ml_vals, output_path: Path):
-    fig, ax = plt.subplots(figsize=(7, 6))
+# ---------------------------------------------------------------------------
+# Data loaders
+# ---------------------------------------------------------------------------
 
-    # Collect range for parity line
+def load_dft(path: Path) -> dict:
+    """Returns {(surface, molecule): E_ads_eV} for status=='ok' rows."""
+    data = {}
+    with path.open() as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            if row.get("status", "").strip() != "ok":
+                continue
+            key = (row["surface"].strip(), row["molecule"].strip())
+            try:
+                data[key] = float(row["E_ads"])
+            except ValueError:
+                pass
+    return data
+
+
+def load_ml_best(path: Path, calculators: list[str]) -> dict:
+    """
+    Returns {calc_name: {(surface, adsorbate): best_E_ads_eV}}
+    Only includes rows with state == 'finished'.
+    """
+    best = {c: defaultdict(lambda: float("inf")) for c in calculators}
+    skipped_running = 0
+
+    with path.open() as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            calc = row.get("calculator", "").strip()
+            if calc not in calculators:
+                continue
+            state = row.get("state", row.get("status", "")).strip()
+            if state != "finished":
+                skipped_running += 1
+                continue
+            key = (row["surface"].strip(), row["adsorbate"].strip())
+            try:
+                e = float(row["E_ads_eV"])
+                if e < best[calc][key]:
+                    best[calc][key] = e
+            except ValueError:
+                pass
+
+    if skipped_running:
+        print(f"  Skipped {skipped_running} row(s) with state != finished (still running).")
+
+    return {c: {k: v for k, v in d.items() if v != float("inf")}
+            for c, d in best.items()}
+
+
+# ---------------------------------------------------------------------------
+# Stats helper
+# ---------------------------------------------------------------------------
+
+def compute_stats(dft_vals, ml_vals, pairs):
+    dft_arr = np.array([dft_vals[k] for k in pairs])
+    ml_arr  = np.array([ml_vals[k]  for k in pairs])
+    mae  = float(np.mean(np.abs(ml_arr - dft_arr)))
+    rmse = float(np.sqrt(np.mean((ml_arr - dft_arr) ** 2)))
+    r2   = float(np.corrcoef(dft_arr, ml_arr)[0, 1] ** 2)
+    return mae, rmse, r2
+
+
+# ---------------------------------------------------------------------------
+# Plot
+# ---------------------------------------------------------------------------
+
+def make_plot(calc_pairs: dict, dft_vals: dict, ml_data: dict,
+              output_path: Path):
+    """
+    calc_pairs : {calc_name: [(surface, molecule), ...]}
+    dft_vals   : {(surface, molecule): dft_E}
+    ml_data    : {calc_name: {(surface, molecule): ml_E}}
+    """
+    fig, ax = plt.subplots(figsize=(8, 7))
     all_vals = []
 
-    # Plot each point
-    for (surf, mol) in pairs:
-        metal = surf[:2]
-        color = METAL_COLORS.get(metal, "grey")
-        marker = MOLECULE_MARKERS.get(mol, "o")
-        x = dft_vals[(surf, mol)]
-        y = ml_vals[(surf, mol)]
-        all_vals.extend([x, y])
-        ax.scatter(x, y, color=color, marker=marker,
-                   s=80, alpha=0.85, linewidths=0.5, edgecolors="k",
-                   zorder=3)
+    # ---- Scatter points ----
+    for calc, pairs in calc_pairs.items():
+        fill    = CALC_FILL.get(calc, "full")
+        lw      = CALC_LINEWIDTH.get(calc, 0.5)
+        for (surf, mol) in pairs:
+            metal  = surf[:2]
+            color  = METAL_COLORS.get(metal, "grey")
+            marker = MOLECULE_MARKERS.get(mol, "o")
+            x = dft_vals[(surf, mol)]
+            y = ml_data[calc][(surf, mol)]
+            all_vals.extend([x, y])
+
+            if fill == "none":
+                ax.scatter(x, y, facecolors="none", edgecolors=color,
+                           marker=marker, s=80, linewidths=lw,
+                           alpha=0.9, zorder=3)
+            else:
+                ax.scatter(x, y, color=color, marker=marker,
+                           s=80, alpha=0.85, linewidths=lw,
+                           edgecolors="k", zorder=3)
 
     if not all_vals:
         print("No data to plot.")
         return
 
-    # Parity line
+    # ---- Parity line ----
     lo = min(all_vals) - 0.1
     hi = max(all_vals) + 0.1
-    ax.plot([lo, hi], [lo, hi], "k--", lw=1.2, label="y = x", zorder=2)
+    ax.plot([lo, hi], [lo, hi], "k--", lw=1.2, zorder=2)
 
-    # MAE / RMSE / R2 annotation — top-right corner
-    dft_arr = np.array([dft_vals[k] for k in pairs])
-    ml_arr  = np.array([ml_vals[k]  for k in pairs])
-    mae  = np.mean(np.abs(ml_arr - dft_arr))
-    rmse = np.sqrt(np.mean((ml_arr - dft_arr) ** 2))
-    r2   = np.corrcoef(dft_arr, ml_arr)[0, 1] ** 2
+    # ---- Stats annotation (top-right, one line per calculator) ----
+    stat_lines = []
+    for calc, pairs in calc_pairs.items():
+        if not pairs:
+            continue
+        mae, rmse, r2 = compute_stats(dft_vals, ml_data[calc], pairs)
+        label = calc.replace("sevennet_", "")   # "omni" or "5m"
+        stat_lines.append(
+            f"[{label}]  MAE={mae:.3f}  RMSE={rmse:.3f}  $R^2$={r2:.3f}"
+        )
 
-    ax.text(0.96, 0.96,
-            f"MAE  = {mae:.3f} eV\nRMSE = {rmse:.3f} eV\n$R^2$   = {r2:.3f}",
+    ax.text(0.96, 0.96, "\n".join(stat_lines),
             transform=ax.transAxes, va="top", ha="right",
-            fontsize=9, family="monospace",
-            bbox=dict(boxstyle="round,pad=0.3", fc="white", alpha=0.7))
+            fontsize=8, family="monospace",
+            bbox=dict(boxstyle="round,pad=0.3", fc="white", alpha=0.8))
 
-    # ---- Legends ----
-    # Metal colour legend
+    # ---- Calculator fill-style legend (top-left) ----
+    calc_handles = []
+    for calc, pairs in calc_pairs.items():
+        if not pairs:
+            continue
+        fill = CALC_FILL.get(calc, "full")
+        label = calc.replace("sevennet_", "SevenNet-")
+        if fill == "none":
+            h = plt.Line2D([0], [0], marker="o", color="w",
+                           markerfacecolor="none", markeredgecolor="grey",
+                           markeredgewidth=1.2, markersize=9, label=label)
+        else:
+            h = plt.Line2D([0], [0], marker="o", color="w",
+                           markerfacecolor="grey", markeredgecolor="k",
+                           markersize=9, label=label)
+        calc_handles.append(h)
+
+    leg_calc = ax.legend(handles=calc_handles, title="Calculator",
+                         loc="upper left", fontsize=8, title_fontsize=8)
+
+    # ---- Metal color legend (lower right) ----
+    all_pairs = [p for pairs in calc_pairs.values() for p in pairs]
     metal_handles = [
         plt.Line2D([0], [0], marker="o", color="w",
                    markerfacecolor=c, markeredgecolor="k",
                    markersize=8, label=m)
         for m, c in METAL_COLORS.items()
-        if any(k[0].startswith(m) for k in pairs)
+        if any(k[0].startswith(m) for k in all_pairs)
     ]
-    leg1 = ax.legend(handles=metal_handles, title="Metal",
-                     loc="lower right", fontsize=8, title_fontsize=8)
+    leg_metal = ax.legend(handles=metal_handles, title="Metal",
+                          loc="lower right", fontsize=8, title_fontsize=8)
 
-    # Molecule marker legend
+    # ---- Molecule marker legend (lower left) ----
     mol_handles = [
         plt.Line2D([0], [0], marker=mk, color="w",
                    markerfacecolor="grey", markeredgecolor="k",
                    markersize=8, label=mol)
         for mol, mk in MOLECULE_MARKERS.items()
-        if any(k[1] == mol for k in pairs)
+        if any(k[1] == mol for k in all_pairs)
     ]
-    ax.legend(handles=mol_handles, title="Molecule",
-              loc="upper left", fontsize=8, title_fontsize=8)
-    ax.add_artist(leg1)
+    leg_mol = ax.legend(handles=mol_handles, title="Molecule",
+                        loc="lower left", fontsize=8, title_fontsize=8)
 
+    ax.add_artist(leg_calc)
+    ax.add_artist(leg_metal)
+    ax.add_artist(leg_mol)
+
+    # Titles and formatting
+    calc_labels = " vs ".join(c.replace("sevennet_", "SevenNet-")
+                               for c in calc_pairs)
     ax.set_xlabel("DFT  $E_{ads}$ (eV)", fontsize=12)
-    ax.set_ylabel("SevenNet-OMNI  $E_{ads}$ (eV)", fontsize=12)
-    ax.set_title("DFT vs SevenNet-OMNI Adsorption Energies", fontsize=13)
+    ax.set_ylabel(f"{calc_labels}  $E_{{ads}}$ (eV)", fontsize=12)
+    ax.set_title(f"DFT vs {calc_labels} Adsorption Energies", fontsize=13)
     ax.set_xlim(lo, hi)
     ax.set_ylim(lo, hi)
     ax.set_aspect("equal")
@@ -189,11 +281,23 @@ def make_plot(pairs, dft_vals, ml_vals, output_path: Path):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Plot DFT vs SevenNet-OMNI adsorption energies."
+        description="Plot DFT vs SevenNet adsorption energies (one or more calculators).",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    parser.add_argument("--dft",    default="dft_binding_energies.csv")
-    parser.add_argument("--ml",     default="workflow/summary.csv")
-    parser.add_argument("--output", default="dft_vs_sevennet.png")
+    parser.add_argument("--dft", default="dft_binding_energies.csv",
+                        help="DFT reference CSV (default: dft_binding_energies.csv)")
+    parser.add_argument("--ml",  default="workflow/summary.csv",
+                        help="GOAD summary CSV (default: workflow/summary.csv)")
+    parser.add_argument("--calculators", nargs="+",
+                        default=["sevennet_omni"],
+                        metavar="CALC",
+                        help=(
+                            "Calculator name(s) to plot. May be repeated. "
+                            "Default: sevennet_omni. "
+                            "Example: --calculators sevennet_omni sevennet_5m"
+                        ))
+    parser.add_argument("--output", default="dft_vs_sevennet.png",
+                        help="Output PNG path (default: dft_vs_sevennet.png)")
     parser.add_argument("--csv-out", default=None,
                         help="Also save matched pairs to this CSV")
     args = parser.parse_args()
@@ -206,43 +310,60 @@ def main():
             print(f"ERROR: {p} not found.")
             raise SystemExit(1)
 
-    dft_data = load_dft(dft_path)
-    ml_data  = load_sevennet_best(ml_path)
+    print(f"Calculators: {args.calculators}")
+    print()
 
-    # Find common pairs
-    common = sorted(set(dft_data) & set(ml_data))
-    if not common:
-        print("No matching surface+molecule pairs found between DFT and ML data.")
-        print(f"  DFT keys  (first 5): {list(dft_data)[:5]}")
-        print(f"  ML keys   (first 5): {list(ml_data)[:5]}")
+    dft_data = load_dft(dft_path)
+    ml_data  = load_ml_best(ml_path, args.calculators)
+
+    # Build per-calculator matched pairs
+    calc_pairs = {}
+    for calc in args.calculators:
+        common = sorted(set(dft_data) & set(ml_data[calc]))
+        calc_pairs[calc] = common
+        ml_only  = len(ml_data[calc]) - len(common)
+        dft_only = len(dft_data) - len(common)
+        print(f"[{calc}]  matched={len(common)}  DFT-only={dft_only}  ML-only={ml_only}")
+
+        if not common:
+            print(f"  WARNING: No matching pairs for {calc} — check calculator name.")
+            continue
+
+        # Per-calculator stats
+        mae, rmse, r2 = compute_stats(dft_data, ml_data[calc], common)
+        print(f"  MAE  = {mae:.4f} eV")
+        print(f"  RMSE = {rmse:.4f} eV")
+        print(f"  R²   = {r2:.4f}")
+
+        # Print table
+        print()
+        print(f"  {'System':<30} {'DFT (eV)':>10} {'ML (eV)':>10} {'Diff (eV)':>10}")
+        print("  " + "-" * 64)
+        for (surf, mol) in common:
+            d = dft_data[(surf, mol)]
+            m = ml_data[calc][(surf, mol)]
+            print(f"  {surf+'_'+mol:<30} {d:>10.4f} {m:>10.4f} {m-d:>10.4f}")
+        print()
+
+    # Check at least one calculator has data
+    if all(len(p) == 0 for p in calc_pairs.values()):
+        print("No data to plot for any calculator.")
         raise SystemExit(1)
 
-    print(f"Matched {len(common)} surface+molecule pairs")
-    print(f"  DFT-only  : {len(dft_data) - len(common)}")
-    print(f"  ML-only   : {len(ml_data)  - len(common)}")
-    print()
+    make_plot(calc_pairs, dft_data, ml_data, Path(args.output))
 
-    # Print table
-    print(f"{'System':<30} {'DFT (eV)':>10} {'SevenNet (eV)':>14} {'Diff (eV)':>10}")
-    print("-" * 68)
-    for (surf, mol) in common:
-        d = dft_data[(surf, mol)]
-        m = ml_data[(surf, mol)]
-        print(f"{surf+'_'+mol:<30} {d:>10.4f} {m:>14.4f} {m-d:>10.4f}")
-    print()
-
-    make_plot(common, dft_data, ml_data, Path(args.output))
-
-    # Optional CSV
+    # Optional CSV — all calculators merged
     if args.csv_out:
         with Path(args.csv_out).open("w", newline="") as f:
             writer = csv.writer(f)
-            writer.writerow(["surface", "molecule", "E_ads_DFT_eV",
-                             "E_ads_SevenNet_eV", "diff_eV"])
-            for (surf, mol) in common:
-                d = dft_data[(surf, mol)]
-                m = ml_data[(surf, mol)]
-                writer.writerow([surf, mol, f"{d:.6f}", f"{m:.6f}", f"{m-d:.6f}"])
+            writer.writerow(["calculator", "surface", "molecule",
+                             "E_ads_DFT_eV", "E_ads_ML_eV", "diff_eV"])
+            for calc, pairs in calc_pairs.items():
+                for (surf, mol) in pairs:
+                    d = dft_data[(surf, mol)]
+                    m = ml_data[calc][(surf, mol)]
+                    writer.writerow([calc, surf, mol,
+                                     f"{d:.6f}", f"{m:.6f}", f"{m-d:.6f}"])
         print(f"CSV saved: {args.csv_out}")
 
 
