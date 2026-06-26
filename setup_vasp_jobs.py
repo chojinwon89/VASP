@@ -56,12 +56,11 @@ EDIFF  = 1E-05
 EDIFFG = -5E-02
 
 ! Exchange-correlation
-GGA = RP
+GGA = PE
 
 ! Ionic Relaxation
 NSW    = 1000
 IBRION = 2
-POTIM  = 0.3
 
 ! DOS
 ISMEAR = 1
@@ -90,17 +89,17 @@ Monkhorst-Pack
 # ---------------------------------------------------------------------------
 SLURM_TEMPLATE = """\
 #!/bin/bash
-#SBATCH --nodes=4
-#SBATCH --ntasks-per-node=17
-#SBATCH --cpus-per-task=6
+#SBATCH --nodes=2
+#SBATCH --ntasks-per-node=26
+#SBATCH --cpus-per-task=4
 #SBATCH --time=48:00:00
 #SBATCH --account=ccpc
 #SBATCH --job-name={job_name}
 #SBATCH --output={job_name}.out
 #SBATCH --error={job_name}.err
 
-export OMP_NUM_THREADS=1
-export OMP_STACKSIZE=3G
+export OMP_NUM_THREADS=8
+export OMP_STACKSIZE=1G
 export OMP_PROC_BIND=spread
 export OMP_PLACES=cores
 ulimit -s unlimited
@@ -114,20 +113,20 @@ srun vasp_std
 # POTCAR element name mapping
 # ---------------------------------------------------------------------------
 POTCAR_MAP = {
-    "Cu": ["Cu_pv", "Cu"],
+    "Cu": ["Cu"],
     "C":  ["C"],
     "H":  ["H"],
     "O":  ["O"],
     "N":  ["N"],
     "S":  ["S"],
-    "Pt": ["Pt_pv", "Pt"],
-    "Pd": ["Pd_pv", "Pd"],
-    "Ni": ["Ni_pv", "Ni"],
-    "Ag": ["Ag_pv", "Ag"],
-    "Au": ["Au_pv", "Au"],
-    "Fe": ["Fe_pv", "Fe"],
-    "Co": ["Co_pv", "Co"],
-    "Zn": ["Zn_pv", "Zn"],
+    "Pt": ["Pt"],
+    "Pd": ["Pd"],
+    "Ni": ["Ni"],
+    "Ag": ["Ag"],
+    "Au": ["Au"],
+    "Fe": ["Fe"],
+    "Co": ["Co"],
+    "Zn": ["Zn"],
     "Al": ["Al"],
 }
 
