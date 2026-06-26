@@ -10,15 +10,31 @@ with the remaining VASP input files needed for DFT verification:
     POTCAR           -- concatenated PBE PAW potentials (species order from POSCAR)
     slm.vasp.kestrel -- Kestrel Slurm submission script
 
+A functional-named subfolder is created inside each system directory so that
+multiple functionals can coexist side-by-side:
+
+    poscar/best/Cu001_CO2/PBE/          <- --functional pbe
+    poscar/best/Cu001_CO2/PBE_D3/       <- --functional pbe-d3
+    poscar/best/Cu001_CO2/r2scan/       <- --functional r2scan
+    poscar/best/Cu001_CO2/beef_vdw/     <- --functional beef-vdw
+
 Usage
 -----
-    # Point --poscar-dir at whichever folder holds the POSCAR subdirectories:
-    python setup_vasp_jobs.py --poscar-dir /scratch/jcho5/.../poscar/best
-    python setup_vasp_jobs.py --poscar-dir /scratch/jcho5/.../poscar/best2
-    python setup_vasp_jobs.py --poscar-dir /scratch/jcho5/.../poscar/best3
+    python setup_vasp_jobs.py --poscar-dir /scratch/jcho5/.../poscar/best \\
+                               --functional pbe
+
+    python setup_vasp_jobs.py --poscar-dir /scratch/jcho5/.../poscar/best \\
+                               --functional pbe-d3
+
+    python setup_vasp_jobs.py --poscar-dir /scratch/jcho5/.../poscar/best \\
+                               --functional r2scan
+
+    python setup_vasp_jobs.py --poscar-dir /scratch/jcho5/.../poscar/best \\
+                               --functional beef-vdw
 
     # Dry-run: see what would be written without touching any files:
-    python setup_vasp_jobs.py --poscar-dir /scratch/jcho5/.../poscar/best --dry-run
+    python setup_vasp_jobs.py --poscar-dir /scratch/jcho5/.../poscar/best \\
+                               --functional pbe --dry-run
 
 Prerequisites
 -------------
@@ -38,9 +54,49 @@ from pathlib import Path
 
 
 # ---------------------------------------------------------------------------
-# INCAR template
+# Supported functionals  ->  (subfolder_name, INCAR_xc_block)
 # ---------------------------------------------------------------------------
-INCAR_TEMPLATE = """\
+FUNCTIONAL_CONFIGS = {
+    "pbe": {
+        "subfolder": "PBE",
+        "xc_block": """\
+! Exchange-correlation
+GGA = PE
+""",
+    },
+    "pbe-d3": {
+        "subfolder": "PBE_D3",
+        "xc_block": """\
+! Exchange-correlation
+GGA    = PE
+IVDW   = 11
+VDW_S6 = 1.0
+VDW_SR = 1.217
+""",
+    },
+    "r2scan": {
+        "subfolder": "r2scan",
+        "xc_block": """\
+! Exchange-correlation
+METAGGA = R2SCAN
+LASPH   = .TRUE.
+""",
+    },
+    "beef-vdw": {
+        "subfolder": "beef_vdw",
+        "xc_block": """\
+! Exchange-correlation
+GGA  = BF
+LUSE_VDW  = .TRUE.
+AGGAC     = 0.0000
+""",
+    },
+}
+
+# ---------------------------------------------------------------------------
+# INCAR template  (xc_block is injected per-functional)
+# ---------------------------------------------------------------------------
+INCAR_BASE = """\
 SYSTEM = {system}
 
 ! Startparameter
@@ -55,9 +111,7 @@ NELMIN = 4
 EDIFF  = 1E-05
 EDIFFG = -5E-02
 
-! Exchange-correlation
-GGA = PE
-
+{xc_block}
 ! Ionic Relaxation
 NSW    = 1000
 IBRION = 2
@@ -181,9 +235,14 @@ def build_potcar(species: list, pp_root: Path, out_path: Path,
 
 
 def setup_job_dir(job_dir: Path, system_name: str,
-                  pp_root: Path, dry_run: bool = False) -> dict:
-    """Write INCAR, KPOINTS, POTCAR, slm.vasp.kestrel into job_dir."""
-    poscar = job_dir / "POSCAR"
+                  pp_root: Path, xc_block: str,
+                  dry_run: bool = False) -> dict:
+    """Write INCAR, KPOINTS, POTCAR, slm.vasp.kestrel into job_dir.
+
+    job_dir is the functional subfolder, e.g. poscar/best/Cu001_CO2/PBE.
+    The POSCAR is read from the parent system directory.
+    """
+    poscar = job_dir.parent / "POSCAR"
     if not poscar.exists():
         return {"status": "skipped", "reason": "no POSCAR"}
 
@@ -197,7 +256,11 @@ def setup_job_dir(job_dir: Path, system_name: str,
     status["species"] = species
 
     if not dry_run:
-        (job_dir / "INCAR").write_text(INCAR_TEMPLATE.format(system=system_name))
+        job_dir.mkdir(parents=True, exist_ok=True)
+        # Copy POSCAR into the functional subfolder
+        (job_dir / "POSCAR").write_bytes(poscar.read_bytes())
+        incar_text = INCAR_BASE.format(system=system_name, xc_block=xc_block.rstrip())
+        (job_dir / "INCAR").write_text(incar_text)
         (job_dir / "KPOINTS").write_text(KPOINTS_TEMPLATE)
 
     potcar_path = job_dir / "POTCAR"
@@ -244,7 +307,12 @@ def main():
     parser = argparse.ArgumentParser(
         description=(
             "Populate VASP job directories (from extract_poscar.py output) "
-            "with INCAR, KPOINTS, POTCAR, and slm.vasp.kestrel."
+            "with INCAR, KPOINTS, POTCAR, and slm.vasp.kestrel.\n\n"
+            "A functional-named subfolder is created inside each system directory:\n"
+            "  poscar/best/Cu001_CO2/PBE/\n"
+            "  poscar/best/Cu001_CO2/PBE_D3/\n"
+            "  poscar/best/Cu001_CO2/r2scan/\n"
+            "  poscar/best/Cu001_CO2/beef_vdw/"
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
@@ -254,8 +322,18 @@ def main():
         metavar="DIR",
         help=(
             "Directory whose immediate subdirectories each contain a POSCAR. "
-            "Point this directly at the folder you want to process, e.g.:\n"
-            "  poscar/best    poscar/best2    poscar/best3    poscar/best4"
+            "E.g.: poscar/best  poscar/best2  poscar/best3"
+        ),
+    )
+    parser.add_argument(
+        "--functional",
+        required=True,
+        choices=list(FUNCTIONAL_CONFIGS.keys()),
+        metavar="FUNCTIONAL",
+        help=(
+            "Exchange-correlation functional to use. "
+            "Choices: " + ", ".join(FUNCTIONAL_CONFIGS.keys()) + ". "
+            "Controls the subfolder name and INCAR XC settings."
         ),
     )
     parser.add_argument(
@@ -274,7 +352,14 @@ def main():
         print(f"ERROR: directory not found: {poscar_dir}")
         raise SystemExit(1)
 
+    # ---- Resolve functional config -------------------------------------------
+    func_cfg   = FUNCTIONAL_CONFIGS[args.functional]
+    subfolder  = func_cfg["subfolder"]
+    xc_block   = func_cfg["xc_block"]
+
     print(f"Processing POSCAR subdirectories in: {poscar_dir}")
+    print(f"Functional : {args.functional}  ->  subfolder name: {subfolder}")
+    print()
 
     # ---- Resolve POTCAR library path -----------------------------------------
     pp_path_str = args.pp_path or os.environ.get("VASP_PP_PATH", "")
@@ -287,37 +372,39 @@ def main():
     else:
         print(f"Using POTCAR library: {pp_root}")
 
-    # ---- Collect job directories (all immediate subdirs with a POSCAR) -------
-    job_dirs = [
+    # ---- Collect system directories (immediate subdirs with a POSCAR) --------
+    system_dirs = [
         d for d in sorted(poscar_dir.iterdir())
         if d.is_dir() and (d / "POSCAR").exists()
     ]
 
-    if not job_dirs:
+    if not system_dirs:
         print(f"No subdirectories containing a POSCAR found under {poscar_dir}.")
         print("Make sure --poscar-dir points at the folder with the POSCAR subdirs,")
         print("e.g. poscar/best  or  poscar/best2")
         raise SystemExit(0)
 
-    print(f"Setting up {len(job_dirs)} VASP job director(y/ies):")
+    print(f"Setting up {len(system_dirs)} system(s) with functional '{args.functional}':")
     print()
 
     all_ok = True
-    for job_dir in job_dirs:
-        system_name = job_dir.name
+    for sys_dir in system_dirs:
+        system_name = sys_dir.name
+        job_dir     = sys_dir / subfolder           # e.g. Cu001_CO2/PBE
         action = "[DRY-RUN]" if args.dry_run else "writing"
         print(f"  {action}: {job_dir}/")
 
         result = setup_job_dir(
             job_dir, system_name,
             pp_root=pp_root,
+            xc_block=xc_block,
             dry_run=args.dry_run,
         )
 
         print(f"    species:  {' '.join(result.get('species', []))}")
 
         if not args.dry_run:
-            files = ["INCAR", "KPOINTS", "slm.vasp.kestrel"]
+            files = ["POSCAR", "INCAR", "KPOINTS", "slm.vasp.kestrel"]
             if result["status"] == "ok":
                 files.append("POTCAR")
             print(f"    written:  {', '.join(files)}")
@@ -337,11 +424,11 @@ def main():
     print("   in each job directory, or set VASP_PP_PATH and re-run:")
     print()
     print("     export VASP_PP_PATH=/projects/vasp/pps/PBE54")
-    print(f"     python setup_vasp_jobs.py --poscar-dir {poscar_dir}")
+    print(f"     python setup_vasp_jobs.py --poscar-dir {poscar_dir} --functional {args.functional}")
     print()
     print("2. Submit each job:")
     print()
-    print(f"     for d in {poscar_dir}/*/; do")
+    print(f"     for d in {poscar_dir}/*/{subfolder}/; do")
     print("       (cd \"$d\" && sbatch slm.vasp.kestrel)")
     print("     done")
     print()
