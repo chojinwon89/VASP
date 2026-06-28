@@ -2,7 +2,8 @@
 GOAD batch driver — isopropanol on Cu(111) and Cu(100).
 Bypasses the Tkinter GUI and calls the GOAD modules directly.
 """
-import os, json, datetime, logging, traceback
+import os, json, datetime, logging, traceback, signal
+from contextlib import contextmanager
 from pathlib import Path
 import numpy as np
 from ase.io import read, write
@@ -23,6 +24,12 @@ RUN_DIR         = Path(os.environ.get(
     "GOAD_RUN_DIR",
     f"runs/{SURFACE}_{ADSORBATE}_seed{SEED}_{CALCULATOR_TYPE}"
 ))
+
+# Per-step wall-clock watchdog timeout (seconds).
+# If any single BFGS step or GA energy evaluation hangs longer than this,
+# a TimeoutError is raised instead of freezing the job forever.
+# Set GOAD_STEP_TIMEOUT=0 to disable. Default: 300 s (5 min).
+STEP_TIMEOUT = int(os.environ.get("GOAD_STEP_TIMEOUT", "300"))
 
 RUN_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -74,6 +81,40 @@ DB_PATH = str(RUN_DIR / "result.json")
 log = logging.getLogger("batch")
 
 
+# ---------------------------------------------------------------------------
+# Watchdog timeout context manager (SIGALRM — Linux only)
+# ---------------------------------------------------------------------------
+
+@contextmanager
+def step_timeout(seconds: int, label: str = "operation"):
+    """
+    Raise TimeoutError if the block takes longer than `seconds`.
+    Pass seconds=0 to disable.
+    Only works on Linux (uses SIGALRM).
+    """
+    if seconds <= 0 or not hasattr(signal, "SIGALRM"):
+        yield
+        return
+
+    def _handler(signum, frame):
+        raise TimeoutError(
+            f"{label} exceeded watchdog limit of {seconds}s — "
+            "likely a hung energy evaluation. Marking as failed."
+        )
+
+    old_handler = signal.signal(signal.SIGALRM, _handler)
+    signal.alarm(seconds)
+    try:
+        yield
+    finally:
+        signal.alarm(0)
+        signal.signal(signal.SIGALRM, old_handler)
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
 def fix_bottom_layers(atoms, surface_analyzer, n_fixed):
     """Fix the bottom n_fixed atomic layers detected by SurfaceAnalyzer."""
     layers = surface_analyzer._info["layers"]["layers_list"]   # top -> bottom
@@ -87,9 +128,10 @@ def relax(atoms, calc, fmax, steps, label, outdir):
     atoms = atoms.copy()
     atoms.calc = calc
     traj = f"{outdir}/{label}.traj"
-    log.info(f"Relaxing {label} (fmax={fmax}, max steps={steps}) ...")
+    log.info(f"Relaxing {label} (fmax={fmax}, max steps={steps}, timeout={STEP_TIMEOUT}s/step) ...")
     opt = BFGS(atoms, trajectory=traj, logfile=f"{outdir}/{label}.bfgs.log")
-    opt.run(fmax=fmax, steps=steps)
+    with step_timeout(STEP_TIMEOUT * steps, label=f"relax:{label}"):
+        opt.run(fmax=fmax, steps=steps)
     e = atoms.get_potential_energy()
     log.info(f"  {label}: E = {e:.6f} eV")
     write(f"{outdir}/{label}.cif", atoms)
@@ -123,17 +165,19 @@ def run_one_system(system, calc):
     # 3. GA — one task uses one seed
     np.random.seed(SEED)
     log.info(f"\n--- GA run (seed={SEED}, pop={GA_KW['population_size']}, gen={GA_KW['generations']}) ---")
-    ga = GeneticAlgorithm(
-        surface=surface_relaxed,
-        molecule=molecule_relaxed,
-        calculator=calc,
-        calculator_type=CALCULATOR_TYPE,
-        surface_energy=E_surf,
-        molecule_energy=E_mol,
-        n_fixed_layers=N_FIXED_LAYERS,
-        **GA_KW,
-    )
-    res = ga.run()
+    with step_timeout(STEP_TIMEOUT * GA_KW["generations"] * GA_KW["population_size"],
+                      label="GA.run"):
+        ga = GeneticAlgorithm(
+            surface=surface_relaxed,
+            molecule=molecule_relaxed,
+            calculator=calc,
+            calculator_type=CALCULATOR_TYPE,
+            surface_energy=E_surf,
+            molecule_energy=E_mol,
+            n_fixed_layers=N_FIXED_LAYERS,
+            **GA_KW,
+        )
+        res = ga.run()
     log.info(f"Seed {SEED}: best E_ads (single-point) = {res['best_energy']:.4f} eV")
     best_overall = {
         "E_ads":       res["best_energy"],
@@ -196,7 +240,8 @@ def main():
     log.info(f"Output dir: {RUN_DIR}")
     log.info(f"Surface: {SURFACE} | Adsorbate: {ADSORBATE} | Seed: {SEED}")
     log.info(f"GA params: population={GA_KW['population_size']}, generations={GA_KW['generations']}")
-    log.info(f"Loading calculator: {CALCULATOR_TYPE}")
+    log.info(f"Calculator: {CALCULATOR_TYPE} | Workers: {os.environ.get('GOAD_N_WORKERS', 'auto')} | "
+             f"Step timeout: {STEP_TIMEOUT}s")
     calc = CalculatorManager.get_calculator(CALCULATOR_TYPE)
 
     entries = []
@@ -208,6 +253,8 @@ def main():
             with open(DB_PATH, "w") as f:
                 json.dump(entry, f, indent=2)
             log.info(f"Result updated -> {DB_PATH}")
+        except TimeoutError as e:
+            log.error(f"TIMEOUT on {system['name']}: {e}")
         except Exception as e:
             log.error(f"FAILED on {system['name']}: {e}")
             log.error(traceback.format_exc())

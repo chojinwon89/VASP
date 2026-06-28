@@ -5,7 +5,7 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=16          # Enough threads to feed the GPU; no need for 104
-#SBATCH --mem=0                     # use all available memory on node
+#SBATCH --mem=120G                  # capped: GPU nodes have less RAM than CPU nodes
 #SBATCH --gpus=1                    # 1 GPU per task
 #SBATCH --time=12:00:00             # increased: some heavy tasks (glycerol/Pt) exceed 4h
 #SBATCH --output=slurm-logs/goad_gpu-%A_%a.out
@@ -18,9 +18,9 @@
 # calculator, but CUDA context is per-process — each worker will try
 # to use the GPU. With 1 GPU and many workers this causes contention.
 #
-# Recommended: set n_workers=1 via env var below so the main process
-# owns the GPU exclusively. Energy evals (~0.02 s on H100) are fast
-# enough that serial-per-generation is still 5-20x faster than CPU.
+# GOAD_N_WORKERS=1 forces the main process to own the GPU exclusively.
+# Energy evals (~0.02 s on H100) are fast enough that serial-per-generation
+# is still 5-20x faster than CPU.
 #
 # To run many tasks in parallel on separate GPU nodes use the throttle:
 #   sbatch --array=0-647%8 goad_array_kestrel_gpu.slurm workflow/tasks_custom.csv
@@ -43,6 +43,9 @@ export NUMEXPR_NUM_THREADS=$SLURM_CPUS_PER_TASK
 # so serial-per-generation is still ~30x faster than CPU-parallel.
 export GOAD_N_WORKERS=1
 
+# Per-step watchdog timeout in seconds (default 300 = 5 min).
+export GOAD_STEP_TIMEOUT=300
+
 cd $SLURM_SUBMIT_DIR
 mkdir -p slurm-logs runs
 
@@ -53,6 +56,8 @@ echo "Job ID:    ${SLURM_JOB_ID}"
 echo "Array ID:  ${SLURM_ARRAY_TASK_ID}"
 echo "CPUs/task: ${SLURM_CPUS_PER_TASK}"
 echo "GPUs:      ${SLURM_GPUS:-1}"
+echo "Workers:   ${GOAD_N_WORKERS}"
+echo "Timeout:   ${GOAD_STEP_TIMEOUT}s per step"
 echo "Work dir:  $(pwd)"
 echo "Started:   $(date)"
 echo "=========================================="
