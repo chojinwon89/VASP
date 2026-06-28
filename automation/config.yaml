@@ -1,0 +1,27 @@
+paths:
+  jobs_root: ./campaigns/current/jobs
+  potcar_root: /home/jcho5/project/paw54/potpaw_PBE.54
+  beef_kernel: /projects/2dmgcat/vdw_kernel.bindat
+  state_db: ./automation/state.db
+  reports_dir: ./campaigns/current/reports
+
+scheduler:
+  submit_cmd: "sbatch slm.vasp.kestrel"
+  poll_minutes: 15
+  max_retries: 4
+
+functionals: [pbe, pbe-d3, r2scan, beef-vdw]
+
+failure_rules:
+  - name: zbrent
+    match: ["ZBRENT", "BRACKETING"]
+    patch:
+      INCAR:
+        EDIFF: "1E-6"
+        ALGO: Normal
+  - name: edddav
+    match: ["EDDDAV", "DAV"]
+    patch:
+      INCAR:
+        ALGO: All
+        NELM: 250
