@@ -17,6 +17,12 @@ This guarantees every generation-0 individual has an oxygen close
 to the surface, giving a real energy gradient from the very first
 evaluation instead of wasting 30+ generations on a flat landscape
 with oxygens pointing away from the surface.
+
+Early stopping
+--------------
+The GA stops early if the best energy has not improved by more than
+early_stop_tol eV in the last early_stop_patience generations.
+Default: patience=30, tol=0.001 eV.
 """
 
 import os
@@ -156,19 +162,23 @@ class GeneticAlgorithm:
     - Support for molecular torsions
     - Molecule kept inside the central unit cell (no edge-wrapping)
     - Initial population biased so lowest O faces the surface at o_target_z
+    - Early stopping when best energy has not improved by > early_stop_tol eV
+      in the last early_stop_patience generations (default: 30 gens, 0.001 eV)
     """
 
     def __init__(self, surface: Atoms, molecule: Atoms, calculator,
                  surface_energy: float, molecule_energy: float,
                  calculator_type: Optional[str] = None,
                  n_fixed_layers: int = 1,
-                 generations: int = 50, population_size: int = 30,
+                 generations: int = 200, population_size: int = 30,
                  mutation_rate: float = 0.3, crossover_rate: float = 0.7,
                  elite_size: int = 5, verbose: bool = True,
                  search_radius: Optional[float] = None,
                  center_in_cell: bool = True,
                  n_workers: Optional[int] = None,
-                 o_target_z: float = 2.3):
+                 o_target_z: float = 2.3,
+                 early_stop_patience: int = 30,
+                 early_stop_tol: float = 0.001):
         """
         Initialize GA.
 
@@ -181,7 +191,7 @@ class GeneticAlgorithm:
             surface_energy: Reference energy of surface
             molecule_energy: Reference energy of molecule
             n_fixed_layers: Number of layers to keep fixed (info only)
-            generations: Number of generations
+            generations: Maximum number of generations (default 200).
             population_size: Population size
             mutation_rate: Mutation rate (0-1)
             crossover_rate: Crossover rate (0-1)
@@ -199,8 +209,11 @@ class GeneticAlgorithm:
             o_target_z: Target distance (Å) between the lowest oxygen atom and
                         the surface top layer in the initial population.
                         Default 2.3 Å — the known O–metal equilibrium distance.
-                        The COM Z is back-calculated from this so every initial
-                        individual has an O pointing toward the surface.
+            early_stop_patience: Stop if best energy has not improved by more
+                                 than early_stop_tol eV in this many consecutive
+                                 generations. Default 30.
+            early_stop_tol: Minimum improvement threshold (eV) for early
+                            stopping. Default 0.001 eV.
         """
         self.surface = surface.copy()
         self.surface.calc = None
@@ -228,6 +241,10 @@ class GeneticAlgorithm:
         # O-facing-surface target distance
         self.o_target_z = o_target_z
 
+        # Early stopping
+        self.early_stop_patience = early_stop_patience
+        self.early_stop_tol = early_stop_tol
+
         # Surface properties (resolves self.search_radius and self.surface_z_max)
         self._analyze_surface()
 
@@ -247,8 +264,6 @@ class GeneticAlgorithm:
         self.best_energy = float('inf')
 
         # Vertical search-space parameters for mutation clamping
-        # surface_buffer / max_height are expressed as COM distance above surface_z_max.
-        # These are only used to clamp Z *mutations* — initial placement uses o_target_z.
         self.surface_buffer = 2.0   # Å  COM minimum above surface_z_max
         self.max_height     = 5.0   # Å  COM maximum above surface_z_max
 
@@ -291,7 +306,9 @@ class GeneticAlgorithm:
         logger.info("GENETIC ALGORITHM - GOAD v1.0")
         logger.info("=" * 60)
         logger.info(f"Population: {self.population_size}")
-        logger.info(f"Generations: {self.generations}")
+        logger.info(f"Max generations: {self.generations}")
+        logger.info(f"Early stopping: patience={self.early_stop_patience} gens, "
+                    f"tol={self.early_stop_tol} eV")
         logger.info("Surface: FIXED during GA search (will relax in post-GA BFGS)")
         logger.info("Molecule: FREE TO MOVE")
         logger.info(f"\nInitial placement strategy:")
@@ -311,6 +328,9 @@ class GeneticAlgorithm:
 
         self._initialize_population()
 
+        no_improve_count = 0
+        best_energy_at_last_check = float('inf')
+
         for gen in range(self.generations):
             self._evaluate_population()
 
@@ -319,7 +339,22 @@ class GeneticAlgorithm:
                 best_gen = min(recent) if recent else float('inf')
                 logger.info(f"Gen {gen+1}/{self.generations} | "
                             f"Best: {best_gen:.4f} eV | "
-                            f"Overall best: {self.best_energy:.4f} eV")
+                            f"Overall best: {self.best_energy:.4f} eV | "
+                            f"No-improve: {no_improve_count}/{self.early_stop_patience}")
+
+            # Early stopping check
+            if self.best_energy < best_energy_at_last_check - self.early_stop_tol:
+                best_energy_at_last_check = self.best_energy
+                no_improve_count = 0
+            else:
+                no_improve_count += 1
+
+            if no_improve_count >= self.early_stop_patience:
+                logger.info(
+                    f"\nEarly stopping at gen {gen+1}: no improvement > "
+                    f"{self.early_stop_tol} eV in {self.early_stop_patience} generations."
+                )
+                break
 
             self._selection_crossover_mutation()
 
@@ -364,7 +399,6 @@ class GeneticAlgorithm:
             logger.warning("No O atoms found — using lowest atom for Z placement")
 
         for _ in range(self.population_size):
-            # Random lateral position centered on surface COM
             x = self.surface_center_xy[0] + np.random.uniform(
                 -self.search_radius, self.search_radius)
             y = self.surface_center_xy[1] + np.random.uniform(
@@ -373,22 +407,20 @@ class GeneticAlgorithm:
             euler_angles   = np.random.uniform(0, 360, 3)
             torsion_angles = np.random.uniform(0, 360, self.n_torsions)
 
-            # --- build a temporary rotated+torsioned molecule to find lowest O ---
+            # Build a temporary rotated+torsioned molecule to find lowest O
             mol_tmp = self.molecule.copy()
             if self.n_torsions > 0:
                 mol_tmp = self.torsion_handler.apply_torsions(mol_tmp, torsion_angles)
 
-            # Centre at origin, apply rotation
             mol_tmp.translate(-mol_tmp.get_center_of_mass())
             self._apply_rotation(mol_tmp, euler_angles)
 
-            # Find lowest O (or lowest atom if no O)
             if o_idx:
                 lowest_o_z = mol_tmp.positions[o_idx, 2].min()
             else:
                 lowest_o_z = mol_tmp.positions[:, 2].min()
 
-            # COM Z such that lowest O lands at surface_z_max + o_target_z
+            # COM Z so that the lowest O lands at surface_z_max + o_target_z
             com_z = self.surface_z_max + self.o_target_z - lowest_o_z
 
             individual = {
