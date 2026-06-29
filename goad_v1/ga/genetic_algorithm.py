@@ -5,6 +5,20 @@ Surface atoms are completely fixed during GA optimization.
 Includes molecular torsions in the genome.
 The molecule is kept inside the central unit cell so it doesn't
 wrap to the edges via PBC.
+
+Z-placement rationale
+---------------------
+The GA encodes the molecule's centre-of-mass (COM) position, not
+individual atom positions.  For a molecule like glycerol that adsorbs
+through an oxygen atom:
+
+    O–metal equilibrium distance : ~2.3 Å  (experiment / DFT)
+    Glycerol COM above bottom O  : ~1.7 Å  (molecular geometry)
+    → COM equilibrium Z          : surface_z_max + 4.0 Å
+
+We therefore initialise the COM in [surface_z_max + 3.0,
+surface_z_max + 5.0] Å and clamp Z mutations to the same range so
+molecules never drift out of the MLFF interaction window.
 """
 
 import os
@@ -143,6 +157,7 @@ class GeneticAlgorithm:
     - Only molecule position and orientation vary
     - Support for molecular torsions
     - Molecule kept inside the central unit cell (no edge-wrapping)
+    - Z placement anchored to physical O–metal distance (~2.3 Å)
     """
 
     def __init__(self, surface: Atoms, molecule: Atoms, calculator,
@@ -159,14 +174,15 @@ class GeneticAlgorithm:
         Initialize GA.
 
         Args:
-            surface: Surface structure
+            surface: Surface structure (should be the POST-relaxation slab so
+                     surface_z_max matches the actual top-layer Z used in GA).
             molecule: Molecule structure
             calculator: ASE calculator
             calculator_type: CalculatorManager calculator type string.
                             Required for parallel population evaluation workers.
             surface_energy: Reference energy of surface
             molecule_energy: Reference energy of molecule
-            n_fixed_layers: Number of layers to keep fixed (info only, all surface fixed in GA)
+            n_fixed_layers: Number of layers to keep fixed (info only)
             generations: Number of generations
             population_size: Population size
             mutation_rate: Mutation rate (0-1)
@@ -174,11 +190,10 @@ class GeneticAlgorithm:
             elite_size: Number of elite individuals to preserve
             verbose: Print progress
             search_radius: Lateral half-width of the initial sampling box (Å).
-                           If None, auto-set to 1/4 of the smaller in-plane cell vector,
-                           which keeps the molecule near the cell center.
-            center_in_cell: If True, snap the molecule's center-of-mass back into
-                            the central unit cell after every placement, so it
-                            never wraps to an edge via PBC.
+                           If None, auto-set to 1/4 of the smaller in-plane
+                           cell vector.
+            center_in_cell: If True, snap the molecule's COM back into the
+                            central unit cell after every placement.
             n_workers: Number of evaluation workers. If None, checks (in order):
                        GOAD_N_WORKERS env var, SLURM_CPUS_PER_TASK, os.cpu_count().
                        NOTE: always forced to 1 when a CUDA device is present to
@@ -204,10 +219,10 @@ class GeneticAlgorithm:
 
         # Cell-centering controls
         self.center_in_cell = center_in_cell
-        self._user_search_radius = search_radius   # may be None
+        self._user_search_radius = search_radius
         self.n_workers = self._resolve_worker_count(n_workers)
 
-        # Surface properties (also resolves self.search_radius)
+        # Surface properties (resolves self.search_radius and self.surface_z_max)
         self._analyze_surface()
 
         # Torsion handling
@@ -225,9 +240,22 @@ class GeneticAlgorithm:
         self.best_individual = None
         self.best_energy = float('inf')
 
-        # Vertical search-space parameters
-        self.max_height = 8.0       # Maximum height above surface (Å)
-        self.surface_buffer = 1.5   # Minimum distance from surface (Å)
+        # ------------------------------------------------------------------
+        # Vertical search-space parameters (COM above surface_z_max)
+        # ------------------------------------------------------------------
+        # Physical basis for glycerol / alcohols on transition metals:
+        #   O–metal equilibrium distance : ~2.3 Å
+        #   Glycerol COM above bottom O  : ~1.7 Å  (mol height / 2)
+        #   → COM equilibrium            : surface_z_max + 4.0 Å
+        #
+        # surface_buffer = 3.0 Å → bottom O at ~1.3 Å (repulsive, strong gradient)
+        # max_height     = 5.0 Å → bottom O at ~3.3 Å (still in MLFF range)
+        #
+        # Both old values (1.5 / 8.0) placed the bottom O 6+ Å from the
+        # surface — outside the MLFF interaction range, giving a flat
+        # energy landscape and no convergence signal.
+        self.surface_buffer = 3.0   # Å  COM minimum above surface_z_max
+        self.max_height     = 5.0   # Å  COM maximum above surface_z_max
 
     # ------------------------------------------------------------------
     # Surface analysis & search-radius default
@@ -246,8 +274,6 @@ class GeneticAlgorithm:
         ax = np.linalg.norm(cell[0, :2])
         ay = np.linalg.norm(cell[1, :2])
 
-        # Default search radius = 1/4 of the smaller in-plane vector.
-        # That keeps initial COMs inside ~half the cell, well away from edges.
         if self._user_search_radius is None:
             self.search_radius = 0.25 * min(ax, ay)
             radius_src = "auto (1/4 of min in-plane cell)"
@@ -255,7 +281,7 @@ class GeneticAlgorithm:
             self.search_radius = float(self._user_search_radius)
             radius_src = "user-specified"
 
-        logger.info(f"Surface Z range: {self.surface_z_min:.2f} - {self.surface_z_max:.2f} Å")
+        logger.info(f"Surface Z range: {self.surface_z_min:.2f} – {self.surface_z_max:.2f} Å")
         logger.info(f"Surface center (XY): "
                     f"({self.surface_center_xy[0]:.2f}, {self.surface_center_xy[1]:.2f})")
         logger.info(f"In-plane cell: |a|={ax:.2f} Å  |b|={ay:.2f} Å")
@@ -267,6 +293,9 @@ class GeneticAlgorithm:
     # ------------------------------------------------------------------
     def run(self) -> Dict:
         """Run the genetic algorithm and return results."""
+        z_min_abs = self.surface_z_max + self.surface_buffer
+        z_max_abs = self.surface_z_max + self.max_height
+
         logger.info("=" * 60)
         logger.info("GENETIC ALGORITHM - GOAD v1.0")
         logger.info("=" * 60)
@@ -274,6 +303,12 @@ class GeneticAlgorithm:
         logger.info(f"Generations: {self.generations}")
         logger.info("Surface: FIXED during GA search (will relax in post-GA BFGS)")
         logger.info("Molecule: FREE TO MOVE")
+        logger.info(f"\nZ search window (COM above surface top layer):")
+        logger.info(f"  surface_z_max : {self.surface_z_max:.2f} Å")
+        logger.info(f"  COM min (Z)   : {z_min_abs:.2f} Å  "
+                    f"(+{self.surface_buffer:.1f} Å → bottom atom ~{self.surface_buffer - 1.7:.1f} Å above surface)")
+        logger.info(f"  COM max (Z)   : {z_max_abs:.2f} Å  "
+                    f"(+{self.max_height:.1f} Å → bottom atom ~{self.max_height - 1.7:.1f} Å above surface)")
         logger.info(f"\nGenome composition:")
         logger.info(f"  Position (X, Y, Z):     3 genes")
         logger.info(f"  Orientation (α, β, γ): 3 genes")
@@ -281,15 +316,14 @@ class GeneticAlgorithm:
         logger.info(f"  Total genes per individual: {6 + self.n_torsions}")
         logger.info("=" * 60 + "\n")
 
-        # Initialize population
         self._initialize_population()
 
-        # Main GA loop
         for gen in range(self.generations):
             self._evaluate_population()
 
             if self.verbose:
-                best_gen = min(self.fitness_history[-self.population_size:])
+                recent = self.fitness_history[-self.population_size:]
+                best_gen = min(recent) if recent else float('inf')
                 logger.info(f"Gen {gen+1}/{self.generations} | "
                             f"Best: {best_gen:.4f} eV | "
                             f"Overall best: {self.best_energy:.4f} eV")
@@ -306,29 +340,39 @@ class GeneticAlgorithm:
     # Initial population
     # ------------------------------------------------------------------
     def _initialize_population(self):
-        """Initialize random population near the cell center."""
+        """
+        Initialize random population with COM placed in the physical
+        interaction window above the surface.
+
+        Z range: [surface_z_max + surface_buffer, surface_z_max + max_height]
+                 = [surface_z_max + 3.0, surface_z_max + 5.0]  Å
+
+        For glycerol (COM ~1.7 Å above bottom O), this places the
+        bottom oxygen 1.3–3.3 Å above the surface top layer —
+        bracketing the ~2.3 Å O–metal equilibrium distance.
+        """
         logger.info("Initializing population...")
+        logger.info(f"  COM Z range: [{self.surface_z_max + self.surface_buffer:.2f}, "
+                    f"{self.surface_z_max + self.max_height:.2f}] Å")
 
         for i in range(self.population_size):
-            # Random molecule position above surface, centered on slab COM
-            x = self.surface_center_xy[0] + np.random.uniform(-self.search_radius, self.search_radius)
-            y = self.surface_center_xy[1] + np.random.uniform(-self.search_radius, self.search_radius)
-            z = self.surface_z_max + np.random.uniform(self.surface_buffer, self.max_height)
+            x = self.surface_center_xy[0] + np.random.uniform(
+                -self.search_radius, self.search_radius)
+            y = self.surface_center_xy[1] + np.random.uniform(
+                -self.search_radius, self.search_radius)
+            z = self.surface_z_max + np.random.uniform(
+                self.surface_buffer, self.max_height)
 
-            # Random orientation (Euler angles in degrees)
-            euler_angles = np.random.uniform(0, 360, 3)
-
-            # Random torsion angles (0-360 degrees)
+            euler_angles   = np.random.uniform(0, 360, 3)
             torsion_angles = np.random.uniform(0, 360, self.n_torsions)
 
             individual = {
-                'position': np.array([x, y, z]),
+                'position':    np.array([x, y, z]),
                 'orientation': np.array(euler_angles),
-                'torsions': np.array(torsion_angles),
-                'energy': None,
-                'structure': None
+                'torsions':    np.array(torsion_angles),
+                'energy':      None,
+                'structure':   None,
             }
-
             self.population.append(individual)
 
     # ------------------------------------------------------------------
@@ -384,22 +428,10 @@ class GeneticAlgorithm:
 
     @staticmethod
     def _resolve_worker_count(n_workers: Optional[int]) -> int:
-        """Resolve worker count from explicit value, env vars, or local CPU count.
-
-        Priority order:
-          1. Explicit ``n_workers`` argument (not None)
-          2. ``GOAD_N_WORKERS`` environment variable  ← checked first so GPU
-             jobs can set ``export GOAD_N_WORKERS=1`` in the SLURM script
-          3. ``SLURM_CPUS_PER_TASK`` (set by SLURM for CPU jobs)
-          4. ``os.cpu_count()``
-
-        Note: even if this returns > 1, ``_evaluate_population`` will still
-        force serial execution when a CUDA device is detected.
-        """
+        """Resolve worker count from explicit value, env vars, or local CPU count."""
         if n_workers is not None:
             return max(1, int(n_workers))
 
-        # Explicit GOAD override (e.g. export GOAD_N_WORKERS=1 for GPU jobs)
         goad_workers = os.environ.get("GOAD_N_WORKERS")
         if goad_workers:
             try:
@@ -436,12 +468,9 @@ class GeneticAlgorithm:
         try:
             system = self._create_system(individual)
 
-            # Fix all surface atoms (GA-stage convention)
             surface_atoms_count = len(self.surface)
             fixed_indices = list(range(surface_atoms_count))
             system.set_constraint(FixAtoms(indices=fixed_indices))
-
-            # Attach calculator (modern ASE API)
             system.calc = self.calculator
 
             energy = system.get_potential_energy()
@@ -452,7 +481,7 @@ class GeneticAlgorithm:
 
         except Exception as e:
             logger.warning(f"Energy calculation failed: {e}")
-            return 1000.0  # large penalty
+            return 1000.0
 
     # ------------------------------------------------------------------
     # System builder (with cell-centering)
@@ -462,44 +491,34 @@ class GeneticAlgorithm:
         surface_copy = self.surface.copy()
         molecule_copy = self.molecule.copy()
 
-        # Apply torsions FIRST (before positioning)
         if self.n_torsions > 0:
             molecule_copy = self.torsion_handler.apply_torsions(
                 molecule_copy,
                 individual['torsions']
             )
 
-        # Position molecule so its COM lands at the requested point
         molecule_copy.translate(
             individual['position'] - molecule_copy.get_center_of_mass()
         )
 
-        # Apply rotation
         self._apply_rotation(molecule_copy, individual['orientation'])
 
-        # ------------------------------------------------------------------
-        # Keep the molecule's COM inside the central unit cell.
-        # This prevents PBC wrapping the molecule to the edges/corners.
-        # Vertical (Z) position is preserved.
-        # ------------------------------------------------------------------
         if self.center_in_cell:
             cell = np.array(surface_copy.get_cell())
-            A2 = cell[:2, :2]                       # 2x2 in-plane cell matrix
+            A2 = cell[:2, :2]
             com = molecule_copy.get_center_of_mass()
             try:
                 inv = np.linalg.inv(A2)
-                frac_xy = inv @ com[:2]             # fractional in-plane coords
-                frac_xy = frac_xy % 1.0             # wrap to [0,1)
-                new_xy = A2 @ frac_xy               # back to Cartesian
+                frac_xy = inv @ com[:2]
+                frac_xy = frac_xy % 1.0
+                new_xy = A2 @ frac_xy
                 shift = np.array([new_xy[0] - com[0],
                                   new_xy[1] - com[1],
                                   0.0])
                 molecule_copy.translate(shift)
             except np.linalg.LinAlgError:
-                # Non-periodic / singular cell: skip centering silently
                 pass
 
-        # Combine
         system = surface_copy + molecule_copy
         return system
 
@@ -539,13 +558,10 @@ class GeneticAlgorithm:
     # ------------------------------------------------------------------
     def _selection_crossover_mutation(self):
         """Selection, crossover, and mutation step."""
-        # Sort population by fitness (lowest energy first)
         self.population.sort(key=lambda x: x['energy'])
 
-        # Keep elite
         new_population = self.population[:self.elite_size].copy()
 
-        # Generate offspring
         while len(new_population) < self.population_size:
             if np.random.random() < self.crossover_rate:
                 parent1 = self._select_parent()
@@ -572,28 +588,41 @@ class GeneticAlgorithm:
             'orientation': parent2['orientation'].copy(),
             'torsions':    np.zeros(self.n_torsions),
             'energy':      None,
-            'structure':   None
+            'structure':   None,
         }
         for i in range(self.n_torsions):
-            child['torsions'][i] = parent1['torsions'][i] if np.random.random() < 0.5 \
-                                   else parent2['torsions'][i]
+            child['torsions'][i] = (parent1['torsions'][i]
+                                    if np.random.random() < 0.5
+                                    else parent2['torsions'][i])
         return child
 
     def _mutate(self, individual: Dict) -> Dict:
-        """Mutate position, orientation, or torsions (one of the three)."""
+        """
+        Mutate position, orientation, or torsions.
+
+        Z is clamped to [surface_z_max + surface_buffer,
+                         surface_z_max + max_height]
+        after every position mutation so molecules cannot drift above
+        the MLFF interaction range over generations.
+        """
         mutation_choice = np.random.random()
 
         if mutation_choice < 0.33:
-            # Mutate position (small Gaussian step)
+            # Position mutation — Gaussian step, then clamp Z
             individual['position'] += np.random.normal(0, 0.5, 3)
+            z_min = self.surface_z_max + self.surface_buffer
+            z_max = self.surface_z_max + self.max_height
+            individual['position'][2] = float(
+                np.clip(individual['position'][2], z_min, z_max)
+            )
 
         elif mutation_choice < 0.66:
-            # Mutate orientation
+            # Orientation mutation
             individual['orientation'] += np.random.normal(0, 10, 3)
             individual['orientation'] = individual['orientation'] % 360
 
         else:
-            # Mutate torsions
+            # Torsion mutation
             for i in range(self.n_torsions):
                 if np.random.random() < 0.5:
                     individual['torsions'][i] += np.random.normal(0, 20)
@@ -620,7 +649,9 @@ class GeneticAlgorithm:
         if self.best_individual:
             p = self.best_individual['position']
             o = self.best_individual['orientation']
-            logger.info(f"Best position (Å): X={p[0]:.2f}, Y={p[1]:.2f}, Z={p[2]:.2f}")
+            z_above = p[2] - self.surface_z_max
+            logger.info(f"Best position (Å): X={p[0]:.2f}, Y={p[1]:.2f}, Z={p[2]:.2f} "
+                        f"(+{z_above:.2f} Å above surface top)")
             logger.info(f"Best orientation (°): α={o[0]:.1f}, β={o[1]:.1f}, γ={o[2]:.1f}")
             if self.n_torsions > 0:
                 logger.info(
