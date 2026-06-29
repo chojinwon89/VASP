@@ -23,6 +23,17 @@ Early stopping
 The GA stops early if the best energy has not improved by more than
 early_stop_tol eV in the last early_stop_patience generations.
 Default: patience=30, tol=0.001 eV.
+
+_create_system rotation order
+------------------------------
+IMPORTANT: rotation must happen BEFORE translation to the target COM.
+  1. Centre molecule at origin
+  2. Rotate around origin  (preserves the O-facing-down orientation)
+  3. Translate COM to target position
+
+Doing rotation AFTER translation would spin the molecule around its
+displaced COM, randomising which atom ends up lowest and defeating
+the O-bias encoded in _initialize_population.
 """
 
 import os
@@ -70,7 +81,12 @@ def _init_energy_worker(surface: Atoms, molecule: Atoms,
 
 
 def _apply_rotation_worker(atoms: Atoms, euler_angles: np.ndarray):
-    """Rotate atoms in place using ZYX Euler angles (degrees)."""
+    """Rotate atoms in place using ZYX Euler angles (degrees).
+
+    Rotation is always performed around the current COM, so call this
+    only when the molecule is already centred at the origin (or wherever
+    the rotation pivot should be).
+    """
     angles_rad = np.deg2rad(euler_angles)
     alpha, beta, gamma = angles_rad
 
@@ -111,8 +127,11 @@ def _evaluate_individual_worker(task: Tuple[int, Dict]) -> Tuple[int, float, Opt
                 individual['torsions']
             )
 
-        molecule_copy.translate(individual['position'] - molecule_copy.get_center_of_mass())
+        # ── correct order: centre → rotate → translate ──────────────────
+        molecule_copy.translate(-molecule_copy.get_center_of_mass())
         _apply_rotation_worker(molecule_copy, individual['orientation'])
+        molecule_copy.translate(individual['position'])
+        # ────────────────────────────────────────────────────────────────
 
         if _WORKER_CENTER_IN_CELL:
             cell = np.array(surface_copy.get_cell())
@@ -377,14 +396,15 @@ class GeneticAlgorithm:
 
         For each individual:
           1. Apply random torsions (if any)
-          2. Apply random Euler rotation
-          3. Find the lowest O atom in the rotated molecule
-          4. Translate so that O sits at surface_z_max + o_target_z
-          5. Record the resulting COM as the genome position
+          2. Centre molecule at origin
+          3. Apply random Euler rotation (around origin)
+          4. Find the lowest O atom in the rotated molecule
+          5. Set COM Z so that lowest O lands at surface_z_max + o_target_z
+          6. Record (x, y, com_z) as the genome position and euler_angles
+             as the genome orientation
 
-        This guarantees every individual has an oxygen pointing toward
-        the surface at the known equilibrium distance, giving the GA a
-        real energy gradient from generation 1.
+        _create_system then reproduces this exactly by:
+          centre → rotate (same euler_angles) → translate to (x, y, com_z)
 
         If the molecule has no oxygen atoms (e.g. pure hydrocarbon),
         we fall back to using the lowest atom instead.
@@ -407,13 +427,13 @@ class GeneticAlgorithm:
             euler_angles   = np.random.uniform(0, 360, 3)
             torsion_angles = np.random.uniform(0, 360, self.n_torsions)
 
-            # Build a temporary rotated+torsioned molecule to find lowest O
+            # Build a temporary molecule centred at origin, then rotate
             mol_tmp = self.molecule.copy()
             if self.n_torsions > 0:
                 mol_tmp = self.torsion_handler.apply_torsions(mol_tmp, torsion_angles)
 
-            mol_tmp.translate(-mol_tmp.get_center_of_mass())
-            self._apply_rotation(mol_tmp, euler_angles)
+            mol_tmp.translate(-mol_tmp.get_center_of_mass())   # centre at origin
+            self._apply_rotation(mol_tmp, euler_angles)         # rotate around origin
 
             if o_idx:
                 lowest_o_z = mol_tmp.positions[o_idx, 2].min()
@@ -421,6 +441,10 @@ class GeneticAlgorithm:
                 lowest_o_z = mol_tmp.positions[:, 2].min()
 
             # COM Z so that the lowest O lands at surface_z_max + o_target_z
+            # After centring at origin, COM is at (0,0,0), so:
+            #   lowest_o_z is relative to origin
+            #   target absolute Z of lowest O = surface_z_max + o_target_z
+            #   therefore COM Z = surface_z_max + o_target_z - lowest_o_z
             com_z = self.surface_z_max + self.o_target_z - lowest_o_z
 
             individual = {
@@ -544,7 +568,15 @@ class GeneticAlgorithm:
     # System builder (with cell-centering)
     # ------------------------------------------------------------------
     def _create_system(self, individual: Dict) -> Atoms:
-        """Build a (surface + positioned molecule) Atoms object."""
+        """Build a (surface + positioned molecule) Atoms object.
+
+        Order is critical:
+          1. Apply torsions (if any)
+          2. Centre molecule at origin
+          3. Rotate around origin   ← preserves O-facing-down orientation
+          4. Translate COM to target position
+          5. (optional) snap COM back into unit cell in XY
+        """
         surface_copy = self.surface.copy()
         molecule_copy = self.molecule.copy()
 
@@ -554,11 +586,11 @@ class GeneticAlgorithm:
                 individual['torsions']
             )
 
-        molecule_copy.translate(
-            individual['position'] - molecule_copy.get_center_of_mass()
-        )
-
+        # ── correct order: centre → rotate → translate ──────────────────
+        molecule_copy.translate(-molecule_copy.get_center_of_mass())
         self._apply_rotation(molecule_copy, individual['orientation'])
+        molecule_copy.translate(individual['position'])
+        # ────────────────────────────────────────────────────────────────
 
         if self.center_in_cell:
             cell = np.array(surface_copy.get_cell())
@@ -583,7 +615,11 @@ class GeneticAlgorithm:
     # Rotation
     # ------------------------------------------------------------------
     def _apply_rotation(self, atoms: Atoms, euler_angles: np.ndarray):
-        """Rotate atoms in place using ZYX Euler angles (degrees)."""
+        """Rotate atoms in place using ZYX Euler angles (degrees).
+
+        Rotates around the current COM, so call this only when the
+        molecule is already centred at the origin.
+        """
         angles_rad = np.deg2rad(euler_angles)
         alpha, beta, gamma = angles_rad
 
