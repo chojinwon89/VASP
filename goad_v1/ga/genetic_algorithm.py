@@ -13,12 +13,17 @@ individual atom positions.  For a molecule like glycerol that adsorbs
 through an oxygen atom:
 
     O–metal equilibrium distance : ~2.3 Å  (experiment / DFT)
-    Glycerol COM above bottom O  : ~1.7 Å  (molecular geometry)
-    → COM equilibrium Z          : surface_z_max + 4.0 Å
+    Glycerol COM above bottom O  : ~2.0 Å  (molecular geometry, flat-lying)
+    → COM equilibrium Z          : surface_z_max + 4.3 Å
 
-We therefore initialise the COM in [surface_z_max + 3.0,
-surface_z_max + 5.0] Å and clamp Z mutations to the same range so
-molecules never drift out of the MLFF interaction window.
+We therefore initialise the COM in [surface_z_max + 2.0,
+surface_z_max + 5.0] Å and clamp Z mutations to the same range.
+
+History of surface_buffer changes:
+  v1.0 original : 1.5 Å  (too low, atom clashes)
+  fix 1         : 3.0 Å  (too high — bottom O still 3.4 Å from surface)
+  fix 2 (this)  : 2.0 Å  (bottom O ~0.3 Å above surface at minimum,
+                           strong repulsive gradient pulls toward 2.3 Å)
 """
 
 import os
@@ -245,16 +250,18 @@ class GeneticAlgorithm:
         # ------------------------------------------------------------------
         # Physical basis for glycerol / alcohols on transition metals:
         #   O–metal equilibrium distance : ~2.3 Å
-        #   Glycerol COM above bottom O  : ~1.7 Å  (mol height / 2)
-        #   → COM equilibrium            : surface_z_max + 4.0 Å
+        #   Glycerol COM above bottom O  : ~2.0 Å (flat-lying orientation)
+        #   → COM equilibrium            : surface_z_max + 4.3 Å
         #
-        # surface_buffer = 3.0 Å → bottom O at ~1.3 Å (repulsive, strong gradient)
-        # max_height     = 5.0 Å → bottom O at ~3.3 Å (still in MLFF range)
+        # surface_buffer = 2.0 Å → bottom O at ~0.3 Å (repulsive, very
+        #                           strong gradient toward 2.3 Å equilibrium)
+        # max_height     = 5.0 Å → bottom O at ~3.0 Å (edge of MLFF range)
         #
-        # Both old values (1.5 / 8.0) placed the bottom O 6+ Å from the
-        # surface — outside the MLFF interaction range, giving a flat
-        # energy landscape and no convergence signal.
-        self.surface_buffer = 3.0   # Å  COM minimum above surface_z_max
+        # Change history:
+        #   original : 1.5 / 8.0  → bottom O 6+ Å away, flat landscape
+        #   fix 1    : 3.0 / 5.0  → bottom O 3.4 Å away, still too far
+        #   fix 2    : 2.0 / 5.0  → bottom O 0.3–3.0 Å, brackets 2.3 Å ✓
+        self.surface_buffer = 2.0   # Å  COM minimum above surface_z_max
         self.max_height     = 5.0   # Å  COM maximum above surface_z_max
 
     # ------------------------------------------------------------------
@@ -306,9 +313,9 @@ class GeneticAlgorithm:
         logger.info(f"\nZ search window (COM above surface top layer):")
         logger.info(f"  surface_z_max : {self.surface_z_max:.2f} Å")
         logger.info(f"  COM min (Z)   : {z_min_abs:.2f} Å  "
-                    f"(+{self.surface_buffer:.1f} Å → bottom atom ~{self.surface_buffer - 1.7:.1f} Å above surface)")
+                    f"(+{self.surface_buffer:.1f} Å → bottom O ~{self.surface_buffer - 2.0:.1f} Å above surface)")
         logger.info(f"  COM max (Z)   : {z_max_abs:.2f} Å  "
-                    f"(+{self.max_height:.1f} Å → bottom atom ~{self.max_height - 1.7:.1f} Å above surface)")
+                    f"(+{self.max_height:.1f} Å → bottom O ~{self.max_height - 2.0:.1f} Å above surface)")
         logger.info(f"\nGenome composition:")
         logger.info(f"  Position (X, Y, Z):     3 genes")
         logger.info(f"  Orientation (α, β, γ): 3 genes")
@@ -345,10 +352,10 @@ class GeneticAlgorithm:
         interaction window above the surface.
 
         Z range: [surface_z_max + surface_buffer, surface_z_max + max_height]
-                 = [surface_z_max + 3.0, surface_z_max + 5.0]  Å
+                 = [surface_z_max + 2.0, surface_z_max + 5.0]  Å
 
-        For glycerol (COM ~1.7 Å above bottom O), this places the
-        bottom oxygen 1.3–3.3 Å above the surface top layer —
+        For glycerol (COM ~2.0 Å above bottom O when flat-lying), this
+        places the bottom oxygen 0.0–3.0 Å above the surface top layer —
         bracketing the ~2.3 Å O–metal equilibrium distance.
         """
         logger.info("Initializing population...")
