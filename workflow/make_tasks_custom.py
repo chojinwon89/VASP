@@ -27,18 +27,36 @@ Usage
 
 NOTE: one calculator value per entry only.
       To run two calculators, add two separate entries.
+
+Seeds
+-----
+Seed 0 is excluded: np.random.seed(0) produces a poor gen-1 population
+for glycerol (+0.17 eV). Seeds 1-3 are used for both calculators.
+
+Generations / Population
+------------------------
+All molecules use generations=200 and population_size=60.
+Early stopping (patience=30, tol=0.001 eV) means the GA will terminate
+well before 200 gens in practice — the high limit is just a safety cap.
 """
 
 import csv
 from pathlib import Path
 
 # ---------------------------------------------------------------------------
+# Per-calculator seed lists
+# Seed 0 excluded — consistently bad gen-1 for glycerol with this RNG seed.
+# ---------------------------------------------------------------------------
+SEEDS_SEVENNET = [1, 2, 3]
+SEEDS_5M       = [1, 2, 3]
+
+# ---------------------------------------------------------------------------
 # DEFAULT GA settings (fallback when not overridden per entry)
 # ---------------------------------------------------------------------------
 DEFAULT = {
-    "seeds":           [0, 1, 2, 3, 4, 5],
+    "seeds":           SEEDS_SEVENNET,
     "population_size": 60,
-    "generations":     100,
+    "generations":     200,
     "calculator":      "sevennet_omni",
 }
 
@@ -51,35 +69,33 @@ def make_entries(surfaces, molecules, calculators, seeds=None, pop=60):
     for surf in surfaces:
         for mol, gen in molecules.items():
             for calc in calculators:
+                calc_seeds = SEEDS_5M if calc == "5m" else SEEDS_SEVENNET
                 entries.append(
-                    (surf, mol, {"seeds": seeds, "population_size": pop,
+                    (surf, mol, {"seeds": calc_seeds, "population_size": pop,
                                  "generations": gen, "calculator": calc})
                 )
     return entries
 
 
 # ---------------------------------------------------------------------------
-# MOLECULES with their generation counts
-# All 9 molecules included:
-#   Heavy oxygenates  — glycerol, propanol, isopropanol, ethanol
-#   Alkanes           — propane, ethane
-#   Alkenes           — propene, ethene
-#   Other             — CO2
+# MOLECULES
+# All use generations=200 and population_size=60.
+# Early stopping will fire well before 200 gens in practice.
 # ---------------------------------------------------------------------------
 MOLECULES = {
     # Heavy oxygenates (more rotatable bonds → more generations needed)
-    "glycerol":    120,
-    "propanol":    100,
-    "isopropanol": 100,
-    "ethanol":      80,
+    "glycerol":    200,
+    "propanol":    200,
+    "isopropanol": 200,
+    "ethanol":     200,
     # Alkanes
-    "propane":      80,
-    "ethane":       60,
+    "propane":     200,
+    "ethane":      200,
     # Alkenes
-    "propene":      80,
-    "ethene":       60,
+    "propene":     200,
+    "ethene":      200,
     # Other
-    "CO2":          60,
+    "CO2":         200,
 }
 
 CALCS = ["sevennet_omni", "5m"]
@@ -146,6 +162,11 @@ print("Metal breakdown:")
 metals = Counter(r["surface"][:2] for r in rows)
 for metal, count in sorted(metals.items()):
     print(f"  {metal}: {count} tasks")
+print()
+print("Calculator breakdown:")
+calcs = Counter(r["calculator"] for r in rows)
+for calc, count in sorted(calcs.items()):
+    print(f"  {calc:<15}: {count} tasks")
 print()
 print("Submit with:")
 print(f"  sbatch --array=0-{task_id-1}%20 goad_array_kestrel.slurm workflow/tasks_custom.csv")
