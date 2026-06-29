@@ -8,22 +8,15 @@ wrap to the edges via PBC.
 
 Z-placement rationale
 ---------------------
-The GA encodes the molecule's centre-of-mass (COM) position, not
-individual atom positions.  For a molecule like glycerol that adsorbs
-through an oxygen atom:
+The GA encodes the molecule's centre-of-mass (COM) position, but
+we bias the *initial* orientation so that the lowest oxygen atom
+(after random rotation) is placed at surface_z_max + o_target_z
+(default 2.3 Å — the known O–metal equilibrium distance).
 
-    O–metal equilibrium distance : ~2.3 Å  (experiment / DFT)
-    Glycerol COM above bottom O  : ~2.0 Å  (molecular geometry, flat-lying)
-    → COM equilibrium Z          : surface_z_max + 4.3 Å
-
-We therefore initialise the COM in [surface_z_max + 2.0,
-surface_z_max + 5.0] Å and clamp Z mutations to the same range.
-
-History of surface_buffer changes:
-  v1.0 original : 1.5 Å  (too low, atom clashes)
-  fix 1         : 3.0 Å  (too high — bottom O still 3.4 Å from surface)
-  fix 2 (this)  : 2.0 Å  (bottom O ~0.3 Å above surface at minimum,
-                           strong repulsive gradient pulls toward 2.3 Å)
+This guarantees every generation-0 individual has an oxygen close
+to the surface, giving a real energy gradient from the very first
+evaluation instead of wasting 30+ generations on a flat landscape
+with oxygens pointing away from the surface.
 """
 
 import os
@@ -162,7 +155,7 @@ class GeneticAlgorithm:
     - Only molecule position and orientation vary
     - Support for molecular torsions
     - Molecule kept inside the central unit cell (no edge-wrapping)
-    - Z placement anchored to physical O–metal distance (~2.3 Å)
+    - Initial population biased so lowest O faces the surface at o_target_z
     """
 
     def __init__(self, surface: Atoms, molecule: Atoms, calculator,
@@ -174,13 +167,13 @@ class GeneticAlgorithm:
                  elite_size: int = 5, verbose: bool = True,
                  search_radius: Optional[float] = None,
                  center_in_cell: bool = True,
-                 n_workers: Optional[int] = None):
+                 n_workers: Optional[int] = None,
+                 o_target_z: float = 2.3):
         """
         Initialize GA.
 
         Args:
-            surface: Surface structure (should be the POST-relaxation slab so
-                     surface_z_max matches the actual top-layer Z used in GA).
+            surface: Surface structure
             molecule: Molecule structure
             calculator: ASE calculator
             calculator_type: CalculatorManager calculator type string.
@@ -203,6 +196,11 @@ class GeneticAlgorithm:
                        GOAD_N_WORKERS env var, SLURM_CPUS_PER_TASK, os.cpu_count().
                        NOTE: always forced to 1 when a CUDA device is present to
                        avoid ProcessPoolExecutor / CUDA context deadlocks.
+            o_target_z: Target distance (Å) between the lowest oxygen atom and
+                        the surface top layer in the initial population.
+                        Default 2.3 Å — the known O–metal equilibrium distance.
+                        The COM Z is back-calculated from this so every initial
+                        individual has an O pointing toward the surface.
         """
         self.surface = surface.copy()
         self.surface.calc = None
@@ -227,6 +225,9 @@ class GeneticAlgorithm:
         self._user_search_radius = search_radius
         self.n_workers = self._resolve_worker_count(n_workers)
 
+        # O-facing-surface target distance
+        self.o_target_z = o_target_z
+
         # Surface properties (resolves self.search_radius and self.surface_z_max)
         self._analyze_surface()
 
@@ -245,22 +246,9 @@ class GeneticAlgorithm:
         self.best_individual = None
         self.best_energy = float('inf')
 
-        # ------------------------------------------------------------------
-        # Vertical search-space parameters (COM above surface_z_max)
-        # ------------------------------------------------------------------
-        # Physical basis for glycerol / alcohols on transition metals:
-        #   O–metal equilibrium distance : ~2.3 Å
-        #   Glycerol COM above bottom O  : ~2.0 Å (flat-lying orientation)
-        #   → COM equilibrium            : surface_z_max + 4.3 Å
-        #
-        # surface_buffer = 2.0 Å → bottom O at ~0.3 Å (repulsive, very
-        #                           strong gradient toward 2.3 Å equilibrium)
-        # max_height     = 5.0 Å → bottom O at ~3.0 Å (edge of MLFF range)
-        #
-        # Change history:
-        #   original : 1.5 / 8.0  → bottom O 6+ Å away, flat landscape
-        #   fix 1    : 3.0 / 5.0  → bottom O 3.4 Å away, still too far
-        #   fix 2    : 2.0 / 5.0  → bottom O 0.3–3.0 Å, brackets 2.3 Å ✓
+        # Vertical search-space parameters for mutation clamping
+        # surface_buffer / max_height are expressed as COM distance above surface_z_max.
+        # These are only used to clamp Z *mutations* — initial placement uses o_target_z.
         self.surface_buffer = 2.0   # Å  COM minimum above surface_z_max
         self.max_height     = 5.0   # Å  COM maximum above surface_z_max
 
@@ -276,7 +264,6 @@ class GeneticAlgorithm:
         self.surface_z_max = z_coords.max()
         self.surface_center_xy = positions[:, :2].mean(axis=0)
 
-        # In-plane cell vector lengths
         cell = np.array(self.surface.get_cell())
         ax = np.linalg.norm(cell[0, :2])
         ay = np.linalg.norm(cell[1, :2])
@@ -300,9 +287,6 @@ class GeneticAlgorithm:
     # ------------------------------------------------------------------
     def run(self) -> Dict:
         """Run the genetic algorithm and return results."""
-        z_min_abs = self.surface_z_max + self.surface_buffer
-        z_max_abs = self.surface_z_max + self.max_height
-
         logger.info("=" * 60)
         logger.info("GENETIC ALGORITHM - GOAD v1.0")
         logger.info("=" * 60)
@@ -310,12 +294,14 @@ class GeneticAlgorithm:
         logger.info(f"Generations: {self.generations}")
         logger.info("Surface: FIXED during GA search (will relax in post-GA BFGS)")
         logger.info("Molecule: FREE TO MOVE")
-        logger.info(f"\nZ search window (COM above surface top layer):")
-        logger.info(f"  surface_z_max : {self.surface_z_max:.2f} Å")
-        logger.info(f"  COM min (Z)   : {z_min_abs:.2f} Å  "
-                    f"(+{self.surface_buffer:.1f} Å → bottom O ~{self.surface_buffer - 2.0:.1f} Å above surface)")
-        logger.info(f"  COM max (Z)   : {z_max_abs:.2f} Å  "
-                    f"(+{self.max_height:.1f} Å → bottom O ~{self.max_height - 2.0:.1f} Å above surface)")
+        logger.info(f"\nInitial placement strategy:")
+        logger.info(f"  Random rotation applied first, then lowest O placed at")
+        logger.info(f"  surface_z_max + {self.o_target_z:.1f} Å = "
+                    f"{self.surface_z_max + self.o_target_z:.2f} Å")
+        logger.info(f"  (COM Z is back-calculated from lowest-O position)")
+        logger.info(f"\nMutation Z clamp (COM above surface_z_max):")
+        logger.info(f"  [{self.surface_z_max + self.surface_buffer:.2f}, "
+                    f"{self.surface_z_max + self.max_height:.2f}] Å")
         logger.info(f"\nGenome composition:")
         logger.info(f"  Position (X, Y, Z):     3 genes")
         logger.info(f"  Orientation (α, β, γ): 3 genes")
@@ -346,37 +332,69 @@ class GeneticAlgorithm:
     # ------------------------------------------------------------------
     # Initial population
     # ------------------------------------------------------------------
+    def _o_indices(self, atoms: Atoms) -> List[int]:
+        """Return indices of oxygen atoms in *atoms*."""
+        return [i for i, s in enumerate(atoms.get_chemical_symbols()) if s == 'O']
+
     def _initialize_population(self):
         """
-        Initialize random population with COM placed in the physical
-        interaction window above the surface.
+        Initialize population with O-facing-surface bias.
 
-        Z range: [surface_z_max + surface_buffer, surface_z_max + max_height]
-                 = [surface_z_max + 2.0, surface_z_max + 5.0]  Å
+        For each individual:
+          1. Apply random torsions (if any)
+          2. Apply random Euler rotation
+          3. Find the lowest O atom in the rotated molecule
+          4. Translate so that O sits at surface_z_max + o_target_z
+          5. Record the resulting COM as the genome position
 
-        For glycerol (COM ~2.0 Å above bottom O when flat-lying), this
-        places the bottom oxygen 0.0–3.0 Å above the surface top layer —
-        bracketing the ~2.3 Å O–metal equilibrium distance.
+        This guarantees every individual has an oxygen pointing toward
+        the surface at the known equilibrium distance, giving the GA a
+        real energy gradient from generation 1.
+
+        If the molecule has no oxygen atoms (e.g. pure hydrocarbon),
+        we fall back to using the lowest atom instead.
         """
-        logger.info("Initializing population...")
-        logger.info(f"  COM Z range: [{self.surface_z_max + self.surface_buffer:.2f}, "
-                    f"{self.surface_z_max + self.max_height:.2f}] Å")
+        logger.info("Initializing population (O-facing-surface bias)...")
+        logger.info(f"  Target O–surface distance : {self.o_target_z:.2f} Å")
+        logger.info(f"  Target O Z absolute       : "
+                    f"{self.surface_z_max + self.o_target_z:.2f} Å")
 
-        for i in range(self.population_size):
+        o_idx = self._o_indices(self.molecule)
+        if not o_idx:
+            logger.warning("No O atoms found — using lowest atom for Z placement")
+
+        for _ in range(self.population_size):
+            # Random lateral position centered on surface COM
             x = self.surface_center_xy[0] + np.random.uniform(
                 -self.search_radius, self.search_radius)
             y = self.surface_center_xy[1] + np.random.uniform(
                 -self.search_radius, self.search_radius)
-            z = self.surface_z_max + np.random.uniform(
-                self.surface_buffer, self.max_height)
 
             euler_angles   = np.random.uniform(0, 360, 3)
             torsion_angles = np.random.uniform(0, 360, self.n_torsions)
 
+            # --- build a temporary rotated+torsioned molecule to find lowest O ---
+            mol_tmp = self.molecule.copy()
+            if self.n_torsions > 0:
+                mol_tmp = self.torsion_handler.apply_torsions(mol_tmp, torsion_angles)
+
+            # Centre at origin, apply rotation
+            mol_tmp.translate(-mol_tmp.get_center_of_mass())
+            self._apply_rotation(mol_tmp, euler_angles)
+
+            # Find lowest O (or lowest atom if no O)
+            if o_idx:
+                lowest_o_z = mol_tmp.positions[o_idx, 2].min()
+            else:
+                lowest_o_z = mol_tmp.positions[:, 2].min()
+
+            # COM Z such that lowest O lands at surface_z_max + o_target_z
+            com_z = self.surface_z_max + self.o_target_z - lowest_o_z
+
             individual = {
-                'position':    np.array([x, y, z]),
-                'orientation': np.array(euler_angles),
-                'torsions':    np.array(torsion_angles),
+                'position':    np.array([x, y, com_z]),
+                'orientation': euler_angles,
+                'torsions':    torsion_angles,
                 'energy':      None,
                 'structure':   None,
             }
@@ -608,14 +626,13 @@ class GeneticAlgorithm:
         Mutate position, orientation, or torsions.
 
         Z is clamped to [surface_z_max + surface_buffer,
-                         surface_z_max + max_height]
-        after every position mutation so molecules cannot drift above
-        the MLFF interaction range over generations.
+                         surface_z_max + max_height] after every
+        position mutation so molecules cannot drift out of the MLFF
+        interaction window over generations.
         """
         mutation_choice = np.random.random()
 
         if mutation_choice < 0.33:
-            # Position mutation — Gaussian step, then clamp Z
             individual['position'] += np.random.normal(0, 0.5, 3)
             z_min = self.surface_z_max + self.surface_buffer
             z_max = self.surface_z_max + self.max_height
@@ -624,12 +641,10 @@ class GeneticAlgorithm:
             )
 
         elif mutation_choice < 0.66:
-            # Orientation mutation
             individual['orientation'] += np.random.normal(0, 10, 3)
             individual['orientation'] = individual['orientation'] % 360
 
         else:
-            # Torsion mutation
             for i in range(self.n_torsions):
                 if np.random.random() < 0.5:
                     individual['torsions'][i] += np.random.normal(0, 20)
