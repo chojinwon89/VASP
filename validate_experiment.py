@@ -47,10 +47,10 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 
-# Pre-define unicode characters so they can be used safely inside f-strings
-# on Python < 3.12 (backslash escapes are not allowed inside f-string braces).
-R2_SYM  = "R\u00b2"   # R²
-SUP2    = "\u00b2"     # superscript 2 (used in r²SCAN label)
+# Pre-define unicode characters — backslash escapes not allowed inside
+# f-string {} on Python < 3.12.
+R2_SYM = "R\u00b2"   # R²
+SUP2   = "\u00b2"     # superscript 2
 
 
 # ---------------------------------------------------------------------------
@@ -58,26 +58,42 @@ SUP2    = "\u00b2"     # superscript 2 (used in r²SCAN label)
 # ---------------------------------------------------------------------------
 
 METHOD_STYLES = {
-    # ML calculators
-    "sevennet_omni": dict(label="GOAD+SevenNet",  color="#E05C00", marker="o",
-                          ls="-",  lw=1.4, ms=8,  fill="full"),
-    "5m":            dict(label="GOAD+MatterSim", color="#0072B2", marker="s",
-                          ls="-",  lw=1.4, ms=8,  fill="none"),
-    # DFT functionals (your own runs)
-    "pbe":           dict(label="DFT (PBE)",            color="#888888", marker="^",
-                          ls="--", lw=1.0, ms=7,  fill="full"),
-    "pbe_d3":        dict(label="DFT (PBE+D3)",         color="#009E73", marker="^",
-                          ls="--", lw=1.0, ms=7,  fill="none"),
+    "sevennet_omni": dict(label="GOAD+SevenNet",           color="#E05C00", marker="o",
+                          ls="-",  lw=1.4, ms=8, fill="full"),
+    "5m":            dict(label="GOAD+MatterSim",          color="#0072B2", marker="s",
+                          ls="-",  lw=1.4, ms=8, fill="none"),
+    "pbe":           dict(label="DFT (PBE)",               color="#888888", marker="^",
+                          ls="--", lw=1.0, ms=7, fill="full"),
+    "pbe_d3":        dict(label="DFT (PBE+D3)",            color="#009E73", marker="^",
+                          ls="--", lw=1.0, ms=7, fill="none"),
     "r2scan":        dict(label="DFT (r" + SUP2 + "SCAN)", color="#CC79A7", marker="D",
-                          ls="--", lw=1.0, ms=7,  fill="full"),
-    "beef_vdw":      dict(label="DFT (BEEF-vdW)",       color="#F0A500", marker="D",
-                          ls="--", lw=1.0, ms=7,  fill="none"),
+                          ls="--", lw=1.0, ms=7, fill="full"),
+    "beef_vdw":      dict(label="DFT (BEEF-vdW)",          color="#F0A500", marker="D",
+                          ls="--", lw=1.0, ms=7, fill="none"),
 }
-
-FUNCTIONAL_ALIASES = {"beef_dfw": "beef_vdw", "pbed3": "pbe_d3"}
 
 EADS_MIN = -5.0
 EADS_MAX =  2.0
+
+
+# ---------------------------------------------------------------------------
+# Functional name normalisation
+# Handles: "PBE+D3" -> "pbe_d3", "beef_dfw" -> "beef_vdw", etc.
+# ---------------------------------------------------------------------------
+
+def normalise_func(name: str) -> str:
+    """Lowercase, replace '+' and '-' with '_', then apply known aliases."""
+    s = name.strip().lower().replace("+", "_").replace("-", "_")
+    # collapse multiple underscores
+    while "__" in s:
+        s = s.replace("__", "_")
+    aliases = {
+        "beef_dfw":  "beef_vdw",
+        "beefvdw":   "beef_vdw",
+        "pbed3":     "pbe_d3",
+        "r2scan":    "r2scan",
+    }
+    return aliases.get(s, s)
 
 
 # ---------------------------------------------------------------------------
@@ -88,14 +104,16 @@ def load_references(path: Path, functional_filter=None) -> dict:
     """
     Load DFT literature reference values.
     Returns {(surface, molecule): {E_ads, functional, reference}}
-    If functional_filter is set, only rows matching that functional are loaded.
+    functional_filter is normalised before comparison.
     """
+    ff = normalise_func(functional_filter) if functional_filter else None
     data = {}
+    skipped = 0
     with path.open() as f:
         for row in csv.DictReader(f):
-            func = row.get("functional", "").strip().lower()
-            func = FUNCTIONAL_ALIASES.get(func, func)
-            if functional_filter and func != functional_filter:
+            func = normalise_func(row.get("functional", ""))
+            if ff and func != ff:
+                skipped += 1
                 continue
             key = (row["surface"].strip(), row["molecule"].strip())
             try:
@@ -107,11 +125,17 @@ def load_references(path: Path, functional_filter=None) -> dict:
                 }
             except ValueError:
                 pass
+    if skipped:
+        print("  load_references: skipped {} rows not matching functional '{}'".format(
+              skipped, ff))
+    print("  load_references: loaded {} systems (functional='{}')".format(
+          len(data), ff or "all"))
     return data
 
 
 def load_dft(path: Path, functionals: list) -> dict:
     """Returns {functional: {(surface, molecule): E_ads_eV}}"""
+    norm_funcs = [normalise_func(f) for f in functionals]
     data = defaultdict(dict)
     with path.open() as f:
         reader = csv.DictReader(f)
@@ -119,9 +143,8 @@ def load_dft(path: Path, functionals: list) -> dict:
         for row in reader:
             if row.get("status", "").strip() != "ok":
                 continue
-            func = row["functional"].strip().lower() if has_func else "pbe"
-            func = FUNCTIONAL_ALIASES.get(func, func)
-            if functionals and func not in functionals:
+            func = normalise_func(row["functional"]) if has_func else "pbe"
+            if norm_funcs and func not in norm_funcs:
                 continue
             key = (row["surface"].strip(), row["molecule"].strip())
             try:
@@ -186,7 +209,7 @@ def make_parity(ref_data, dft_data, ml_data,
     axes_flat = np.array(axes).flatten()
 
     all_comparison = []
-    ref_label = ref_functional.upper().replace("_", "+")
+    ref_label = normalise_func(ref_functional).upper().replace("_", "+")
 
     for i, method in enumerate(methods):
         ax     = axes_flat[i]
@@ -197,11 +220,13 @@ def make_parity(ref_data, dft_data, ml_data,
         fill   = style.get("fill", "full")
         ms     = style.get("ms", 8)
 
-        pred    = ml_data.get(method, {}) if method in ml_calcs else dft_data.get(method, {})
+        pred    = ml_data.get(method, {}) if method in ml_calcs \
+                  else dft_data.get(normalise_func(method), {})
         matched = sorted(set(ref_data) & set(pred))
 
         if not matched:
             ax.set_title(label + "\n(no matched data)", fontsize=9)
+            ax.set_visible(True)
             continue
 
         ref_vals  = np.array([ref_data[k]["E_ads"] for k in matched])
@@ -286,7 +311,8 @@ def make_bar(ref_data, dft_data, ml_data,
     """One group of bars per system. DFT literature shown as diamond marker."""
     methods  = ml_calcs + dft_functionals
     all_pred = {
-        m: (ml_data.get(m, {}) if m in ml_calcs else dft_data.get(m, {}))
+        m: (ml_data.get(m, {}) if m in ml_calcs
+            else dft_data.get(normalise_func(m), {}))
         for m in methods
     }
 
@@ -321,13 +347,11 @@ def make_bar(ref_data, dft_data, ml_data,
                label=label, color=color, alpha=0.82,
                hatch=hatch, edgecolor="white", linewidth=0.5)
 
-    # DFT literature reference markers
-    ref_label = ref_functional.upper().replace("_", "+")
+    ref_label = normalise_func(ref_functional).upper().replace("_", "+")
     ref_vals  = [ref_data[k]["E_ads"] for k in systems]
     ax.scatter(x, ref_vals, color="black", marker="D",
                s=55, zorder=5, label="DFT Lit. ({})".format(ref_label),
                clip_on=False)
-    # +/-0.05 eV bar representing typical DFT convergence uncertainty
     ax.errorbar(x, ref_vals, yerr=0.05,
                 fmt="none", ecolor="black", elinewidth=1.2,
                 capsize=4, zorder=4, alpha=0.7)
@@ -347,7 +371,6 @@ def make_bar(ref_data, dft_data, ml_data,
     ax.yaxis.set_major_locator(ticker.MaxNLocator(7))
     ax.tick_params(axis="y", labelsize=9)
 
-    # MAE summary box
     mae_lines = []
     for method in methods:
         src   = all_pred[method]
@@ -381,28 +404,20 @@ def main():
         description="Validate GOAD+ML and DFT against DFT literature reference values.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    parser.add_argument("--ref",  default="dft_literature_references.csv",
-                        help="DFT literature reference CSV "
-                             "(default: dft_literature_references.csv)")
-    parser.add_argument("--dft",  default="dft_binding_energies_all.csv",
-                        help="Your own DFT results CSV with functional column")
-    parser.add_argument("--ml",   default="workflow/summary.csv",
-                        help="GOAD summary CSV")
+    parser.add_argument("--ref",  default="dft_literature_references.csv")
+    parser.add_argument("--dft",  default="dft_binding_energies_all.csv")
+    parser.add_argument("--ml",   default="workflow/summary.csv")
     parser.add_argument("--ref-functional", default="pbe_d3",
-                        help="Functional to use from the reference CSV "
-                             "(default: pbe_d3)")
+                        help="Functional to use from the reference CSV (default: pbe_d3)")
     parser.add_argument("--dft-functionals", nargs="+",
                         default=["pbe", "pbe_d3", "r2scan", "beef_vdw"],
                         metavar="FUNC")
     parser.add_argument("--ml-calcs", nargs="+",
                         default=["sevennet_omni", "5m"],
                         metavar="CALC")
-    parser.add_argument("--output-parity",
-                        default="results/lit_validation_parity.png")
-    parser.add_argument("--output-bar",
-                        default="results/lit_validation_bar.png")
-    parser.add_argument("--csv-out",
-                        default="results/lit_validation.csv")
+    parser.add_argument("--output-parity", default="results/lit_validation_parity.png")
+    parser.add_argument("--output-bar",    default="results/lit_validation_bar.png")
+    parser.add_argument("--csv-out",       default="results/lit_validation.csv")
     args = parser.parse_args()
 
     for p in [Path(args.ref), Path(args.dft), Path(args.ml)]:
@@ -422,10 +437,12 @@ def main():
     dft_data = load_dft(Path(args.dft), args.dft_functionals)
     ml_data  = load_ml(Path(args.ml),   args.ml_calcs)
 
+    print()
     print("DFT literature systems loaded : {}".format(len(ref_data)))
     for func in args.dft_functionals:
-        n     = len(dft_data.get(func, {}))
-        match = len(set(ref_data) & set(dft_data.get(func, {})))
+        nf    = normalise_func(func)
+        n     = len(dft_data.get(nf, {}))
+        match = len(set(ref_data) & set(dft_data.get(nf, {})))
         print("  Your DFT {:<10}: {} systems, {} matched to literature".format(
               func, n, match))
     for calc in args.ml_calcs:
@@ -462,15 +479,15 @@ def main():
         print("CSV saved: {}".format(args.csv_out))
 
     # Summary table
-    hdr_r2 = R2_SYM
     print()
     print("=" * 65)
     print("{:<22} {:>3} {:>8} {:>8} {:>8} {:>7}".format(
-          "Method", "N", "MAE", "RMSE", "Bias", hdr_r2))
+          "Method", "N", "MAE", "RMSE", "Bias", R2_SYM))
     print("-" * 65)
     for method in args.ml_calcs + args.dft_functionals:
-        src     = (ml_data.get(method, {}) if method in args.ml_calcs
-                   else dft_data.get(method, {}))
+        nf  = normalise_func(method)
+        src = (ml_data.get(method, {}) if method in args.ml_calcs
+               else dft_data.get(nf, {}))
         matched = sorted(set(ref_data) & set(src))
         lbl     = METHOD_STYLES.get(method, {}).get("label", method)
         if not matched:
