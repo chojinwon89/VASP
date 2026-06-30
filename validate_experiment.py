@@ -47,6 +47,11 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 
+# Pre-define unicode characters so they can be used safely inside f-strings
+# on Python < 3.12 (backslash escapes are not allowed inside f-string braces).
+R2_SYM  = "R\u00b2"   # R²
+SUP2    = "\u00b2"     # superscript 2 (used in r²SCAN label)
+
 
 # ---------------------------------------------------------------------------
 # Display config
@@ -59,13 +64,13 @@ METHOD_STYLES = {
     "5m":            dict(label="GOAD+MatterSim", color="#0072B2", marker="s",
                           ls="-",  lw=1.4, ms=8,  fill="none"),
     # DFT functionals (your own runs)
-    "pbe":           dict(label="DFT (PBE)",       color="#888888", marker="^",
+    "pbe":           dict(label="DFT (PBE)",            color="#888888", marker="^",
                           ls="--", lw=1.0, ms=7,  fill="full"),
-    "pbe_d3":        dict(label="DFT (PBE+D3)",    color="#009E73", marker="^",
+    "pbe_d3":        dict(label="DFT (PBE+D3)",         color="#009E73", marker="^",
                           ls="--", lw=1.0, ms=7,  fill="none"),
-    "r2scan":        dict(label="DFT (r\u00b2SCAN)",    color="#CC79A7", marker="D",
+    "r2scan":        dict(label="DFT (r" + SUP2 + "SCAN)", color="#CC79A7", marker="D",
                           ls="--", lw=1.0, ms=7,  fill="full"),
-    "beef_vdw":      dict(label="DFT (BEEF-vdW)",  color="#F0A500", marker="D",
+    "beef_vdw":      dict(label="DFT (BEEF-vdW)",       color="#F0A500", marker="D",
                           ls="--", lw=1.0, ms=7,  fill="none"),
 }
 
@@ -79,7 +84,7 @@ EADS_MAX =  2.0
 # Loaders
 # ---------------------------------------------------------------------------
 
-def load_references(path: Path, functional_filter: str | None = None) -> dict:
+def load_references(path: Path, functional_filter=None) -> dict:
     """
     Load DFT literature reference values.
     Returns {(surface, molecule): {E_ads, functional, reference}}
@@ -181,7 +186,7 @@ def make_parity(ref_data, dft_data, ml_data,
     axes_flat = np.array(axes).flatten()
 
     all_comparison = []
-    ref_label = ref_functional.upper().replace("_", "+").replace("PBE+D3", "PBE+D3")
+    ref_label = ref_functional.upper().replace("_", "+")
 
     for i, method in enumerate(methods):
         ax     = axes_flat[i]
@@ -196,7 +201,7 @@ def make_parity(ref_data, dft_data, ml_data,
         matched = sorted(set(ref_data) & set(pred))
 
         if not matched:
-            ax.set_title(f"{label}\n(no matched data)", fontsize=9)
+            ax.set_title(label + "\n(no matched data)", fontsize=9)
             continue
 
         ref_vals  = np.array([ref_data[k]["E_ads"] for k in matched])
@@ -207,7 +212,7 @@ def make_parity(ref_data, dft_data, ml_data,
             ax.scatter(rv, pv, facecolors=fc, edgecolors=color,
                        marker=marker, s=ms ** 2 * 0.8,
                        linewidths=1.3, zorder=3, alpha=0.9)
-            ax.annotate(f"{k[0]}\n{k[1]}",
+            ax.annotate(k[0] + "\n" + k[1],
                         xy=(rv, pv), fontsize=5.5, color="#333333",
                         xytext=(3, 3), textcoords="offset points")
 
@@ -220,11 +225,13 @@ def make_parity(ref_data, dft_data, ml_data,
                         color="grey", alpha=0.08, zorder=1)
 
         mae, rmse, bias, r2 = stats(ref_data, pred, matched)
-        stat_txt = (f"N={len(matched)}\n"
-                    f"MAE  = {mae:.3f} eV\n"
-                    f"RMSE = {rmse:.3f} eV\n"
-                    f"bias = {bias:+.3f} eV\n"
-                    f"R\u00b2   = {r2:.3f}")
+        stat_txt = (
+            "N={}\n"
+            "MAE  = {:.3f} eV\n"
+            "RMSE = {:.3f} eV\n"
+            "bias = {:+.3f} eV\n"
+            "{} = {:.3f}"
+        ).format(len(matched), mae, rmse, bias, R2_SYM, r2)
         ax.text(0.97, 0.03, stat_txt,
                 transform=ax.transAxes, va="bottom", ha="right",
                 fontsize=7, family="monospace",
@@ -232,7 +239,8 @@ def make_parity(ref_data, dft_data, ml_data,
                           ec="lightgrey", alpha=0.92))
 
         ax.set_title(label, fontsize=10, fontweight="bold", pad=5)
-        ax.set_xlabel(f"DFT Literature ({ref_label})  $E_{{ads}}$ (eV)", fontsize=9)
+        ax.set_xlabel("DFT Literature ({})  $E_{{ads}}$ (eV)".format(ref_label),
+                      fontsize=9)
         ax.set_ylabel("Predicted  $E_{ads}$ (eV)", fontsize=9)
         ax.set_xlim(lo, hi)
         ax.set_ylim(lo, hi)
@@ -244,26 +252,26 @@ def make_parity(ref_data, dft_data, ml_data,
 
         for k, rv, pv in zip(matched, ref_vals, pred_vals):
             all_comparison.append({
-                "method":       method,
-                "surface":      k[0],
-                "molecule":     k[1],
-                "E_ref_eV":     f"{rv:.4f}",
-                "E_pred_eV":    f"{pv:.4f}",
-                "diff_eV":      f"{pv - rv:+.4f}",
+                "method":         method,
+                "surface":        k[0],
+                "molecule":       k[1],
+                "E_ref_eV":       "{:.4f}".format(rv),
+                "E_pred_eV":      "{:.4f}".format(pv),
+                "diff_eV":        "{:+.4f}".format(pv - rv),
                 "ref_functional": ref_data[k]["functional"],
-                "reference":    ref_data[k]["reference"],
+                "reference":      ref_data[k]["reference"],
             })
 
     for j in range(len(methods), len(axes_flat)):
         axes_flat[j].set_visible(False)
 
     fig.suptitle(
-        f"Validation Against DFT Literature ({ref_label})",
+        "Validation Against DFT Literature ({})".format(ref_label),
         fontsize=13, fontweight="bold", y=1.01
     )
     fig.tight_layout()
     fig.savefig(output_path, dpi=180, bbox_inches="tight", facecolor="white")
-    print(f"Parity figure saved: {output_path}")
+    print("Parity figure saved: {}".format(output_path))
     plt.close(fig)
 
     return all_comparison
@@ -317,20 +325,20 @@ def make_bar(ref_data, dft_data, ml_data,
     ref_label = ref_functional.upper().replace("_", "+")
     ref_vals  = [ref_data[k]["E_ads"] for k in systems]
     ax.scatter(x, ref_vals, color="black", marker="D",
-               s=55, zorder=5, label=f"DFT Lit. ({ref_label})",
+               s=55, zorder=5, label="DFT Lit. ({})".format(ref_label),
                clip_on=False)
-    # ±0.05 eV bar representing typical DFT convergence uncertainty
+    # +/-0.05 eV bar representing typical DFT convergence uncertainty
     ax.errorbar(x, ref_vals, yerr=0.05,
                 fmt="none", ecolor="black", elinewidth=1.2,
                 capsize=4, zorder=4, alpha=0.7)
 
-    xlabels = [f"{k[0]}\n{k[1]}" for k in systems]
+    xlabels = [k[0] + "\n" + k[1] for k in systems]
     ax.set_xticks(x)
     ax.set_xticklabels(xlabels, fontsize=7.5, rotation=30, ha="right")
     ax.axhline(0, color="black", linewidth=0.7, linestyle="-", alpha=0.4)
     ax.set_ylabel("$E_{ads}$ (eV)", fontsize=11)
     ax.set_title(
-        f"Adsorption Energy: All Methods vs DFT Literature ({ref_label})",
+        "Adsorption Energy: All Methods vs DFT Literature ({})".format(ref_label),
         fontsize=12, fontweight="bold", pad=8
     )
     ax.legend(loc="lower left", fontsize=8, framealpha=0.9,
@@ -348,7 +356,8 @@ def make_bar(ref_data, dft_data, ml_data,
             mae, _, bias, r2 = stats(ref_data, src, match)
             lbl = METHOD_STYLES.get(method, {}).get("label", method)
             mae_lines.append(
-                f"{lbl}: MAE={mae:.3f}  bias={bias:+.3f}  R\u00b2={r2:.3f}"
+                "{}: MAE={:.3f}  bias={:+.3f}  {}={:.3f}".format(
+                    lbl, mae, bias, R2_SYM, r2)
             )
 
     ax.text(0.01, 0.99, "\n".join(mae_lines),
@@ -359,7 +368,7 @@ def make_bar(ref_data, dft_data, ml_data,
 
     fig.tight_layout()
     fig.savefig(output_path, dpi=180, bbox_inches="tight", facecolor="white")
-    print(f"Bar chart saved: {output_path}")
+    print("Bar chart saved: {}".format(output_path))
     plt.close(fig)
 
 
@@ -373,13 +382,15 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("--ref",  default="dft_literature_references.csv",
-                        help="DFT literature reference CSV (default: dft_literature_references.csv)")
+                        help="DFT literature reference CSV "
+                             "(default: dft_literature_references.csv)")
     parser.add_argument("--dft",  default="dft_binding_energies_all.csv",
                         help="Your own DFT results CSV with functional column")
     parser.add_argument("--ml",   default="workflow/summary.csv",
                         help="GOAD summary CSV")
     parser.add_argument("--ref-functional", default="pbe_d3",
-                        help="Functional to use from the reference CSV (default: pbe_d3)")
+                        help="Functional to use from the reference CSV "
+                             "(default: pbe_d3)")
     parser.add_argument("--dft-functionals", nargs="+",
                         default=["pbe", "pbe_d3", "r2scan", "beef_vdw"],
                         metavar="FUNC")
@@ -396,29 +407,32 @@ def main():
 
     for p in [Path(args.ref), Path(args.dft), Path(args.ml)]:
         if not p.exists():
-            print(f"ERROR: {p} not found.")
+            print("ERROR: {} not found.".format(p))
             raise SystemExit(1)
 
-    print(f"DFT literature ref : {args.ref}  (functional: {args.ref_functional})")
-    print(f"Your DFT CSV       : {args.dft}")
-    print(f"ML CSV             : {args.ml}")
-    print(f"DFT functionals    : {args.dft_functionals}")
-    print(f"ML calculators     : {args.ml_calcs}")
+    print("DFT literature ref : {}  (functional: {})".format(
+          args.ref, args.ref_functional))
+    print("Your DFT CSV       : {}".format(args.dft))
+    print("ML CSV             : {}".format(args.ml))
+    print("DFT functionals    : {}".format(args.dft_functionals))
+    print("ML calculators     : {}".format(args.ml_calcs))
     print()
 
     ref_data = load_references(Path(args.ref), args.ref_functional)
     dft_data = load_dft(Path(args.dft), args.dft_functionals)
     ml_data  = load_ml(Path(args.ml),   args.ml_calcs)
 
-    print(f"DFT literature systems loaded : {len(ref_data)}")
+    print("DFT literature systems loaded : {}".format(len(ref_data)))
     for func in args.dft_functionals:
         n     = len(dft_data.get(func, {}))
         match = len(set(ref_data) & set(dft_data.get(func, {})))
-        print(f"  Your DFT {func:<10}: {n} systems, {match} matched to literature")
+        print("  Your DFT {:<10}: {} systems, {} matched to literature".format(
+              func, n, match))
     for calc in args.ml_calcs:
         n     = len(ml_data.get(calc, {}))
         match = len(set(ref_data) & set(ml_data.get(calc, {})))
-        print(f"  ML  {calc:<14}: {n} systems, {match} matched to literature")
+        print("  ML  {:<14}: {} systems, {} matched to literature".format(
+              calc, n, match))
     print()
 
     Path(args.output_parity).parent.mkdir(parents=True, exist_ok=True)
@@ -445,13 +459,14 @@ def main():
             ])
             writer.writeheader()
             writer.writerows(comparison)
-        print(f"CSV saved: {args.csv_out}")
+        print("CSV saved: {}".format(args.csv_out))
 
     # Summary table
+    hdr_r2 = R2_SYM
     print()
     print("=" * 65)
-    print(f"{'Method':<22} {'N':>3} {'MAE':>8} {'RMSE':>8} "
-          f"{'Bias':>8} {'R\u00b2':>7}")
+    print("{:<22} {:>3} {:>8} {:>8} {:>8} {:>7}".format(
+          "Method", "N", "MAE", "RMSE", "Bias", hdr_r2))
     print("-" * 65)
     for method in args.ml_calcs + args.dft_functionals:
         src     = (ml_data.get(method, {}) if method in args.ml_calcs
@@ -459,11 +474,11 @@ def main():
         matched = sorted(set(ref_data) & set(src))
         lbl     = METHOD_STYLES.get(method, {}).get("label", method)
         if not matched:
-            print(f"  {lbl:<20} {'---':>3}")
+            print("  {:<20} {:>3}".format(lbl, "---"))
             continue
         mae, rmse, bias, r2 = stats(ref_data, src, matched)
-        print(f"  {lbl:<20} {len(matched):>3} {mae:>8.3f} {rmse:>8.3f} "
-              f"{bias:>+8.3f} {r2:>7.3f}")
+        print("  {:<20} {:>3} {:>8.3f} {:>8.3f} {:>+8.3f} {:>7.3f}".format(
+              lbl, len(matched), mae, rmse, bias, r2))
     print("=" * 65)
 
 
