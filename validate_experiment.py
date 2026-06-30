@@ -2,22 +2,22 @@
 """
 validate_experiment.py
 ======================
-Compare GOAD+ML and DFT adsorption energies against experimental
-reference values (TPD / SCAC).
+Compare GOAD+ML and DFT adsorption energies against DFT literature
+reference values (PBE+D3 from Catalysis-Hub / published papers).
 
 Reads
 -----
-  experimental_references.csv  — curated experimental E_ads values
-  dft_binding_energies_all.csv — DFT results (multi-functional)
-  workflow/summary.csv         — GOAD+ML results
+  dft_literature_references.csv  -- curated DFT literature E_ads values
+  dft_binding_energies_all.csv   -- your own DFT results (multi-functional)
+  workflow/summary.csv           -- GOAD+ML results
 
 Outputs
 -------
-  Figure 1 (--output-parity):  parity plot  — predicted vs experiment
+  Figure 1 (--output-parity):  parity plot  -- predicted vs DFT literature
                                 one panel per method (GOAD+SevenNet,
-                                GOAD+5m, DFT functionals)
-  Figure 2 (--output-bar):     bar chart    — per-system comparison of
-                                all methods against experiment
+                                GOAD+5m, your DFT functionals)
+  Figure 2 (--output-bar):     bar chart    -- per-system comparison of
+                                all methods against DFT literature
   CSV      (--csv-out):        full numerical comparison table
 
 Usage
@@ -25,14 +25,15 @@ Usage
     python validate_experiment.py
 
     python validate_experiment.py \\
-        --exp   experimental_references.csv \\
-        --dft   dft_binding_energies_all.csv \\
-        --ml    workflow/summary.csv \\
+        --ref  dft_literature_references.csv \\
+        --dft  dft_binding_energies_all.csv \\
+        --ml   workflow/summary.csv \\
+        --ref-functional pbe_d3 \\
         --dft-functionals pbe_d3 r2scan beef_vdw \\
         --ml-calcs sevennet_omni 5m \\
-        --output-parity results/exp_validation_parity.png \\
-        --output-bar    results/exp_validation_bar.png \\
-        --csv-out       results/exp_validation.csv
+        --output-parity results/lit_validation_parity.png \\
+        --output-bar    results/lit_validation_bar.png \\
+        --csv-out       results/lit_validation.csv
 """
 
 import argparse
@@ -57,7 +58,7 @@ METHOD_STYLES = {
                           ls="-",  lw=1.4, ms=8,  fill="full"),
     "5m":            dict(label="GOAD+MatterSim", color="#0072B2", marker="s",
                           ls="-",  lw=1.4, ms=8,  fill="none"),
-    # DFT functionals
+    # DFT functionals (your own runs)
     "pbe":           dict(label="DFT (PBE)",       color="#888888", marker="^",
                           ls="--", lw=1.0, ms=7,  fill="full"),
     "pbe_d3":        dict(label="DFT (PBE+D3)",    color="#009E73", marker="^",
@@ -78,17 +79,26 @@ EADS_MAX =  2.0
 # Loaders
 # ---------------------------------------------------------------------------
 
-def load_experimental(path: Path) -> dict:
-    """Returns {(surface, molecule): {E_ads, technique, reference}}"""
+def load_references(path: Path, functional_filter: str | None = None) -> dict:
+    """
+    Load DFT literature reference values.
+    Returns {(surface, molecule): {E_ads, functional, reference}}
+    If functional_filter is set, only rows matching that functional are loaded.
+    """
     data = {}
     with path.open() as f:
         for row in csv.DictReader(f):
+            func = row.get("functional", "").strip().lower()
+            func = FUNCTIONAL_ALIASES.get(func, func)
+            if functional_filter and func != functional_filter:
+                continue
             key = (row["surface"].strip(), row["molecule"].strip())
             try:
                 data[key] = {
-                    "E_ads":     float(row["E_ads_eV"]),
-                    "technique": row.get("technique", "").strip(),
-                    "reference": row.get("reference", "").strip(),
+                    "E_ads":      float(row["E_ads_eV"]),
+                    "functional": func,
+                    "reference":  row.get("reference", "").strip(),
+                    "note":       row.get("note", "").strip(),
                 }
             except ValueError:
                 pass
@@ -143,9 +153,9 @@ def load_ml(path: Path, calculators: list) -> dict:
 # Stats
 # ---------------------------------------------------------------------------
 
-def stats(exp_data, pred_vals, keys):
-    e = np.array([exp_data[k]["E_ads"] for k in keys])
-    p = np.array([pred_vals[k]         for k in keys])
+def stats(ref_data, pred_vals, keys):
+    e = np.array([ref_data[k]["E_ads"] for k in keys])
+    p = np.array([pred_vals[k]          for k in keys])
     mae  = float(np.mean(np.abs(p - e)))
     rmse = float(np.sqrt(np.mean((p - e) ** 2)))
     bias = float(np.mean(p - e))
@@ -154,14 +164,14 @@ def stats(exp_data, pred_vals, keys):
 
 
 # ---------------------------------------------------------------------------
-# Figure 1 — Parity plot (one panel per method)
+# Figure 1 -- Parity plot (one panel per method)
 # ---------------------------------------------------------------------------
 
-def make_parity(exp_data, dft_data, ml_data,
-                dft_functionals, ml_calcs, output_path: Path):
-    """One panel per method. X = experiment, Y = predicted."""
+def make_parity(ref_data, dft_data, ml_data,
+                dft_functionals, ml_calcs, ref_functional, output_path: Path):
+    """One panel per method. X = DFT literature, Y = predicted."""
     methods = ml_calcs + dft_functionals
-    n = len(methods)
+    n     = len(methods)
     ncols = min(n, 3)
     nrows = (n + ncols - 1) // ncols
 
@@ -171,9 +181,10 @@ def make_parity(exp_data, dft_data, ml_data,
     axes_flat = np.array(axes).flatten()
 
     all_comparison = []
+    ref_label = ref_functional.upper().replace("_", "+").replace("PBE+D3", "PBE+D3")
 
     for i, method in enumerate(methods):
-        ax = axes_flat[i]
+        ax     = axes_flat[i]
         style  = METHOD_STYLES.get(method, {})
         label  = style.get("label", method)
         color  = style.get("color", "grey")
@@ -181,34 +192,34 @@ def make_parity(exp_data, dft_data, ml_data,
         fill   = style.get("fill", "full")
         ms     = style.get("ms", 8)
 
-        pred = ml_data.get(method, {}) if method in ml_calcs else dft_data.get(method, {})
-        matched = sorted(set(exp_data) & set(pred))
+        pred    = ml_data.get(method, {}) if method in ml_calcs else dft_data.get(method, {})
+        matched = sorted(set(ref_data) & set(pred))
 
         if not matched:
             ax.set_title(f"{label}\n(no matched data)", fontsize=9)
             continue
 
-        exp_vals  = np.array([exp_data[k]["E_ads"] for k in matched])
+        ref_vals  = np.array([ref_data[k]["E_ads"] for k in matched])
         pred_vals = np.array([pred[k]               for k in matched])
 
-        for k, ex, pr in zip(matched, exp_vals, pred_vals):
+        for k, rv, pv in zip(matched, ref_vals, pred_vals):
             fc = color if fill == "full" else "none"
-            ax.scatter(ex, pr, facecolors=fc, edgecolors=color,
+            ax.scatter(rv, pv, facecolors=fc, edgecolors=color,
                        marker=marker, s=ms ** 2 * 0.8,
                        linewidths=1.3, zorder=3, alpha=0.9)
             ax.annotate(f"{k[0]}\n{k[1]}",
-                        xy=(ex, pr), fontsize=5.5, color="#333333",
+                        xy=(rv, pv), fontsize=5.5, color="#333333",
                         xytext=(3, 3), textcoords="offset points")
 
-        lo = min(exp_vals.min(), pred_vals.min()) - 0.1
-        hi = max(exp_vals.max(), pred_vals.max()) + 0.1
+        lo = min(ref_vals.min(), pred_vals.min()) - 0.1
+        hi = max(ref_vals.max(), pred_vals.max()) + 0.1
         ax.plot([lo, hi], [lo, hi], "k--", lw=1.0, zorder=2)
         ax.fill_between([lo, hi],
                         [lo - 0.15, hi - 0.15],
                         [lo + 0.15, hi + 0.15],
                         color="grey", alpha=0.08, zorder=1)
 
-        mae, rmse, bias, r2 = stats(exp_data, pred, matched)
+        mae, rmse, bias, r2 = stats(ref_data, pred, matched)
         stat_txt = (f"N={len(matched)}\n"
                     f"MAE  = {mae:.3f} eV\n"
                     f"RMSE = {rmse:.3f} eV\n"
@@ -221,8 +232,8 @@ def make_parity(exp_data, dft_data, ml_data,
                           ec="lightgrey", alpha=0.92))
 
         ax.set_title(label, fontsize=10, fontweight="bold", pad=5)
-        ax.set_xlabel("Experiment  $E_{ads}$ (eV)", fontsize=9)
-        ax.set_ylabel("Predicted  $E_{ads}$ (eV)",  fontsize=9)
+        ax.set_xlabel(f"DFT Literature ({ref_label})  $E_{{ads}}$ (eV)", fontsize=9)
+        ax.set_ylabel("Predicted  $E_{ads}$ (eV)", fontsize=9)
         ax.set_xlim(lo, hi)
         ax.set_ylim(lo, hi)
         ax.set_aspect("equal")
@@ -231,23 +242,25 @@ def make_parity(exp_data, dft_data, ml_data,
         ax.yaxis.set_major_locator(ticker.MaxNLocator(5))
         ax.tick_params(labelsize=8)
 
-        for k, ex, pr in zip(matched, exp_vals, pred_vals):
+        for k, rv, pv in zip(matched, ref_vals, pred_vals):
             all_comparison.append({
-                "method":    method,
-                "surface":   k[0],
-                "molecule":  k[1],
-                "E_exp_eV":  f"{ex:.4f}",
-                "E_pred_eV": f"{pr:.4f}",
-                "diff_eV":   f"{pr - ex:+.4f}",
-                "technique": exp_data[k]["technique"],
-                "reference": exp_data[k]["reference"],
+                "method":       method,
+                "surface":      k[0],
+                "molecule":     k[1],
+                "E_ref_eV":     f"{rv:.4f}",
+                "E_pred_eV":    f"{pv:.4f}",
+                "diff_eV":      f"{pv - rv:+.4f}",
+                "ref_functional": ref_data[k]["functional"],
+                "reference":    ref_data[k]["reference"],
             })
 
     for j in range(len(methods), len(axes_flat)):
         axes_flat[j].set_visible(False)
 
-    fig.suptitle("Validation Against Experiment (TPD / SCAC)",
-                 fontsize=13, fontweight="bold", y=1.01)
+    fig.suptitle(
+        f"Validation Against DFT Literature ({ref_label})",
+        fontsize=13, fontweight="bold", y=1.01
+    )
     fig.tight_layout()
     fig.savefig(output_path, dpi=180, bbox_inches="tight", facecolor="white")
     print(f"Parity figure saved: {output_path}")
@@ -257,20 +270,20 @@ def make_parity(exp_data, dft_data, ml_data,
 
 
 # ---------------------------------------------------------------------------
-# Figure 2 — Bar chart (per system, all methods side by side)
+# Figure 2 -- Bar chart (per system, all methods side by side)
 # ---------------------------------------------------------------------------
 
-def make_bar(exp_data, dft_data, ml_data,
-             dft_functionals, ml_calcs, output_path: Path):
-    """One group of bars per system. Experiment shown as diamond marker."""
-    methods = ml_calcs + dft_functionals
-
-    all_pred = {}
-    for m in methods:
-        all_pred[m] = ml_data.get(m, {}) if m in ml_calcs else dft_data.get(m, {})
+def make_bar(ref_data, dft_data, ml_data,
+             dft_functionals, ml_calcs, ref_functional, output_path: Path):
+    """One group of bars per system. DFT literature shown as diamond marker."""
+    methods  = ml_calcs + dft_functionals
+    all_pred = {
+        m: (ml_data.get(m, {}) if m in ml_calcs else dft_data.get(m, {}))
+        for m in methods
+    }
 
     systems = sorted(
-        k for k in exp_data
+        k for k in ref_data
         if any(k in all_pred[m] for m in methods)
     )
 
@@ -283,29 +296,31 @@ def make_bar(exp_data, dft_data, ml_data,
     bar_w  = 0.8 / n_meth
     x      = np.arange(n_sys)
 
-    fig_w = max(12, n_sys * 1.2)
+    fig_w = max(14, n_sys * 1.1)
     fig, ax = plt.subplots(figsize=(fig_w, 6))
     fig.patch.set_facecolor("white")
 
     for mi, method in enumerate(methods):
-        style = METHOD_STYLES.get(method, {})
-        label = style.get("label", method)
-        color = style.get("color", "grey")
-        fill  = style.get("fill", "full")
-        hatch = "" if fill == "full" else "///"
-        src   = all_pred[method]
-
-        vals = [src[k] if k in src else np.nan for k in systems]
+        style  = METHOD_STYLES.get(method, {})
+        label  = style.get("label", method)
+        color  = style.get("color", "grey")
+        fill   = style.get("fill", "full")
+        hatch  = "" if fill == "full" else "///"
+        src    = all_pred[method]
+        vals   = [src[k] if k in src else np.nan for k in systems]
         offset = (mi - n_meth / 2 + 0.5) * bar_w
         ax.bar(x + offset, vals, width=bar_w * 0.92,
                label=label, color=color, alpha=0.82,
                hatch=hatch, edgecolor="white", linewidth=0.5)
 
-    # Experiment markers
-    exp_vals = [exp_data[k]["E_ads"] for k in systems]
-    ax.scatter(x, exp_vals, color="black", marker="D",
-               s=55, zorder=5, label="Experiment", clip_on=False)
-    ax.errorbar(x, exp_vals, yerr=0.10,
+    # DFT literature reference markers
+    ref_label = ref_functional.upper().replace("_", "+")
+    ref_vals  = [ref_data[k]["E_ads"] for k in systems]
+    ax.scatter(x, ref_vals, color="black", marker="D",
+               s=55, zorder=5, label=f"DFT Lit. ({ref_label})",
+               clip_on=False)
+    # ±0.05 eV bar representing typical DFT convergence uncertainty
+    ax.errorbar(x, ref_vals, yerr=0.05,
                 fmt="none", ecolor="black", elinewidth=1.2,
                 capsize=4, zorder=4, alpha=0.7)
 
@@ -314,8 +329,10 @@ def make_bar(exp_data, dft_data, ml_data,
     ax.set_xticklabels(xlabels, fontsize=7.5, rotation=30, ha="right")
     ax.axhline(0, color="black", linewidth=0.7, linestyle="-", alpha=0.4)
     ax.set_ylabel("$E_{ads}$ (eV)", fontsize=11)
-    ax.set_title("Adsorption Energy: Predicted Methods vs Experiment",
-                 fontsize=12, fontweight="bold", pad=8)
+    ax.set_title(
+        f"Adsorption Energy: All Methods vs DFT Literature ({ref_label})",
+        fontsize=12, fontweight="bold", pad=8
+    )
     ax.legend(loc="lower left", fontsize=8, framealpha=0.9,
               edgecolor="lightgrey", ncol=2)
     ax.grid(True, axis="y", alpha=0.25, linewidth=0.6)
@@ -328,9 +345,11 @@ def make_bar(exp_data, dft_data, ml_data,
         src   = all_pred[method]
         match = [k for k in systems if k in src]
         if match:
-            mae, _, bias, r2 = stats(exp_data, src, match)
+            mae, _, bias, r2 = stats(ref_data, src, match)
             lbl = METHOD_STYLES.get(method, {}).get("label", method)
-            mae_lines.append(f"{lbl}: MAE={mae:.3f}  bias={bias:+.3f}  R\u00b2={r2:.3f}")
+            mae_lines.append(
+                f"{lbl}: MAE={mae:.3f}  bias={bias:+.3f}  R\u00b2={r2:.3f}"
+            )
 
     ax.text(0.01, 0.99, "\n".join(mae_lines),
             transform=ax.transAxes, va="top", ha="left",
@@ -350,12 +369,17 @@ def make_bar(exp_data, dft_data, ml_data,
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Validate GOAD+ML and DFT against experimental adsorption energies.",
+        description="Validate GOAD+ML and DFT against DFT literature reference values.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    parser.add_argument("--exp",   default="experimental_references.csv")
-    parser.add_argument("--dft",   default="dft_binding_energies_all.csv")
-    parser.add_argument("--ml",    default="workflow/summary.csv")
+    parser.add_argument("--ref",  default="dft_literature_references.csv",
+                        help="DFT literature reference CSV (default: dft_literature_references.csv)")
+    parser.add_argument("--dft",  default="dft_binding_energies_all.csv",
+                        help="Your own DFT results CSV with functional column")
+    parser.add_argument("--ml",   default="workflow/summary.csv",
+                        help="GOAD summary CSV")
+    parser.add_argument("--ref-functional", default="pbe_d3",
+                        help="Functional to use from the reference CSV (default: pbe_d3)")
     parser.add_argument("--dft-functionals", nargs="+",
                         default=["pbe", "pbe_d3", "r2scan", "beef_vdw"],
                         metavar="FUNC")
@@ -363,52 +387,52 @@ def main():
                         default=["sevennet_omni", "5m"],
                         metavar="CALC")
     parser.add_argument("--output-parity",
-                        default="results/exp_validation_parity.png")
+                        default="results/lit_validation_parity.png")
     parser.add_argument("--output-bar",
-                        default="results/exp_validation_bar.png")
+                        default="results/lit_validation_bar.png")
     parser.add_argument("--csv-out",
-                        default="results/exp_validation.csv")
+                        default="results/lit_validation.csv")
     args = parser.parse_args()
 
-    for p in [Path(args.exp), Path(args.dft), Path(args.ml)]:
+    for p in [Path(args.ref), Path(args.dft), Path(args.ml)]:
         if not p.exists():
             print(f"ERROR: {p} not found.")
             raise SystemExit(1)
 
-    print(f"Experimental refs : {args.exp}")
-    print(f"DFT CSV           : {args.dft}")
-    print(f"ML CSV            : {args.ml}")
-    print(f"DFT functionals   : {args.dft_functionals}")
-    print(f"ML calculators    : {args.ml_calcs}")
+    print(f"DFT literature ref : {args.ref}  (functional: {args.ref_functional})")
+    print(f"Your DFT CSV       : {args.dft}")
+    print(f"ML CSV             : {args.ml}")
+    print(f"DFT functionals    : {args.dft_functionals}")
+    print(f"ML calculators     : {args.ml_calcs}")
     print()
 
-    exp_data = load_experimental(Path(args.exp))
+    ref_data = load_references(Path(args.ref), args.ref_functional)
     dft_data = load_dft(Path(args.dft), args.dft_functionals)
     ml_data  = load_ml(Path(args.ml),   args.ml_calcs)
 
-    print(f"Experimental systems loaded : {len(exp_data)}")
+    print(f"DFT literature systems loaded : {len(ref_data)}")
     for func in args.dft_functionals:
         n     = len(dft_data.get(func, {}))
-        match = len(set(exp_data) & set(dft_data.get(func, {})))
-        print(f"  DFT {func:<12}: {n} systems, {match} matched to experiment")
+        match = len(set(ref_data) & set(dft_data.get(func, {})))
+        print(f"  Your DFT {func:<10}: {n} systems, {match} matched to literature")
     for calc in args.ml_calcs:
         n     = len(ml_data.get(calc, {}))
-        match = len(set(exp_data) & set(ml_data.get(calc, {})))
-        print(f"  ML  {calc:<14}: {n} systems, {match} matched to experiment")
+        match = len(set(ref_data) & set(ml_data.get(calc, {})))
+        print(f"  ML  {calc:<14}: {n} systems, {match} matched to literature")
     print()
 
     Path(args.output_parity).parent.mkdir(parents=True, exist_ok=True)
     comparison = make_parity(
-        exp_data, dft_data, ml_data,
+        ref_data, dft_data, ml_data,
         args.dft_functionals, args.ml_calcs,
-        Path(args.output_parity)
+        args.ref_functional, Path(args.output_parity)
     )
 
     Path(args.output_bar).parent.mkdir(parents=True, exist_ok=True)
     make_bar(
-        exp_data, dft_data, ml_data,
+        ref_data, dft_data, ml_data,
         args.dft_functionals, args.ml_calcs,
-        Path(args.output_bar)
+        args.ref_functional, Path(args.output_bar)
     )
 
     if comparison:
@@ -416,8 +440,8 @@ def main():
         with Path(args.csv_out).open("w", newline="") as f:
             writer = csv.DictWriter(f, fieldnames=[
                 "method", "surface", "molecule",
-                "E_exp_eV", "E_pred_eV", "diff_eV",
-                "technique", "reference"
+                "E_ref_eV", "E_pred_eV", "diff_eV",
+                "ref_functional", "reference"
             ])
             writer.writeheader()
             writer.writerows(comparison)
@@ -430,15 +454,14 @@ def main():
           f"{'Bias':>8} {'R\u00b2':>7}")
     print("-" * 65)
     for method in args.ml_calcs + args.dft_functionals:
-        src = (ml_data.get(method, {}) if method in args.ml_calcs
-               else dft_data.get(method, {}))
-        matched = sorted(set(exp_data) & set(src))
+        src     = (ml_data.get(method, {}) if method in args.ml_calcs
+                   else dft_data.get(method, {}))
+        matched = sorted(set(ref_data) & set(src))
+        lbl     = METHOD_STYLES.get(method, {}).get("label", method)
         if not matched:
-            lbl = METHOD_STYLES.get(method, {}).get("label", method)
             print(f"  {lbl:<20} {'---':>3}")
             continue
-        mae, rmse, bias, r2 = stats(exp_data, src, matched)
-        lbl = METHOD_STYLES.get(method, {}).get("label", method)
+        mae, rmse, bias, r2 = stats(ref_data, src, matched)
         print(f"  {lbl:<20} {len(matched):>3} {mae:>8.3f} {rmse:>8.3f} "
               f"{bias:>+8.3f} {r2:>7.3f}")
     print("=" * 65)
