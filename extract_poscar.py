@@ -36,8 +36,17 @@ Usage
     # Default: reads ./runs, writes per-seed + best/ into ./poscar
     python extract_poscar.py
 
-    # Custom runs dir
-    python extract_poscar.py --runs-dir /scratch/jcho5/.../runs
+    # Only use SevenNet-OMNI runs (skip 5m / other calculators)
+    python extract_poscar.py --calculator sevennet_omni
+
+    # Only use 5m runs
+    python extract_poscar.py --calculator 5m
+
+    # Custom runs dir + calculator filter
+    python extract_poscar.py \\
+        --runs-dir /scratch/jcho5/.../runs \\
+        --calculator sevennet_omni \\
+        --best-only
 
     # Best POSCARs only, directly into a named directory (no extra best/ level)
     python extract_poscar.py \\
@@ -151,29 +160,53 @@ def write_poscar(atoms: Atoms, out_path: Path,
 # Run collection
 # ---------------------------------------------------------------------------
 
-def collect_runs(runs_dir: Path) -> list:
+def parse_calculator_from_dirname(name: str) -> str:
+    """
+    Extract the calculator name from a run directory name.
+    Pattern: <surface>_<adsorbate>_seed<N>_<calculator>
+    e.g. Cu111_isopropanol_seed0_sevennet_omni -> 'sevennet_omni'
+         Pt111_ethanol_seed1_5m               -> '5m'
+    """
+    parts = name.split("_seed")
+    if len(parts) != 2:
+        return ""
+    seed_calc = parts[1]               # e.g. '0_sevennet_omni'
+    _, *calc_parts = seed_calc.split("_")
+    return "_".join(calc_parts)        # e.g. 'sevennet_omni'
+
+
+def collect_runs(runs_dir: Path, calculator_filter: str = None) -> list:
     """
     Walk runs_dir and collect all task entries that have a final_adsorbed
     geometry.
+
+    Parameters
+    ----------
+    calculator_filter : str or None
+        If given (e.g. 'sevennet_omni' or '5m'), only runs whose directory
+        name ends with that calculator string are included.
     """
-    entries = []
+    entries  = []
+    skipped  = 0
 
     for task_dir in sorted(runs_dir.iterdir()):
         if not task_dir.is_dir():
             continue
 
-        # Directory name pattern: <surface>_<adsorbate>_seed<N>_<calc>
-        # e.g.  Cu111_isopropanol_seed0_sevennet_omni
         name = task_dir.name
+
+        # ---- Calculator filter ----
+        calc = parse_calculator_from_dirname(name)
+        if calculator_filter and calc != calculator_filter:
+            skipped += 1
+            continue
+
         parts = name.split("_seed")
         if len(parts) != 2:
             continue
 
         surface_adsorbate = parts[0]       # e.g. Cu111_isopropanol
-        seed_calc         = parts[1]       # e.g. 0_sevennet_omni
-
-        seed_str, *calc_parts = seed_calc.split("_")
-        calculator = "_".join(calc_parts)
+        seed_str, *_      = parts[1].split("_")
 
         atoms, meta = load_final_geometry(task_dir)
         if atoms is None:
@@ -194,7 +227,7 @@ def collect_runs(runs_dir: Path) -> list:
             "surface":       surface,
             "adsorbate":     adsorbate,
             "seed":          int(seed_str) if seed_str.isdigit() else seed_str,
-            "calculator":    calculator,
+            "calculator":    calc,
             "atoms":         atoms,
             "E_ads_eV":      meta.get("E_ads_eV",      None),
             "E_total_eV":    meta.get("E_total_eV",    None),
@@ -202,6 +235,10 @@ def collect_runs(runs_dir: Path) -> list:
             "E_molecule_eV": meta.get("E_molecule_eV", None),
             "timestamp":     meta.get("timestamp",     ""),
         })
+
+    if calculator_filter:
+        print("Calculator filter : '{}' — skipped {} non-matching dirs, "
+              "kept {} runs".format(calculator_filter, skipped, len(entries)))
 
     return entries
 
@@ -213,7 +250,7 @@ def select_best_per_system(entries: list) -> dict:
     """
     best = {}
     for e in entries:
-        key = f"{e['surface']}_{e['adsorbate']}"
+        key = "{}_{}".format(e["surface"], e["adsorbate"])
         if key not in best:
             best[key] = e
         else:
@@ -247,6 +284,15 @@ def main():
         ),
     )
     parser.add_argument(
+        "--calculator", default=None,
+        metavar="CALC",
+        help=(
+            "Only extract runs from this calculator. "
+            "Examples: sevennet_omni  5m  chgnet  mace "
+            "(default: use all calculators found in runs/)"
+        ),
+    )
+    parser.add_argument(
         "--best-only", action="store_true",
         help=(
             "Only write the best-seed POSCAR per (surface, adsorbate). "
@@ -269,64 +315,86 @@ def main():
     sort_species = not args.no_sort
 
     if not runs_dir.exists():
-        print(f"ERROR: runs directory not found: {runs_dir}")
+        print("ERROR: runs directory not found: {}".format(runs_dir))
         raise SystemExit(1)
 
-    entries = collect_runs(runs_dir)
+    entries = collect_runs(runs_dir, calculator_filter=args.calculator)
 
     if not entries:
-        print(f"No completed runs with final_adsorbed.cif/.traj found in {runs_dir}")
+        msg = "No completed runs"
+        if args.calculator:
+            msg += " for calculator '{}'".format(args.calculator)
+        print(msg + " with final_adsorbed.cif/.traj found in {}".format(runs_dir))
         raise SystemExit(0)
 
-    print(f"Found {len(entries)} completed run(s) in {runs_dir}")
+    print("Found {} completed run(s) in {}{}".format(
+        len(entries), runs_dir,
+        " [calculator={}]".format(args.calculator) if args.calculator else ""
+    ))
+
+    # Show breakdown of what was found
+    from collections import Counter
+    by_calc = Counter(e["calculator"] for e in entries)
+    for calc, n in sorted(by_calc.items()):
+        print("  {:<20}: {} runs".format(calc, n))
+    print()
 
     written = 0
 
     # ---- Per-seed POSCARs --------------------------------------------------
     if not args.best_only:
         for e in entries:
-            label   = f"{e['surface']}_{e['adsorbate']}_seed{e['seed']}"
+            label   = "{}_{}_{}_seed{}".format(
+                e["surface"], e["adsorbate"], e["calculator"], e["seed"])
             poscar  = out_dir / label / "POSCAR"
-            e_str   = f"{e['E_ads_eV']:.4f} eV" if e["E_ads_eV"] is not None else "E_ads unknown"
-            comment = (f"{e['surface']} + {e['adsorbate']} | seed={e['seed']} | "
-                       f"calc={e['calculator']} | E_ads={e_str}")
-            write_poscar(e["atoms"], poscar, sort_species=sort_species, comment=comment)
+            e_str   = "{:.4f} eV".format(e["E_ads_eV"]) \
+                      if e["E_ads_eV"] is not None else "E_ads unknown"
+            comment = ("{} + {} | seed={} | calc={} | E_ads={}".format(
+                e["surface"], e["adsorbate"], e["seed"],
+                e["calculator"], e_str))
+            write_poscar(e["atoms"], poscar,
+                         sort_species=sort_species, comment=comment)
             if args.verbose:
-                print(f"  [per-seed]  {poscar}   E_ads={e_str}")
+                print("  [per-seed]  {}   E_ads={}".format(poscar, e_str))
             written += 1
 
     # ---- Best-seed POSCARs -------------------------------------------------
     best = select_best_per_system(entries)
 
-    # When --best-only: write directly into out_dir (no best/ subdirectory).
-    # When writing both per-seed and best: nest under out_dir/best/ to avoid
-    # collisions with the per-seed directories.
     best_dir = out_dir if args.best_only else out_dir / "best"
 
     for key, e in sorted(best.items()):
-        label   = f"{e['surface']}_{e['adsorbate']}"
+        label   = "{}_{}".format(e["surface"], e["adsorbate"])
         poscar  = best_dir / label / "POSCAR"
-        e_str   = f"{e['E_ads_eV']:.4f} eV" if e["E_ads_eV"] is not None else "E_ads unknown"
-        comment = (f"{e['surface']} + {e['adsorbate']} | BEST seed={e['seed']} | "
-                   f"calc={e['calculator']} | E_ads={e_str}")
-        write_poscar(e["atoms"], poscar, sort_species=sort_species, comment=comment)
-        print(f"  [best]  {poscar}   seed={e['seed']}  E_ads={e_str}")
+        e_str   = "{:.4f} eV".format(e["E_ads_eV"]) \
+                  if e["E_ads_eV"] is not None else "E_ads unknown"
+        comment = ("{} + {} | BEST seed={} | calc={} | E_ads={}".format(
+            e["surface"], e["adsorbate"], e["seed"],
+            e["calculator"], e_str))
+        write_poscar(e["atoms"], poscar,
+                     sort_species=sort_species, comment=comment)
+        print("  [best]  {}   seed={}  E_ads={}".format(
+              poscar, e["seed"], e_str))
         written += 1
 
     # ---- Summary -----------------------------------------------------------
-    print(f"\nWrote {written} POSCAR file(s) under {out_dir}/")
+    print("\nWrote {} POSCAR file(s) under {}/".format(written, out_dir))
     print()
     if args.best_only:
-        print(f"Best-seed layout:  {out_dir}/<surface>_<adsorbate>/POSCAR")
+        print("Best-seed layout:  {}/<surface>_<adsorbate>/POSCAR".format(out_dir))
     else:
-        print(f"Per-seed layout:   {out_dir}/<surface>_<adsorbate>_seed<N>/POSCAR")
-        print(f"Best-seed layout:  {out_dir}/best/<surface>_<adsorbate>/POSCAR  <- use for DFT")
+        print("Per-seed layout:   {}/<surface>_<adsorbate>_<calc>_seed<N>/POSCAR".format(
+              out_dir))
+        print("Best-seed layout:  {}/best/<surface>_<adsorbate>/POSCAR  <- use for DFT".format(
+              out_dir))
     print()
     print("Next steps:")
-    print("  1. cp <out-dir>/<system>/POSCAR  ~/vasp-jobs/<system>/")
-    print("  2. Add INCAR, KPOINTS, POTCAR")
-    print("  3. NSW=0 (single-point) or NSW=20 IBRION=2 (short relax)")
-    print("  4. Compare VASP E_ads with GOAD E_ads_eV in result.json")
+    print("  1. python setup_vasp_jobs.py --poscar-dir {} --functional r2scan".format(
+          best_dir))
+    print("  2. for d in {}/*/*/; do (cd \"$d\" && sbatch slm.vasp.kestrel); done".format(
+          best_dir))
+    print("  3. python calc_binding_energy.py --best-dir {} --output dft_eads.csv".format(
+          best_dir))
 
 
 if __name__ == "__main__":
