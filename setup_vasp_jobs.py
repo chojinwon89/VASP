@@ -36,21 +36,30 @@ Usage
     python setup_vasp_jobs.py --poscar-dir /scratch/jcho5/.../poscar/best \\
                                --functional pbe --dry-run
 
+    # Override the default POTCAR library path:
+    python setup_vasp_jobs.py --poscar-dir ... --functional pbe \\
+                               --pp-path /path/to/potpaw_PBE
+
 Prerequisites
 -------------
-Set VASP_PP_PATH to the root of your POTCAR library, e.g.:
+POTCAR library is set by default to:
 
-    export VASP_PP_PATH=/projects/vasp/pps/PBE54
+    /projects/2dmgcat/paw64/potpaw_PBE_64
 
-Or pass it explicitly:
-
-    python setup_vasp_jobs.py --poscar-dir ... --pp-path /projects/vasp/pps/PBE54
+This can be overridden with --pp-path or the VASP_PP_PATH environment variable
+(--pp-path takes priority over both).
 """
 
 import argparse
 import os
 import re
 from pathlib import Path
+
+
+# ---------------------------------------------------------------------------
+# Default POTCAR library path for Kestrel
+# ---------------------------------------------------------------------------
+DEFAULT_PP_PATH = "/projects/2dmgcat/paw64/potpaw_PBE_64"
 
 
 # ---------------------------------------------------------------------------
@@ -165,23 +174,32 @@ srun vasp_std
 
 # ---------------------------------------------------------------------------
 # POTCAR element name mapping
+# Maps element symbol -> list of candidate subfolder names to try in order
+# under the POTCAR library root.
+# potpaw_PBE_64 uses standard element names; _pv / _sv variants tried as
+# fallback for transition metals where the standard folder is missing.
 # ---------------------------------------------------------------------------
 POTCAR_MAP = {
-    "Cu": ["Cu"],
+    "Cu": ["Cu", "Cu_pv"],
     "C":  ["C"],
     "H":  ["H"],
     "O":  ["O"],
     "N":  ["N"],
     "S":  ["S"],
-    "Pt": ["Pt"],
-    "Pd": ["Pd"],
-    "Ni": ["Ni"],
-    "Ag": ["Ag"],
+    "Pt": ["Pt", "Pt_pv"],
+    "Pd": ["Pd", "Pd_pv"],
+    "Ni": ["Ni", "Ni_pv"],
+    "Ag": ["Ag", "Ag_pv"],
     "Au": ["Au"],
-    "Fe": ["Fe"],
-    "Co": ["Co"],
+    "Fe": ["Fe", "Fe_pv"],
+    "Co": ["Co", "Co_pv"],
     "Zn": ["Zn"],
     "Al": ["Al"],
+    "Ga": ["Ga", "Ga_d"],
+    "Zr": ["Zr", "Zr_sv"],
+    "Mo": ["Mo", "Mo_pv", "Mo_sv"],
+    "Mg": ["Mg"],
+    "Si": ["Si"],
 }
 
 
@@ -214,7 +232,7 @@ def find_potcar(element: str, pp_root: Path) -> Path:
     raise FileNotFoundError(
         f"POTCAR for '{element}' not found under {pp_root}.\n"
         f"Tried: {tried}\n"
-        "Set VASP_PP_PATH correctly or add the element to POTCAR_MAP."
+        "Add the element to POTCAR_MAP or check the library path."
     )
 
 
@@ -338,8 +356,11 @@ def main():
     )
     parser.add_argument(
         "--pp-path", default=None,
-        help="Path to VASP PBE PAW pseudopotential library root "
-             "(overrides VASP_PP_PATH env var)",
+        help=(
+            "Path to VASP PBE PAW pseudopotential library root. "
+            "Priority: --pp-path > VASP_PP_PATH env var > built-in default "
+            f"({DEFAULT_PP_PATH})"
+        ),
     )
     parser.add_argument(
         "--dry-run", action="store_true",
@@ -353,24 +374,33 @@ def main():
         raise SystemExit(1)
 
     # ---- Resolve functional config -------------------------------------------
-    func_cfg   = FUNCTIONAL_CONFIGS[args.functional]
-    subfolder  = func_cfg["subfolder"]
-    xc_block   = func_cfg["xc_block"]
+    func_cfg  = FUNCTIONAL_CONFIGS[args.functional]
+    subfolder = func_cfg["subfolder"]
+    xc_block  = func_cfg["xc_block"]
 
     print(f"Processing POSCAR subdirectories in: {poscar_dir}")
     print(f"Functional : {args.functional}  ->  subfolder name: {subfolder}")
     print()
 
     # ---- Resolve POTCAR library path -----------------------------------------
-    pp_path_str = args.pp_path or os.environ.get("VASP_PP_PATH", "")
-    pp_root = Path(pp_path_str) if pp_path_str else None
-    if pp_root is None:
-        print("WARNING: VASP_PP_PATH is not set and --pp-path not given.")
+    # Priority: --pp-path > VASP_PP_PATH env var > DEFAULT_PP_PATH
+    pp_path_str = (args.pp_path
+                   or os.environ.get("VASP_PP_PATH", "")
+                   or DEFAULT_PP_PATH)
+    pp_root = Path(pp_path_str)
+
+    if not pp_root.exists():
+        print(f"WARNING: POTCAR library not found at: {pp_root}")
         print("         POTCAR will NOT be built automatically.")
         print("         A make_potcar.sh helper will be written instead.")
+        print(f"         Override with --pp-path or VASP_PP_PATH env var.")
         print()
+        pp_root = None
     else:
-        print(f"Using POTCAR library: {pp_root}")
+        source = ("--pp-path" if args.pp_path
+                  else "VASP_PP_PATH" if os.environ.get("VASP_PP_PATH")
+                  else "default")
+        print(f"Using POTCAR library ({source}): {pp_root}")
 
     # ---- Collect system directories (immediate subdirs with a POSCAR) --------
     system_dirs = [
@@ -420,12 +450,14 @@ def main():
     print("NEXT STEPS")
     print("=" * 65)
     print()
-    print("1. If POTCAR was not built automatically, run make_potcar.sh")
-    print("   in each job directory, or set VASP_PP_PATH and re-run:")
-    print()
-    print("     export VASP_PP_PATH=/projects/vasp/pps/PBE54")
-    print(f"     python setup_vasp_jobs.py --poscar-dir {poscar_dir} --functional {args.functional}")
-    print()
+    if not all_ok:
+        print("1. Some POTCARs were not built — check warnings above.")
+        print(f"   Verify the library path: {pp_root or DEFAULT_PP_PATH}")
+        print(f"   Then re-run:")
+        print()
+        print(f"     python setup_vasp_jobs.py --poscar-dir {poscar_dir} "
+              f"--functional {args.functional}")
+        print()
     print("2. Submit each job:")
     print()
     print(f"     for d in {poscar_dir}/*/{subfolder}/; do")
@@ -436,8 +468,6 @@ def main():
     print()
     print("     grep 'free  energy' OUTCAR | tail -1")
     print()
-    if not all_ok:
-        print("Some warnings were raised — see above.")
 
 
 if __name__ == "__main__":
