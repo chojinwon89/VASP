@@ -10,61 +10,6 @@ from pathlib import Path
 from datetime import datetime
 
 
-# ---------------------------------------------------------------------------
-# SMILES lookup for carbon counting (mirrors batch_isopropanol.py)
-# ---------------------------------------------------------------------------
-MOLECULE_SMILES = {
-    "H2":                       "[H][H]",
-    "H2O":                      "O",
-    "CO":                       "[C-]#[O+]",
-    "CO2":                      "O=C=O",
-    "methanol":                 "CO",
-    "formic_acid":              "OC=O",
-    "ethanol":                  "CCO",
-    "ethylene":                 "C=C",
-    "ethene":                   "C=C",
-    "ethane":                   "CC",
-    "acetaldehyde":             "CC=O",
-    "acetic_acid":              "CC(=O)O",
-    "DME":                      "COC",
-    "isopropanol":              "CC(C)O",
-    "propanol":                 "CCCO",
-    "propene":                  "CC=C",
-    "propane":                  "CCC",
-    "propionic_acid":           "CCC(=O)O",
-    "lactic_acid":              "CC(O)C(=O)O",
-    "pyruvic_acid":             "CC(=O)C(=O)O",
-    "3-hydroxypropionic_acid":  "OCCC(=O)O",
-    "3-MTHF":                   "CC1CCCO1",
-    "butyric_acid":             "CCCC(=O)O",
-    "1-butene":                 "CCC=C",
-    "isobutene":                "CC(=C)C",
-    "butadiene":                "C=CC=C",
-    "methylmethacrylate":       "COC(=O)C(=C)C",
-    "valeric_acid":             "CCCCC(=O)O",
-    "1-pentene":                "CCCC=C",
-    "2-pentanone":              "CCCC(=O)C",
-    "cyclopentanone":           "O=C1CCCC1",
-    "furfural":                 "O=Cc1ccco1",
-    "isoprene":                 "CC(=C)C=C",
-    "itaconic_acid":            "OC(=O)CC(=C)C(=O)O",
-    "caproic_acid":             "CCCCCC(=O)O",
-    "5-HMF":                    "OCc1ccc(C=O)o1",
-    "benzene":                  "c1ccccc1",
-    "5-heptanone":              "CCCCC(=O)CC",
-    "toluene":                  "Cc1ccccc1",
-    "glycerol":                 "OCC(O)CO",
-}
-
-
-def carbon_count(molecule_name: str) -> int:
-    """Count carbon atoms from SMILES (C + c). Falls back to name-based count."""
-    smiles = MOLECULE_SMILES.get(molecule_name)
-    if smiles:
-        return sum(1 for ch in smiles if ch in ("C", "c"))
-    return molecule_name.upper().count("C")
-
-
 def load_task(tasks_csv: Path, task_id: int) -> dict:
     with tasks_csv.open() as f:
         reader = csv.DictReader(f)
@@ -77,7 +22,7 @@ def load_task(tasks_csv: Path, task_id: int) -> dict:
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--task-id", type=int, required=True)
-    parser.add_argument("--tasks-csv", default="workflow/tasks.csv")
+    parser.add_argument("--tasks-csv", default="workflow/tasks_custom.csv")
     args = parser.parse_args()
 
     repo = Path.cwd()
@@ -89,14 +34,68 @@ def main():
     seed       = int(task["seed"])
     calculator = task["calculator"]
 
-    # Organise runs by carbon count: runs/C{n}/<surface>_<adsorbate>_seed<N>_<calc>/
-    n_carbon   = carbon_count(adsorbate)
-    run_name   = f"{surface}_{adsorbate}_seed{seed}_{calculator}"
-    run_dir    = repo / "runs" / f"C{n_carbon}" / run_name
-    run_dir.mkdir(parents=True, exist_ok=True)
+    env = os.environ.copy()
+    env["GOAD_SURFACE"]   = surface
+    env["GOAD_ADSORBATE"] = adsorbate
+    env["GOAD_SEED"]      = str(seed)
+    env["GOAD_CALC"]      = calculator
+    # Do NOT set GOAD_RUN_DIR here.
+    # batch_isopropanol.py builds runs/C{n}/... automatically.
 
-    status_file = run_dir / "status.json"
-    log_file    = run_dir / "run.log"
+    # Pass per-task GA overrides (only present in tasks_custom.csv)
+    env["GOAD_POPULATION_SIZE"] = task.get("population_size", "")
+    env["GOAD_GENERATIONS"]     = task.get("generations", "")
+
+    # Temporary log before run_dir is known
+    tmp_log = repo / "slurm-logs" / f"task_{args.task_id}.log"
+    tmp_log.parent.mkdir(parents=True, exist_ok=True)
+
+    state      = "finished"
+    returncode = 0
+
+    try:
+        with tmp_log.open("w") as log:
+            log.write("=" * 80 + "\n")
+            log.write(f"Starting GOAD task {args.task_id}\n")
+            log.write(json.dumps(task, indent=2) + "\n")
+            log.write("=" * 80 + "\n\n")
+            log.flush()
+
+            # --- Step 1: generate input CIFs (skips existing files) ---
+            # generate_surface_cifs.py and generate_molecule_cifs.py
+            # replace the old prep_inputs.py and cover all metals/molecules.
+            for script in ["generate_surface_cifs.py", "generate_molecule_cifs.py"]:
+                subprocess.run(
+                    [sys.executable, script],
+                    cwd=repo,
+                    env=env,
+                    stdout=log,
+                    stderr=subprocess.STDOUT,
+                    check=True,
+                )
+
+            # --- Step 2: run GOAD ---
+            subprocess.run(
+                [sys.executable, "batch_isopropanol.py"],
+                cwd=repo,
+                env=env,
+                stdout=log,
+                stderr=subprocess.STDOUT,
+                check=True,
+            )
+
+    except subprocess.CalledProcessError as e:
+        state      = "failed"
+        returncode = e.returncode
+
+    # Reconstruct run_dir using same carbon-count logic as batch_isopropanol.py
+    # so we can write status.json in the right place.
+    sys.path.insert(0, str(repo))
+    from batch_isopropanol import carbon_count
+    n_carbon = carbon_count(adsorbate)
+    run_name = f"{surface}_{adsorbate}_seed{seed}_{calculator}"
+    run_dir  = repo / "runs" / f"C{n_carbon}" / run_name
+    run_dir.mkdir(parents=True, exist_ok=True)
 
     status = {
         "task_id":    args.task_id,
@@ -107,58 +106,15 @@ def main():
         "n_carbon":   n_carbon,
         "run_dir":    str(run_dir),
         "started_at": datetime.now().isoformat(),
-        "state":      "running",
+        "finished_at": datetime.now().isoformat(),
+        "state":      state,
     }
-    status_file.write_text(json.dumps(status, indent=2))
+    if state == "failed":
+        status["returncode"] = returncode
 
-    env = os.environ.copy()
-    env["GOAD_SURFACE"]   = surface
-    env["GOAD_ADSORBATE"] = adsorbate
-    env["GOAD_SEED"]      = str(seed)
-    env["GOAD_CALC"]      = calculator
-    env["GOAD_RUN_DIR"]   = str(run_dir)
+    (run_dir / "status.json").write_text(json.dumps(status, indent=2))
 
-    # Pass per-task GA overrides (only present in tasks_custom.csv)
-    env["GOAD_POPULATION_SIZE"] = task.get("population_size", "")
-    env["GOAD_GENERATIONS"]     = task.get("generations", "")
-
-    try:
-        with log_file.open("w") as log:
-            log.write("=" * 80 + "\n")
-            log.write(f"Starting GOAD task {args.task_id}  [C{n_carbon}]\n")
-            log.write(json.dumps(task, indent=2) + "\n")
-            log.write("=" * 80 + "\n\n")
-            log.flush()
-
-            subprocess.run(
-                [sys.executable, "prep_inputs.py"],
-                cwd=repo,
-                env=env,
-                stdout=log,
-                stderr=subprocess.STDOUT,
-                check=True,
-            )
-
-            subprocess.run(
-                [sys.executable, "batch_isopropanol.py"],
-                cwd=repo,
-                env=env,
-                stdout=log,
-                stderr=subprocess.STDOUT,
-                check=True,
-            )
-
-        status["state"]       = "finished"
-        status["finished_at"] = datetime.now().isoformat()
-
-    except subprocess.CalledProcessError as e:
-        status["state"]       = "failed"
-        status["returncode"]  = e.returncode
-        status["finished_at"] = datetime.now().isoformat()
-
-    status_file.write_text(json.dumps(status, indent=2))
-
-    if status["state"] == "failed":
+    if state == "failed":
         raise SystemExit(1)
 
 

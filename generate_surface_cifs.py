@@ -4,10 +4,22 @@ generate_surface_cifs.py
 Generate CIF files for all metal surface slabs needed for the CCB project
 adsorption workflow.
 
-Slabs use a 3×3 supercell (3×2 for (110) facets) with 4 layers and ~15 Å
-vacuum, matching the existing Cu111.cif / Cu100.cif convention.
+Supported crystal structures and metals
+---------------------------------------
+FCC : Cu, Pd, Pt, Ni, Au, Ag, Ir, Rh
+BCC : Fe, Cr, Mo
+HCP : Ru, Co, Ti, Zn
 
-Existing CIF files are **never overwritten** — the script skips them.
+Facets built per structure
+--------------------------
+FCC  ->  (111), (110), (100)
+BCC  ->  (110), (100), (111)
+HCP  ->  (0001), (10-10)  [hcp0001 and hcp10m10 in ASE]
+
+Slabs use a 3x3 supercell (3x2 for open (110) facets) with 4 layers
+and ~15 A vacuum.
+
+Existing CIF files are **never overwritten** -- the script skips them.
 
 Output: one .cif file per surface in inputs/
 
@@ -17,78 +29,124 @@ Usage
 """
 
 import os
-from ase.build import fcc111, fcc110, fcc100
+from ase.build import (
+    fcc111, fcc110, fcc100,
+    bcc110, bcc100, bcc111,
+    hcp0001, hcp10m10,
+)
 from ase.io import write
 
 os.makedirs("inputs", exist_ok=True)
 
 # ---------------------------------------------------------------------------
-# Surface specifications
-# (element, builder_func, supercell_size, extra_kwargs, output_name)
+# Experimental lattice constants (Angstrom)
+# FCC: a only
+# BCC: a only
+# HCP: (a, c)
 # ---------------------------------------------------------------------------
-# Lattice constants (Å)
-A = {
-    "Cu": 3.61,
-    "Pd": 3.89,
-    "Pt": 3.92,
-    "Ni": 3.52,
-    "Au": 4.08,
-    "Ag": 4.09,
+A_FCC = {
+    "Cu": 3.615,
+    "Pd": 3.890,
+    "Pt": 3.924,
+    "Ni": 3.524,
+    "Au": 4.078,
+    "Ag": 4.086,
+    "Ir": 3.840,
+    "Rh": 3.803,
 }
 
-# (element, facet_func, size, extra_kwargs, name)
-SLAB_SPECS = [
-    # Cu (existing Cu111 & Cu100 will be skipped automatically)
-    ("Cu", fcc111, (3, 3, 4), {}, "Cu111"),
-    ("Cu", fcc110, (3, 2, 4), {}, "Cu110"),
-    ("Cu", fcc100, (3, 3, 4), {}, "Cu100"),
-    # Pd
-    ("Pd", fcc111, (3, 3, 4), {}, "Pd111"),
-    ("Pd", fcc110, (3, 2, 4), {}, "Pd110"),
-    ("Pd", fcc100, (3, 3, 4), {}, "Pd100"),
-    # Pt
-    ("Pt", fcc111, (3, 3, 4), {}, "Pt111"),
-    ("Pt", fcc110, (3, 2, 4), {}, "Pt110"),
-    ("Pt", fcc100, (3, 3, 4), {}, "Pt100"),
-    # Ni
-    ("Ni", fcc111, (3, 3, 4), {}, "Ni111"),
-    ("Ni", fcc100, (3, 3, 4), {}, "Ni100"),
-    # Au
-    ("Au", fcc111, (3, 3, 4), {}, "Au111"),
-    # Ag
-    ("Ag", fcc111, (3, 3, 4), {}, "Ag111"),
-    ("Ag", fcc110, (3, 2, 4), {}, "Ag110"),
-    ("Ag", fcc100, (3, 3, 4), {}, "Ag100"),
-]
+A_BCC = {
+    "Fe": 2.870,
+    "Cr": 2.885,
+    "Mo": 3.147,
+}
 
+A_HCP = {
+    # (a, c)
+    "Ru": (2.706, 4.282),
+    "Co": (2.507, 4.069),
+    "Ti": (2.951, 4.686),
+    "Zn": (2.665, 4.947),
+}
+
+# ---------------------------------------------------------------------------
+# Build spec lists
+# (element, builder_func, size, extra_kwargs, output_name)
+# ---------------------------------------------------------------------------
+SLAB_SPECS = []
+
+# --- FCC ---
+for el, a in A_FCC.items():
+    SLAB_SPECS += [
+        (el, fcc111, (3, 3, 4), {"a": a, "orthogonal": True}, f"{el}111"),
+        (el, fcc110, (3, 2, 4), {"a": a},                     f"{el}110"),
+        (el, fcc100, (3, 3, 4), {"a": a},                     f"{el}100"),
+    ]
+
+# Cu001 alias (same slab as Cu100, kept for backwards compat with task CSVs)
+SLAB_SPECS.append(
+    ("Cu", fcc100, (3, 3, 4), {"a": A_FCC["Cu"]}, "Cu001")
+)
+
+# --- BCC ---
+for el, a in A_BCC.items():
+    SLAB_SPECS += [
+        (el, bcc110, (3, 2, 4), {"a": a},                     f"{el}110"),
+        (el, bcc100, (3, 3, 4), {"a": a},                     f"{el}100"),
+        (el, bcc111, (3, 3, 4), {"a": a, "orthogonal": True}, f"{el}111"),
+    ]
+
+# --- HCP ---
+for el, (a, c) in A_HCP.items():
+    SLAB_SPECS += [
+        (el, hcp0001,  (3, 3, 4), {"a": a, "c": c, "orthogonal": True}, f"{el}0001"),
+        (el, hcp10m10, (3, 2, 4), {"a": a, "c": c},                     f"{el}10m10"),
+    ]
+
+# ---------------------------------------------------------------------------
+# Generate CIFs
+# ---------------------------------------------------------------------------
 written = []
 skipped = []
+errors  = []
 
-for element, builder, size, extra, name in SLAB_SPECS:
+for element, builder, size, kwargs, name in SLAB_SPECS:
     out_path = f"inputs/{name}.cif"
     if os.path.exists(out_path):
         skipped.append(name)
         continue
     try:
-        a = A[element]
-        slab = builder(element, size=size, a=a, vacuum=15.0, **extra)
+        slab = builder(element, size=size, vacuum=15.0, **kwargs)
         write(out_path, slab)
         cell = slab.get_cell().lengths()
         written.append(
             f"{name}: {len(slab):3d} atoms  "
-            f"cell = [{cell[0]:.2f} {cell[1]:.2f} {cell[2]:.2f}] Å"
+            f"cell = [{cell[0]:.2f} {cell[1]:.2f} {cell[2]:.2f}] A"
         )
     except Exception as exc:
-        print(f"  WARNING: could not build {name}: {exc}")
+        errors.append(f"{name}: {exc}")
 
-print(f"\n{'='*60}")
-print(f"Surface CIF generation complete")
+print(f"\n{'='*65}")
+print("Surface CIF generation complete")
 print(f"  Written : {len(written)}")
 print(f"  Skipped : {len(skipped)}  (already existed)")
-print(f"{'='*60}")
-for entry in written:
-    print(f"  + {entry}")
+print(f"  Errors  : {len(errors)}")
+print(f"{'='*65}")
+
+if written:
+    print("\nWritten:")
+    for entry in written:
+        print(f"  + {entry}")
+
 if skipped:
-    print(f"\nSkipped (not overwritten):")
+    print("\nSkipped (not overwritten):")
     for s in skipped:
         print(f"  ~ {s}")
+
+if errors:
+    print("\nErrors:")
+    for e in errors:
+        print(f"  ! {e}")
+
+print()
+print("All surface CIFs are in inputs/")
