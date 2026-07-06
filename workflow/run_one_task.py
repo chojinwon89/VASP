@@ -10,6 +10,61 @@ from pathlib import Path
 from datetime import datetime
 
 
+# ---------------------------------------------------------------------------
+# SMILES lookup for carbon counting (mirrors batch_isopropanol.py)
+# ---------------------------------------------------------------------------
+MOLECULE_SMILES = {
+    "H2":                       "[H][H]",
+    "H2O":                      "O",
+    "CO":                       "[C-]#[O+]",
+    "CO2":                      "O=C=O",
+    "methanol":                 "CO",
+    "formic_acid":              "OC=O",
+    "ethanol":                  "CCO",
+    "ethylene":                 "C=C",
+    "ethene":                   "C=C",
+    "ethane":                   "CC",
+    "acetaldehyde":             "CC=O",
+    "acetic_acid":              "CC(=O)O",
+    "DME":                      "COC",
+    "isopropanol":              "CC(C)O",
+    "propanol":                 "CCCO",
+    "propene":                  "CC=C",
+    "propane":                  "CCC",
+    "propionic_acid":           "CCC(=O)O",
+    "lactic_acid":              "CC(O)C(=O)O",
+    "pyruvic_acid":             "CC(=O)C(=O)O",
+    "3-hydroxypropionic_acid":  "OCCC(=O)O",
+    "3-MTHF":                   "CC1CCCO1",
+    "butyric_acid":             "CCCC(=O)O",
+    "1-butene":                 "CCC=C",
+    "isobutene":                "CC(=C)C",
+    "butadiene":                "C=CC=C",
+    "methylmethacrylate":       "COC(=O)C(=C)C",
+    "valeric_acid":             "CCCCC(=O)O",
+    "1-pentene":                "CCCC=C",
+    "2-pentanone":              "CCCC(=O)C",
+    "cyclopentanone":           "O=C1CCCC1",
+    "furfural":                 "O=Cc1ccco1",
+    "isoprene":                 "CC(=C)C=C",
+    "itaconic_acid":            "OC(=O)CC(=C)C(=O)O",
+    "caproic_acid":             "CCCCCC(=O)O",
+    "5-HMF":                    "OCc1ccc(C=O)o1",
+    "benzene":                  "c1ccccc1",
+    "5-heptanone":              "CCCCC(=O)CC",
+    "toluene":                  "Cc1ccccc1",
+    "glycerol":                 "OCC(O)CO",
+}
+
+
+def carbon_count(molecule_name: str) -> int:
+    """Count carbon atoms from SMILES (C + c). Falls back to name-based count."""
+    smiles = MOLECULE_SMILES.get(molecule_name)
+    if smiles:
+        return sum(1 for ch in smiles if ch in ("C", "c"))
+    return molecule_name.upper().count("C")
+
+
 def load_task(tasks_csv: Path, task_id: int) -> dict:
     with tasks_csv.open() as f:
         reader = csv.DictReader(f)
@@ -34,8 +89,10 @@ def main():
     seed       = int(task["seed"])
     calculator = task["calculator"]
 
-    run_name = f"{surface}_{adsorbate}_seed{seed}_{calculator}"
-    run_dir  = repo / "runs" / run_name
+    # Organise runs by carbon count: runs/C{n}/<surface>_<adsorbate>_seed<N>_<calc>/
+    n_carbon   = carbon_count(adsorbate)
+    run_name   = f"{surface}_{adsorbate}_seed{seed}_{calculator}"
+    run_dir    = repo / "runs" / f"C{n_carbon}" / run_name
     run_dir.mkdir(parents=True, exist_ok=True)
 
     status_file = run_dir / "status.json"
@@ -47,6 +104,7 @@ def main():
         "adsorbate":  adsorbate,
         "seed":       seed,
         "calculator": calculator,
+        "n_carbon":   n_carbon,
         "run_dir":    str(run_dir),
         "started_at": datetime.now().isoformat(),
         "state":      "running",
@@ -67,7 +125,7 @@ def main():
     try:
         with log_file.open("w") as log:
             log.write("=" * 80 + "\n")
-            log.write(f"Starting GOAD task {args.task_id}\n")
+            log.write(f"Starting GOAD task {args.task_id}  [C{n_carbon}]\n")
             log.write(json.dumps(task, indent=2) + "\n")
             log.write("=" * 80 + "\n\n")
             log.flush()

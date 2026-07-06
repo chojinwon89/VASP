@@ -20,10 +20,82 @@ SURFACE         = os.environ.get("GOAD_SURFACE",   "Cu111")
 ADSORBATE       = os.environ.get("GOAD_ADSORBATE", "isopropanol")
 SEED            = int(os.environ.get("GOAD_SEED",  "0"))
 CALCULATOR_TYPE = os.environ.get("GOAD_CALC",      "sevennet_omni")
-RUN_DIR         = Path(os.environ.get(
-    "GOAD_RUN_DIR",
-    f"runs/{SURFACE}_{ADSORBATE}_seed{SEED}_{CALCULATOR_TYPE}"
-))
+
+# ---------------------------------------------------------------------------
+# SMILES lookup — used ONLY to count carbon atoms for runs/C{n}/ subfolder.
+# Count uppercase 'C' characters in the SMILES string (excludes lowercase 'c'
+# in aromatic rings, which are also carbons — both are counted below).
+# ---------------------------------------------------------------------------
+MOLECULE_SMILES = {
+    # C0 — no carbon
+    "H2":                       "[H][H]",
+    "H2O":                      "O",
+    # C1
+    "CO":                       "[C-]#[O+]",
+    "CO2":                      "O=C=O",
+    "methanol":                 "CO",
+    "formic_acid":              "OC=O",
+    # C2
+    "ethanol":                  "CCO",
+    "ethylene":                 "C=C",
+    "ethene":                   "C=C",
+    "ethane":                   "CC",
+    "acetaldehyde":             "CC=O",
+    "acetic_acid":              "CC(=O)O",
+    "DME":                      "COC",
+    # C3
+    "isopropanol":              "CC(C)O",
+    "propanol":                 "CCCO",
+    "propene":                  "CC=C",
+    "propane":                  "CCC",
+    "propionic_acid":           "CCC(=O)O",
+    "lactic_acid":              "CC(O)C(=O)O",
+    "pyruvic_acid":             "CC(=O)C(=O)O",
+    "3-hydroxypropionic_acid":  "OCCC(=O)O",
+    "3-MTHF":                   "CC1CCCO1",
+    # C4
+    "butyric_acid":             "CCCC(=O)O",
+    "1-butene":                 "CCC=C",
+    "isobutene":                "CC(=C)C",
+    "butadiene":                "C=CC=C",
+    "methylmethacrylate":       "COC(=O)C(=C)C",
+    # C5
+    "valeric_acid":             "CCCCC(=O)O",
+    "1-pentene":                "CCCC=C",
+    "2-pentanone":              "CCCC(=O)C",
+    "cyclopentanone":           "O=C1CCCC1",
+    "furfural":                 "O=Cc1ccco1",
+    "isoprene":                 "CC(=C)C=C",
+    "itaconic_acid":            "OC(=O)CC(=C)C(=O)O",
+    # C6
+    "caproic_acid":             "CCCCCC(=O)O",
+    "5-HMF":                    "OCc1ccc(C=O)o1",
+    "benzene":                  "c1ccccc1",
+    # C7
+    "5-heptanone":              "CCCCC(=O)CC",
+    "toluene":                  "Cc1ccccc1",
+    # C3 multi-OH
+    "glycerol":                 "OCC(O)CO",
+}
+
+
+def carbon_count(molecule_name: str) -> int:
+    """
+    Return the number of carbon atoms for a molecule by counting
+    C/c characters in its SMILES string.
+    Falls back to counting 'C' in the molecule name if SMILES unknown.
+    """
+    smiles = MOLECULE_SMILES.get(molecule_name)
+    if smiles:
+        return sum(1 for ch in smiles if ch in ("C", "c"))
+    # Fallback: crude name-based count (less reliable)
+    return molecule_name.upper().count("C")
+
+
+# Build run directory:  runs/C{n}/<surface>_<adsorbate>_seed<N>_<calc>/
+_n_carbon  = carbon_count(ADSORBATE)
+_default_run_dir = f"runs/C{_n_carbon}/{SURFACE}_{ADSORBATE}_seed{SEED}_{CALCULATOR_TYPE}"
+RUN_DIR = Path(os.environ.get("GOAD_RUN_DIR", _default_run_dir))
 
 # Per-step wall-clock watchdog timeout (seconds).
 # If any single BFGS step or GA energy evaluation hangs longer than this,
@@ -237,7 +309,8 @@ def main():
         ],
     )
 
-    log.info(f"Output dir: {RUN_DIR}")
+    log.info(f"Output dir : {RUN_DIR}")
+    log.info(f"Carbon count: C{_n_carbon}  ->  runs/C{_n_carbon}/")
     log.info(f"Surface: {SURFACE} | Adsorbate: {ADSORBATE} | Seed: {SEED}")
     log.info(f"GA params: population={GA_KW['population_size']}, generations={GA_KW['generations']}")
     log.info(f"Calculator: {CALCULATOR_TYPE} | Workers: {os.environ.get('GOAD_N_WORKERS', 'auto')} | "
