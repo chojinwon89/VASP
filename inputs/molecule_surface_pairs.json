@@ -1,0 +1,7877 @@
+[
+  {
+    "surface_cif": "inputs/Cu111.cif",
+    "molecule_cif": "inputs/ethanol.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu111.cif",
+    "molecule_cif": "inputs/methanol.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu111.cif",
+    "molecule_cif": "inputs/acetaldehyde.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu111.cif",
+    "molecule_cif": "inputs/acetic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu111.cif",
+    "molecule_cif": "inputs/propionic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu111.cif",
+    "molecule_cif": "inputs/butyric_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu111.cif",
+    "molecule_cif": "inputs/valeric_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu111.cif",
+    "molecule_cif": "inputs/caproic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu111.cif",
+    "molecule_cif": "inputs/lactic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu111.cif",
+    "molecule_cif": "inputs/pyruvic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu111.cif",
+    "molecule_cif": "inputs/3-hydroxypropionic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu111.cif",
+    "molecule_cif": "inputs/furfural.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu111.cif",
+    "molecule_cif": "inputs/5-HMF.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu111.cif",
+    "molecule_cif": "inputs/cyclopentanone.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu111.cif",
+    "molecule_cif": "inputs/2-pentanone.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu111.cif",
+    "molecule_cif": "inputs/5-heptanone.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu111.cif",
+    "molecule_cif": "inputs/itaconic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu111.cif",
+    "molecule_cif": "inputs/3-MTHF.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu111.cif",
+    "molecule_cif": "inputs/DME.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu111.cif",
+    "molecule_cif": "inputs/methylmethacrylate.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu111.cif",
+    "molecule_cif": "inputs/formic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu111.cif",
+    "molecule_cif": "inputs/ethylene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu111.cif",
+    "molecule_cif": "inputs/propene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu111.cif",
+    "molecule_cif": "inputs/1-butene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu111.cif",
+    "molecule_cif": "inputs/isobutene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu111.cif",
+    "molecule_cif": "inputs/1-pentene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu111.cif",
+    "molecule_cif": "inputs/butadiene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu111.cif",
+    "molecule_cif": "inputs/isoprene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu111.cif",
+    "molecule_cif": "inputs/benzene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu111.cif",
+    "molecule_cif": "inputs/toluene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu111.cif",
+    "molecule_cif": "inputs/CO.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu111.cif",
+    "molecule_cif": "inputs/CO2.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu111.cif",
+    "molecule_cif": "inputs/H2.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu111.cif",
+    "molecule_cif": "inputs/H2O.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu111.cif",
+    "molecule_cif": "inputs/isopropanol.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu110.cif",
+    "molecule_cif": "inputs/ethanol.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu110.cif",
+    "molecule_cif": "inputs/methanol.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu110.cif",
+    "molecule_cif": "inputs/acetaldehyde.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu110.cif",
+    "molecule_cif": "inputs/acetic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu110.cif",
+    "molecule_cif": "inputs/propionic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu110.cif",
+    "molecule_cif": "inputs/butyric_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu110.cif",
+    "molecule_cif": "inputs/valeric_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu110.cif",
+    "molecule_cif": "inputs/caproic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu110.cif",
+    "molecule_cif": "inputs/lactic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu110.cif",
+    "molecule_cif": "inputs/pyruvic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu110.cif",
+    "molecule_cif": "inputs/3-hydroxypropionic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu110.cif",
+    "molecule_cif": "inputs/furfural.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu110.cif",
+    "molecule_cif": "inputs/5-HMF.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu110.cif",
+    "molecule_cif": "inputs/cyclopentanone.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu110.cif",
+    "molecule_cif": "inputs/2-pentanone.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu110.cif",
+    "molecule_cif": "inputs/5-heptanone.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu110.cif",
+    "molecule_cif": "inputs/itaconic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu110.cif",
+    "molecule_cif": "inputs/3-MTHF.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu110.cif",
+    "molecule_cif": "inputs/DME.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu110.cif",
+    "molecule_cif": "inputs/methylmethacrylate.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu110.cif",
+    "molecule_cif": "inputs/formic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu110.cif",
+    "molecule_cif": "inputs/ethylene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu110.cif",
+    "molecule_cif": "inputs/propene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu110.cif",
+    "molecule_cif": "inputs/1-butene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu110.cif",
+    "molecule_cif": "inputs/isobutene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu110.cif",
+    "molecule_cif": "inputs/1-pentene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu110.cif",
+    "molecule_cif": "inputs/butadiene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu110.cif",
+    "molecule_cif": "inputs/isoprene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu110.cif",
+    "molecule_cif": "inputs/benzene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu110.cif",
+    "molecule_cif": "inputs/toluene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu110.cif",
+    "molecule_cif": "inputs/CO.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu110.cif",
+    "molecule_cif": "inputs/CO2.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu110.cif",
+    "molecule_cif": "inputs/H2.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu110.cif",
+    "molecule_cif": "inputs/H2O.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu110.cif",
+    "molecule_cif": "inputs/isopropanol.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu100.cif",
+    "molecule_cif": "inputs/ethanol.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu100.cif",
+    "molecule_cif": "inputs/methanol.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu100.cif",
+    "molecule_cif": "inputs/acetaldehyde.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu100.cif",
+    "molecule_cif": "inputs/acetic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu100.cif",
+    "molecule_cif": "inputs/propionic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu100.cif",
+    "molecule_cif": "inputs/butyric_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu100.cif",
+    "molecule_cif": "inputs/valeric_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu100.cif",
+    "molecule_cif": "inputs/caproic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu100.cif",
+    "molecule_cif": "inputs/lactic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu100.cif",
+    "molecule_cif": "inputs/pyruvic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu100.cif",
+    "molecule_cif": "inputs/3-hydroxypropionic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu100.cif",
+    "molecule_cif": "inputs/furfural.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu100.cif",
+    "molecule_cif": "inputs/5-HMF.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu100.cif",
+    "molecule_cif": "inputs/cyclopentanone.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu100.cif",
+    "molecule_cif": "inputs/2-pentanone.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu100.cif",
+    "molecule_cif": "inputs/5-heptanone.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu100.cif",
+    "molecule_cif": "inputs/itaconic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu100.cif",
+    "molecule_cif": "inputs/3-MTHF.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu100.cif",
+    "molecule_cif": "inputs/DME.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu100.cif",
+    "molecule_cif": "inputs/methylmethacrylate.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu100.cif",
+    "molecule_cif": "inputs/formic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu100.cif",
+    "molecule_cif": "inputs/ethylene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu100.cif",
+    "molecule_cif": "inputs/propene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu100.cif",
+    "molecule_cif": "inputs/1-butene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu100.cif",
+    "molecule_cif": "inputs/isobutene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu100.cif",
+    "molecule_cif": "inputs/1-pentene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu100.cif",
+    "molecule_cif": "inputs/butadiene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu100.cif",
+    "molecule_cif": "inputs/isoprene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu100.cif",
+    "molecule_cif": "inputs/benzene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu100.cif",
+    "molecule_cif": "inputs/toluene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu100.cif",
+    "molecule_cif": "inputs/CO.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu100.cif",
+    "molecule_cif": "inputs/CO2.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu100.cif",
+    "molecule_cif": "inputs/H2.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu100.cif",
+    "molecule_cif": "inputs/H2O.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Cu100.cif",
+    "molecule_cif": "inputs/isopropanol.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd111.cif",
+    "molecule_cif": "inputs/ethanol.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd111.cif",
+    "molecule_cif": "inputs/methanol.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd111.cif",
+    "molecule_cif": "inputs/acetaldehyde.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd111.cif",
+    "molecule_cif": "inputs/acetic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd111.cif",
+    "molecule_cif": "inputs/propionic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd111.cif",
+    "molecule_cif": "inputs/butyric_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd111.cif",
+    "molecule_cif": "inputs/valeric_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd111.cif",
+    "molecule_cif": "inputs/caproic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd111.cif",
+    "molecule_cif": "inputs/lactic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd111.cif",
+    "molecule_cif": "inputs/pyruvic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd111.cif",
+    "molecule_cif": "inputs/3-hydroxypropionic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd111.cif",
+    "molecule_cif": "inputs/furfural.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd111.cif",
+    "molecule_cif": "inputs/5-HMF.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd111.cif",
+    "molecule_cif": "inputs/cyclopentanone.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd111.cif",
+    "molecule_cif": "inputs/2-pentanone.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd111.cif",
+    "molecule_cif": "inputs/5-heptanone.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd111.cif",
+    "molecule_cif": "inputs/itaconic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd111.cif",
+    "molecule_cif": "inputs/3-MTHF.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd111.cif",
+    "molecule_cif": "inputs/DME.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd111.cif",
+    "molecule_cif": "inputs/methylmethacrylate.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd111.cif",
+    "molecule_cif": "inputs/formic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd111.cif",
+    "molecule_cif": "inputs/ethylene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd111.cif",
+    "molecule_cif": "inputs/propene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd111.cif",
+    "molecule_cif": "inputs/1-butene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd111.cif",
+    "molecule_cif": "inputs/isobutene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd111.cif",
+    "molecule_cif": "inputs/1-pentene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd111.cif",
+    "molecule_cif": "inputs/butadiene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd111.cif",
+    "molecule_cif": "inputs/isoprene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd111.cif",
+    "molecule_cif": "inputs/benzene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd111.cif",
+    "molecule_cif": "inputs/toluene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd111.cif",
+    "molecule_cif": "inputs/CO.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd111.cif",
+    "molecule_cif": "inputs/CO2.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd111.cif",
+    "molecule_cif": "inputs/H2.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd111.cif",
+    "molecule_cif": "inputs/H2O.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd111.cif",
+    "molecule_cif": "inputs/isopropanol.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd110.cif",
+    "molecule_cif": "inputs/ethanol.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd110.cif",
+    "molecule_cif": "inputs/methanol.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd110.cif",
+    "molecule_cif": "inputs/acetaldehyde.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd110.cif",
+    "molecule_cif": "inputs/acetic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd110.cif",
+    "molecule_cif": "inputs/propionic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd110.cif",
+    "molecule_cif": "inputs/butyric_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd110.cif",
+    "molecule_cif": "inputs/valeric_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd110.cif",
+    "molecule_cif": "inputs/caproic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd110.cif",
+    "molecule_cif": "inputs/lactic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd110.cif",
+    "molecule_cif": "inputs/pyruvic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd110.cif",
+    "molecule_cif": "inputs/3-hydroxypropionic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd110.cif",
+    "molecule_cif": "inputs/furfural.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd110.cif",
+    "molecule_cif": "inputs/5-HMF.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd110.cif",
+    "molecule_cif": "inputs/cyclopentanone.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd110.cif",
+    "molecule_cif": "inputs/2-pentanone.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd110.cif",
+    "molecule_cif": "inputs/5-heptanone.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd110.cif",
+    "molecule_cif": "inputs/itaconic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd110.cif",
+    "molecule_cif": "inputs/3-MTHF.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd110.cif",
+    "molecule_cif": "inputs/DME.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd110.cif",
+    "molecule_cif": "inputs/methylmethacrylate.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd110.cif",
+    "molecule_cif": "inputs/formic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd110.cif",
+    "molecule_cif": "inputs/ethylene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd110.cif",
+    "molecule_cif": "inputs/propene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd110.cif",
+    "molecule_cif": "inputs/1-butene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd110.cif",
+    "molecule_cif": "inputs/isobutene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd110.cif",
+    "molecule_cif": "inputs/1-pentene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd110.cif",
+    "molecule_cif": "inputs/butadiene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd110.cif",
+    "molecule_cif": "inputs/isoprene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd110.cif",
+    "molecule_cif": "inputs/benzene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd110.cif",
+    "molecule_cif": "inputs/toluene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd110.cif",
+    "molecule_cif": "inputs/CO.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd110.cif",
+    "molecule_cif": "inputs/CO2.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd110.cif",
+    "molecule_cif": "inputs/H2.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd110.cif",
+    "molecule_cif": "inputs/H2O.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd110.cif",
+    "molecule_cif": "inputs/isopropanol.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd100.cif",
+    "molecule_cif": "inputs/ethanol.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd100.cif",
+    "molecule_cif": "inputs/methanol.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd100.cif",
+    "molecule_cif": "inputs/acetaldehyde.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd100.cif",
+    "molecule_cif": "inputs/acetic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd100.cif",
+    "molecule_cif": "inputs/propionic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd100.cif",
+    "molecule_cif": "inputs/butyric_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd100.cif",
+    "molecule_cif": "inputs/valeric_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd100.cif",
+    "molecule_cif": "inputs/caproic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd100.cif",
+    "molecule_cif": "inputs/lactic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd100.cif",
+    "molecule_cif": "inputs/pyruvic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd100.cif",
+    "molecule_cif": "inputs/3-hydroxypropionic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd100.cif",
+    "molecule_cif": "inputs/furfural.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd100.cif",
+    "molecule_cif": "inputs/5-HMF.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd100.cif",
+    "molecule_cif": "inputs/cyclopentanone.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd100.cif",
+    "molecule_cif": "inputs/2-pentanone.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd100.cif",
+    "molecule_cif": "inputs/5-heptanone.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd100.cif",
+    "molecule_cif": "inputs/itaconic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd100.cif",
+    "molecule_cif": "inputs/3-MTHF.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd100.cif",
+    "molecule_cif": "inputs/DME.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd100.cif",
+    "molecule_cif": "inputs/methylmethacrylate.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd100.cif",
+    "molecule_cif": "inputs/formic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd100.cif",
+    "molecule_cif": "inputs/ethylene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd100.cif",
+    "molecule_cif": "inputs/propene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd100.cif",
+    "molecule_cif": "inputs/1-butene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd100.cif",
+    "molecule_cif": "inputs/isobutene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd100.cif",
+    "molecule_cif": "inputs/1-pentene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd100.cif",
+    "molecule_cif": "inputs/butadiene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd100.cif",
+    "molecule_cif": "inputs/isoprene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd100.cif",
+    "molecule_cif": "inputs/benzene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd100.cif",
+    "molecule_cif": "inputs/toluene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd100.cif",
+    "molecule_cif": "inputs/CO.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd100.cif",
+    "molecule_cif": "inputs/CO2.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd100.cif",
+    "molecule_cif": "inputs/H2.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd100.cif",
+    "molecule_cif": "inputs/H2O.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pd100.cif",
+    "molecule_cif": "inputs/isopropanol.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt111.cif",
+    "molecule_cif": "inputs/ethanol.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt111.cif",
+    "molecule_cif": "inputs/methanol.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt111.cif",
+    "molecule_cif": "inputs/acetaldehyde.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt111.cif",
+    "molecule_cif": "inputs/acetic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt111.cif",
+    "molecule_cif": "inputs/propionic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt111.cif",
+    "molecule_cif": "inputs/butyric_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt111.cif",
+    "molecule_cif": "inputs/valeric_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt111.cif",
+    "molecule_cif": "inputs/caproic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt111.cif",
+    "molecule_cif": "inputs/lactic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt111.cif",
+    "molecule_cif": "inputs/pyruvic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt111.cif",
+    "molecule_cif": "inputs/3-hydroxypropionic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt111.cif",
+    "molecule_cif": "inputs/furfural.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt111.cif",
+    "molecule_cif": "inputs/5-HMF.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt111.cif",
+    "molecule_cif": "inputs/cyclopentanone.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt111.cif",
+    "molecule_cif": "inputs/2-pentanone.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt111.cif",
+    "molecule_cif": "inputs/5-heptanone.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt111.cif",
+    "molecule_cif": "inputs/itaconic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt111.cif",
+    "molecule_cif": "inputs/3-MTHF.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt111.cif",
+    "molecule_cif": "inputs/DME.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt111.cif",
+    "molecule_cif": "inputs/methylmethacrylate.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt111.cif",
+    "molecule_cif": "inputs/formic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt111.cif",
+    "molecule_cif": "inputs/ethylene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt111.cif",
+    "molecule_cif": "inputs/propene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt111.cif",
+    "molecule_cif": "inputs/1-butene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt111.cif",
+    "molecule_cif": "inputs/isobutene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt111.cif",
+    "molecule_cif": "inputs/1-pentene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt111.cif",
+    "molecule_cif": "inputs/butadiene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt111.cif",
+    "molecule_cif": "inputs/isoprene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt111.cif",
+    "molecule_cif": "inputs/benzene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt111.cif",
+    "molecule_cif": "inputs/toluene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt111.cif",
+    "molecule_cif": "inputs/CO.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt111.cif",
+    "molecule_cif": "inputs/CO2.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt111.cif",
+    "molecule_cif": "inputs/H2.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt111.cif",
+    "molecule_cif": "inputs/H2O.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt111.cif",
+    "molecule_cif": "inputs/isopropanol.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt110.cif",
+    "molecule_cif": "inputs/ethanol.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt110.cif",
+    "molecule_cif": "inputs/methanol.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt110.cif",
+    "molecule_cif": "inputs/acetaldehyde.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt110.cif",
+    "molecule_cif": "inputs/acetic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt110.cif",
+    "molecule_cif": "inputs/propionic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt110.cif",
+    "molecule_cif": "inputs/butyric_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt110.cif",
+    "molecule_cif": "inputs/valeric_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt110.cif",
+    "molecule_cif": "inputs/caproic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt110.cif",
+    "molecule_cif": "inputs/lactic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt110.cif",
+    "molecule_cif": "inputs/pyruvic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt110.cif",
+    "molecule_cif": "inputs/3-hydroxypropionic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt110.cif",
+    "molecule_cif": "inputs/furfural.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt110.cif",
+    "molecule_cif": "inputs/5-HMF.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt110.cif",
+    "molecule_cif": "inputs/cyclopentanone.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt110.cif",
+    "molecule_cif": "inputs/2-pentanone.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt110.cif",
+    "molecule_cif": "inputs/5-heptanone.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt110.cif",
+    "molecule_cif": "inputs/itaconic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt110.cif",
+    "molecule_cif": "inputs/3-MTHF.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt110.cif",
+    "molecule_cif": "inputs/DME.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt110.cif",
+    "molecule_cif": "inputs/methylmethacrylate.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt110.cif",
+    "molecule_cif": "inputs/formic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt110.cif",
+    "molecule_cif": "inputs/ethylene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt110.cif",
+    "molecule_cif": "inputs/propene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt110.cif",
+    "molecule_cif": "inputs/1-butene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt110.cif",
+    "molecule_cif": "inputs/isobutene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt110.cif",
+    "molecule_cif": "inputs/1-pentene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt110.cif",
+    "molecule_cif": "inputs/butadiene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt110.cif",
+    "molecule_cif": "inputs/isoprene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt110.cif",
+    "molecule_cif": "inputs/benzene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt110.cif",
+    "molecule_cif": "inputs/toluene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt110.cif",
+    "molecule_cif": "inputs/CO.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt110.cif",
+    "molecule_cif": "inputs/CO2.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt110.cif",
+    "molecule_cif": "inputs/H2.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt110.cif",
+    "molecule_cif": "inputs/H2O.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt110.cif",
+    "molecule_cif": "inputs/isopropanol.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt100.cif",
+    "molecule_cif": "inputs/ethanol.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt100.cif",
+    "molecule_cif": "inputs/methanol.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt100.cif",
+    "molecule_cif": "inputs/acetaldehyde.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt100.cif",
+    "molecule_cif": "inputs/acetic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt100.cif",
+    "molecule_cif": "inputs/propionic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt100.cif",
+    "molecule_cif": "inputs/butyric_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt100.cif",
+    "molecule_cif": "inputs/valeric_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt100.cif",
+    "molecule_cif": "inputs/caproic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt100.cif",
+    "molecule_cif": "inputs/lactic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt100.cif",
+    "molecule_cif": "inputs/pyruvic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt100.cif",
+    "molecule_cif": "inputs/3-hydroxypropionic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt100.cif",
+    "molecule_cif": "inputs/furfural.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt100.cif",
+    "molecule_cif": "inputs/5-HMF.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt100.cif",
+    "molecule_cif": "inputs/cyclopentanone.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt100.cif",
+    "molecule_cif": "inputs/2-pentanone.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt100.cif",
+    "molecule_cif": "inputs/5-heptanone.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt100.cif",
+    "molecule_cif": "inputs/itaconic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt100.cif",
+    "molecule_cif": "inputs/3-MTHF.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt100.cif",
+    "molecule_cif": "inputs/DME.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt100.cif",
+    "molecule_cif": "inputs/methylmethacrylate.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt100.cif",
+    "molecule_cif": "inputs/formic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt100.cif",
+    "molecule_cif": "inputs/ethylene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt100.cif",
+    "molecule_cif": "inputs/propene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt100.cif",
+    "molecule_cif": "inputs/1-butene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt100.cif",
+    "molecule_cif": "inputs/isobutene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt100.cif",
+    "molecule_cif": "inputs/1-pentene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt100.cif",
+    "molecule_cif": "inputs/butadiene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt100.cif",
+    "molecule_cif": "inputs/isoprene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt100.cif",
+    "molecule_cif": "inputs/benzene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt100.cif",
+    "molecule_cif": "inputs/toluene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt100.cif",
+    "molecule_cif": "inputs/CO.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt100.cif",
+    "molecule_cif": "inputs/CO2.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt100.cif",
+    "molecule_cif": "inputs/H2.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt100.cif",
+    "molecule_cif": "inputs/H2O.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Pt100.cif",
+    "molecule_cif": "inputs/isopropanol.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ni111.cif",
+    "molecule_cif": "inputs/ethanol.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ni111.cif",
+    "molecule_cif": "inputs/methanol.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ni111.cif",
+    "molecule_cif": "inputs/acetaldehyde.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ni111.cif",
+    "molecule_cif": "inputs/acetic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ni111.cif",
+    "molecule_cif": "inputs/propionic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ni111.cif",
+    "molecule_cif": "inputs/butyric_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ni111.cif",
+    "molecule_cif": "inputs/valeric_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ni111.cif",
+    "molecule_cif": "inputs/caproic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ni111.cif",
+    "molecule_cif": "inputs/lactic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ni111.cif",
+    "molecule_cif": "inputs/pyruvic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ni111.cif",
+    "molecule_cif": "inputs/3-hydroxypropionic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ni111.cif",
+    "molecule_cif": "inputs/furfural.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ni111.cif",
+    "molecule_cif": "inputs/5-HMF.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ni111.cif",
+    "molecule_cif": "inputs/cyclopentanone.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ni111.cif",
+    "molecule_cif": "inputs/2-pentanone.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ni111.cif",
+    "molecule_cif": "inputs/5-heptanone.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ni111.cif",
+    "molecule_cif": "inputs/itaconic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ni111.cif",
+    "molecule_cif": "inputs/3-MTHF.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ni111.cif",
+    "molecule_cif": "inputs/DME.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ni111.cif",
+    "molecule_cif": "inputs/methylmethacrylate.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ni111.cif",
+    "molecule_cif": "inputs/formic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ni111.cif",
+    "molecule_cif": "inputs/ethylene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ni111.cif",
+    "molecule_cif": "inputs/propene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ni111.cif",
+    "molecule_cif": "inputs/1-butene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ni111.cif",
+    "molecule_cif": "inputs/isobutene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ni111.cif",
+    "molecule_cif": "inputs/1-pentene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ni111.cif",
+    "molecule_cif": "inputs/butadiene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ni111.cif",
+    "molecule_cif": "inputs/isoprene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ni111.cif",
+    "molecule_cif": "inputs/benzene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ni111.cif",
+    "molecule_cif": "inputs/toluene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ni111.cif",
+    "molecule_cif": "inputs/CO.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ni111.cif",
+    "molecule_cif": "inputs/CO2.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ni111.cif",
+    "molecule_cif": "inputs/H2.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ni111.cif",
+    "molecule_cif": "inputs/H2O.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ni111.cif",
+    "molecule_cif": "inputs/isopropanol.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ni100.cif",
+    "molecule_cif": "inputs/ethanol.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ni100.cif",
+    "molecule_cif": "inputs/methanol.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ni100.cif",
+    "molecule_cif": "inputs/acetaldehyde.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ni100.cif",
+    "molecule_cif": "inputs/acetic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ni100.cif",
+    "molecule_cif": "inputs/propionic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ni100.cif",
+    "molecule_cif": "inputs/butyric_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ni100.cif",
+    "molecule_cif": "inputs/valeric_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ni100.cif",
+    "molecule_cif": "inputs/caproic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ni100.cif",
+    "molecule_cif": "inputs/lactic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ni100.cif",
+    "molecule_cif": "inputs/pyruvic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ni100.cif",
+    "molecule_cif": "inputs/3-hydroxypropionic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ni100.cif",
+    "molecule_cif": "inputs/furfural.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ni100.cif",
+    "molecule_cif": "inputs/5-HMF.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ni100.cif",
+    "molecule_cif": "inputs/cyclopentanone.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ni100.cif",
+    "molecule_cif": "inputs/2-pentanone.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ni100.cif",
+    "molecule_cif": "inputs/5-heptanone.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ni100.cif",
+    "molecule_cif": "inputs/itaconic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ni100.cif",
+    "molecule_cif": "inputs/3-MTHF.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ni100.cif",
+    "molecule_cif": "inputs/DME.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ni100.cif",
+    "molecule_cif": "inputs/methylmethacrylate.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ni100.cif",
+    "molecule_cif": "inputs/formic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ni100.cif",
+    "molecule_cif": "inputs/ethylene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ni100.cif",
+    "molecule_cif": "inputs/propene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ni100.cif",
+    "molecule_cif": "inputs/1-butene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ni100.cif",
+    "molecule_cif": "inputs/isobutene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ni100.cif",
+    "molecule_cif": "inputs/1-pentene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ni100.cif",
+    "molecule_cif": "inputs/butadiene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ni100.cif",
+    "molecule_cif": "inputs/isoprene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ni100.cif",
+    "molecule_cif": "inputs/benzene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ni100.cif",
+    "molecule_cif": "inputs/toluene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ni100.cif",
+    "molecule_cif": "inputs/CO.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ni100.cif",
+    "molecule_cif": "inputs/CO2.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ni100.cif",
+    "molecule_cif": "inputs/H2.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ni100.cif",
+    "molecule_cif": "inputs/H2O.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ni100.cif",
+    "molecule_cif": "inputs/isopropanol.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Au111.cif",
+    "molecule_cif": "inputs/ethanol.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Au111.cif",
+    "molecule_cif": "inputs/methanol.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Au111.cif",
+    "molecule_cif": "inputs/acetaldehyde.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Au111.cif",
+    "molecule_cif": "inputs/acetic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Au111.cif",
+    "molecule_cif": "inputs/propionic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Au111.cif",
+    "molecule_cif": "inputs/butyric_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Au111.cif",
+    "molecule_cif": "inputs/valeric_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Au111.cif",
+    "molecule_cif": "inputs/caproic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Au111.cif",
+    "molecule_cif": "inputs/lactic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Au111.cif",
+    "molecule_cif": "inputs/pyruvic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Au111.cif",
+    "molecule_cif": "inputs/3-hydroxypropionic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Au111.cif",
+    "molecule_cif": "inputs/furfural.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Au111.cif",
+    "molecule_cif": "inputs/5-HMF.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Au111.cif",
+    "molecule_cif": "inputs/cyclopentanone.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Au111.cif",
+    "molecule_cif": "inputs/2-pentanone.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Au111.cif",
+    "molecule_cif": "inputs/5-heptanone.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Au111.cif",
+    "molecule_cif": "inputs/itaconic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Au111.cif",
+    "molecule_cif": "inputs/3-MTHF.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Au111.cif",
+    "molecule_cif": "inputs/DME.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Au111.cif",
+    "molecule_cif": "inputs/methylmethacrylate.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Au111.cif",
+    "molecule_cif": "inputs/formic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Au111.cif",
+    "molecule_cif": "inputs/ethylene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Au111.cif",
+    "molecule_cif": "inputs/propene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Au111.cif",
+    "molecule_cif": "inputs/1-butene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Au111.cif",
+    "molecule_cif": "inputs/isobutene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Au111.cif",
+    "molecule_cif": "inputs/1-pentene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Au111.cif",
+    "molecule_cif": "inputs/butadiene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Au111.cif",
+    "molecule_cif": "inputs/isoprene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Au111.cif",
+    "molecule_cif": "inputs/benzene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Au111.cif",
+    "molecule_cif": "inputs/toluene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Au111.cif",
+    "molecule_cif": "inputs/CO.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Au111.cif",
+    "molecule_cif": "inputs/CO2.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Au111.cif",
+    "molecule_cif": "inputs/H2.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Au111.cif",
+    "molecule_cif": "inputs/H2O.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Au111.cif",
+    "molecule_cif": "inputs/isopropanol.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag111.cif",
+    "molecule_cif": "inputs/ethanol.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag111.cif",
+    "molecule_cif": "inputs/methanol.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag111.cif",
+    "molecule_cif": "inputs/acetaldehyde.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag111.cif",
+    "molecule_cif": "inputs/acetic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag111.cif",
+    "molecule_cif": "inputs/propionic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag111.cif",
+    "molecule_cif": "inputs/butyric_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag111.cif",
+    "molecule_cif": "inputs/valeric_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag111.cif",
+    "molecule_cif": "inputs/caproic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag111.cif",
+    "molecule_cif": "inputs/lactic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag111.cif",
+    "molecule_cif": "inputs/pyruvic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag111.cif",
+    "molecule_cif": "inputs/3-hydroxypropionic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag111.cif",
+    "molecule_cif": "inputs/furfural.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag111.cif",
+    "molecule_cif": "inputs/5-HMF.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag111.cif",
+    "molecule_cif": "inputs/cyclopentanone.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag111.cif",
+    "molecule_cif": "inputs/2-pentanone.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag111.cif",
+    "molecule_cif": "inputs/5-heptanone.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag111.cif",
+    "molecule_cif": "inputs/itaconic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag111.cif",
+    "molecule_cif": "inputs/3-MTHF.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag111.cif",
+    "molecule_cif": "inputs/DME.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag111.cif",
+    "molecule_cif": "inputs/methylmethacrylate.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag111.cif",
+    "molecule_cif": "inputs/formic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag111.cif",
+    "molecule_cif": "inputs/ethylene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag111.cif",
+    "molecule_cif": "inputs/propene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag111.cif",
+    "molecule_cif": "inputs/1-butene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag111.cif",
+    "molecule_cif": "inputs/isobutene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag111.cif",
+    "molecule_cif": "inputs/1-pentene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag111.cif",
+    "molecule_cif": "inputs/butadiene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag111.cif",
+    "molecule_cif": "inputs/isoprene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag111.cif",
+    "molecule_cif": "inputs/benzene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag111.cif",
+    "molecule_cif": "inputs/toluene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag111.cif",
+    "molecule_cif": "inputs/CO.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag111.cif",
+    "molecule_cif": "inputs/CO2.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag111.cif",
+    "molecule_cif": "inputs/H2.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag111.cif",
+    "molecule_cif": "inputs/H2O.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag111.cif",
+    "molecule_cif": "inputs/isopropanol.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag110.cif",
+    "molecule_cif": "inputs/ethanol.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag110.cif",
+    "molecule_cif": "inputs/methanol.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag110.cif",
+    "molecule_cif": "inputs/acetaldehyde.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag110.cif",
+    "molecule_cif": "inputs/acetic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag110.cif",
+    "molecule_cif": "inputs/propionic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag110.cif",
+    "molecule_cif": "inputs/butyric_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag110.cif",
+    "molecule_cif": "inputs/valeric_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag110.cif",
+    "molecule_cif": "inputs/caproic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag110.cif",
+    "molecule_cif": "inputs/lactic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag110.cif",
+    "molecule_cif": "inputs/pyruvic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag110.cif",
+    "molecule_cif": "inputs/3-hydroxypropionic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag110.cif",
+    "molecule_cif": "inputs/furfural.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag110.cif",
+    "molecule_cif": "inputs/5-HMF.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag110.cif",
+    "molecule_cif": "inputs/cyclopentanone.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag110.cif",
+    "molecule_cif": "inputs/2-pentanone.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag110.cif",
+    "molecule_cif": "inputs/5-heptanone.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag110.cif",
+    "molecule_cif": "inputs/itaconic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag110.cif",
+    "molecule_cif": "inputs/3-MTHF.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag110.cif",
+    "molecule_cif": "inputs/DME.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag110.cif",
+    "molecule_cif": "inputs/methylmethacrylate.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag110.cif",
+    "molecule_cif": "inputs/formic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag110.cif",
+    "molecule_cif": "inputs/ethylene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag110.cif",
+    "molecule_cif": "inputs/propene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag110.cif",
+    "molecule_cif": "inputs/1-butene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag110.cif",
+    "molecule_cif": "inputs/isobutene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag110.cif",
+    "molecule_cif": "inputs/1-pentene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag110.cif",
+    "molecule_cif": "inputs/butadiene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag110.cif",
+    "molecule_cif": "inputs/isoprene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag110.cif",
+    "molecule_cif": "inputs/benzene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag110.cif",
+    "molecule_cif": "inputs/toluene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag110.cif",
+    "molecule_cif": "inputs/CO.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag110.cif",
+    "molecule_cif": "inputs/CO2.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag110.cif",
+    "molecule_cif": "inputs/H2.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag110.cif",
+    "molecule_cif": "inputs/H2O.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag110.cif",
+    "molecule_cif": "inputs/isopropanol.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag100.cif",
+    "molecule_cif": "inputs/ethanol.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag100.cif",
+    "molecule_cif": "inputs/methanol.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag100.cif",
+    "molecule_cif": "inputs/acetaldehyde.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag100.cif",
+    "molecule_cif": "inputs/acetic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag100.cif",
+    "molecule_cif": "inputs/propionic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag100.cif",
+    "molecule_cif": "inputs/butyric_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag100.cif",
+    "molecule_cif": "inputs/valeric_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag100.cif",
+    "molecule_cif": "inputs/caproic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag100.cif",
+    "molecule_cif": "inputs/lactic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag100.cif",
+    "molecule_cif": "inputs/pyruvic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag100.cif",
+    "molecule_cif": "inputs/3-hydroxypropionic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag100.cif",
+    "molecule_cif": "inputs/furfural.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag100.cif",
+    "molecule_cif": "inputs/5-HMF.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag100.cif",
+    "molecule_cif": "inputs/cyclopentanone.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag100.cif",
+    "molecule_cif": "inputs/2-pentanone.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag100.cif",
+    "molecule_cif": "inputs/5-heptanone.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag100.cif",
+    "molecule_cif": "inputs/itaconic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag100.cif",
+    "molecule_cif": "inputs/3-MTHF.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag100.cif",
+    "molecule_cif": "inputs/DME.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag100.cif",
+    "molecule_cif": "inputs/methylmethacrylate.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag100.cif",
+    "molecule_cif": "inputs/formic_acid.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag100.cif",
+    "molecule_cif": "inputs/ethylene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag100.cif",
+    "molecule_cif": "inputs/propene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag100.cif",
+    "molecule_cif": "inputs/1-butene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag100.cif",
+    "molecule_cif": "inputs/isobutene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag100.cif",
+    "molecule_cif": "inputs/1-pentene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag100.cif",
+    "molecule_cif": "inputs/butadiene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag100.cif",
+    "molecule_cif": "inputs/isoprene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag100.cif",
+    "molecule_cif": "inputs/benzene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag100.cif",
+    "molecule_cif": "inputs/toluene.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag100.cif",
+    "molecule_cif": "inputs/CO.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag100.cif",
+    "molecule_cif": "inputs/CO2.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag100.cif",
+    "molecule_cif": "inputs/H2.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag100.cif",
+    "molecule_cif": "inputs/H2O.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  },
+  {
+    "surface_cif": "inputs/Ag100.cif",
+    "molecule_cif": "inputs/isopropanol.cif",
+    "calculator": "sevennet_omni",
+    "n_fixed_layers": 2,
+    "ga": {
+      "generations": 80,
+      "population_size": 40,
+      "mutation_rate": 0.3,
+      "crossover_rate": 0.7,
+      "elite_size": 5,
+      "verbose": true,
+      "n_seeds": 3
+    }
+  }
+]
