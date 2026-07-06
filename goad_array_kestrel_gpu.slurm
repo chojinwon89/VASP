@@ -7,7 +7,8 @@
 #SBATCH --cpus-per-task=16          # Enough threads to feed the GPU; no need for 104
 #SBATCH --mem=120G                  # capped: GPU nodes have less RAM than CPU nodes
 #SBATCH --gpus=1                    # 1 GPU per task
-#SBATCH --time=12:00:00             # increased: some heavy tasks (glycerol/Pt) exceed 4h
+#SBATCH --gres=gpu:1                # required on Kestrel to actually allocate the GPU
+#SBATCH --time=12:00:00
 #SBATCH --output=slurm-logs/goad_gpu-%A_%a.out
 #SBATCH --error=slurm-logs/goad_gpu-%A_%a.err
 
@@ -71,7 +72,7 @@ if torch.cuda.is_available():
     print('VRAM:', round(torch.cuda.get_device_properties(0).total_memory/1e9, 1), 'GB')
 "
 
-TASKS_CSV="${1:-workflow/tasks.csv}"
+TASKS_CSV="${1:-workflow/tasks_custom.csv}"
 echo "Tasks CSV: ${TASKS_CSV}"
 
 python workflow/run_one_task.py \
