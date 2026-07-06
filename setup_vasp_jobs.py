@@ -123,7 +123,7 @@ EDIFFG = -5E-02
 {xc_block}
 ! Ionic Relaxation
 NSW    = 1000
-IBRION = 2
+IBRON = 2
 
 ! DOS
 ISMEAR = 1
@@ -176,30 +176,38 @@ srun vasp_std
 # POTCAR element name mapping
 # Maps element symbol -> list of candidate subfolder names to try in order
 # under the POTCAR library root.
-# potpaw_PBE_64 uses standard element names; _pv / _sv variants tried as
-# fallback for transition metals where the standard folder is missing.
 # ---------------------------------------------------------------------------
 POTCAR_MAP = {
-    "Cu": ["Cu", "Cu_pv"],
-    "C":  ["C"],
+    # Non-metals / common adsorbate elements
     "H":  ["H"],
-    "O":  ["O"],
+    "C":  ["C"],
     "N":  ["N"],
+    "O":  ["O"],
     "S":  ["S"],
-    "Pt": ["Pt", "Pt_pv"],
-    "Pd": ["Pd", "Pd_pv"],
-    "Ni": ["Ni", "Ni_pv"],
-    "Ag": ["Ag", "Ag_pv"],
-    "Au": ["Au"],
-    "Fe": ["Fe", "Fe_pv"],
-    "Co": ["Co", "Co_pv"],
-    "Zn": ["Zn"],
+    "Si": ["Si"],
     "Al": ["Al"],
+    "Mg": ["Mg"],
+    # FCC metals
+    "Cu": ["Cu", "Cu_pv"],
+    "Pd": ["Pd", "Pd_pv"],
+    "Pt": ["Pt", "Pt_pv"],
+    "Ni": ["Ni", "Ni_pv"],
+    "Au": ["Au"],
+    "Ag": ["Ag", "Ag_pv"],
+    "Ir": ["Ir", "Ir_pv"],
+    "Rh": ["Rh", "Rh_pv"],
+    # BCC metals
+    "Fe": ["Fe", "Fe_pv"],
+    "Cr": ["Cr", "Cr_pv"],
+    "Mo": ["Mo", "Mo_pv", "Mo_sv"],
+    # HCP metals
+    "Ru": ["Ru", "Ru_pv"],
+    "Co": ["Co", "Co_pv"],
+    "Ti": ["Ti", "Ti_pv", "Ti_sv"],
+    "Zn": ["Zn"],
+    # Other
     "Ga": ["Ga", "Ga_d"],
     "Zr": ["Zr", "Zr_sv"],
-    "Mo": ["Mo", "Mo_pv", "Mo_sv"],
-    "Mg": ["Mg"],
-    "Si": ["Si"],
 }
 
 
@@ -383,7 +391,6 @@ def main():
     print()
 
     # ---- Resolve POTCAR library path -----------------------------------------
-    # Priority: --pp-path > VASP_PP_PATH env var > DEFAULT_PP_PATH
     pp_path_str = (args.pp_path
                    or os.environ.get("VASP_PP_PATH", "")
                    or DEFAULT_PP_PATH)
@@ -420,7 +427,7 @@ def main():
     all_ok = True
     for sys_dir in system_dirs:
         system_name = sys_dir.name
-        job_dir     = sys_dir / subfolder           # e.g. Cu001_CO2/PBE
+        job_dir     = sys_dir / subfolder
         action = "[DRY-RUN]" if args.dry_run else "writing"
         print(f"  {action}: {job_dir}/")
 
