@@ -10,16 +10,14 @@ FCC : Cu, Pd, Pt, Ni, Au, Ag, Ir, Rh
 BCC : Fe, Cr, Mo
 HCP : Ru, Co, Ti, Zn
 
-Facets built per structure
+Facets and supercell sizes
 --------------------------
-FCC  ->  (111), (110), (100)
-BCC  ->  (110), (100), (111)
-HCP  ->  (0001), (10-10)  [hcp0001 and hcp10m10 in ASE]
+(111) / BCC(111) / HCP(0001) : (4, 4, 4) orthogonal=True   <- 64 atoms/slab, rectangular cell
+(110)                         : (3, 2, 4)                   <- open facet
+(100) / BCC(100)              : (3, 3, 4)                   <- square facet
 
-Slabs use a 3x3 supercell (3x2 for open (110) facets) with 4 layers
-and ~15 A vacuum.
-
-Existing CIF files are **never overwritten** -- the script skips them.
+All slabs: 4 layers, 15 A vacuum.
+Existing CIF files are never overwritten -- script skips them.
 
 Output: one .cif file per surface in inputs/
 
@@ -40,8 +38,7 @@ os.makedirs("inputs", exist_ok=True)
 
 # ---------------------------------------------------------------------------
 # Experimental lattice constants (Angstrom)
-# FCC: a only
-# BCC: a only
+# FCC / BCC: a only
 # HCP: (a, c)
 # ---------------------------------------------------------------------------
 A_FCC = {
@@ -71,14 +68,17 @@ A_HCP = {
 
 # ---------------------------------------------------------------------------
 # Build spec lists
-# (element, builder_func, size, extra_kwargs, output_name)
+# (element, builder_func, size, kwargs, output_name)
+#
+# (111) orthogonal=True requires second size element to be even.
+# We use (4, 4, 4) -- consistent with existing Cu111/Pt111/etc. in inputs/.
 # ---------------------------------------------------------------------------
 SLAB_SPECS = []
 
 # --- FCC ---
 for el, a in A_FCC.items():
     SLAB_SPECS += [
-        (el, fcc111, (3, 3, 4), {"a": a, "orthogonal": True}, f"{el}111"),
+        (el, fcc111, (4, 4, 4), {"a": a, "orthogonal": True}, f"{el}111"),
         (el, fcc110, (3, 2, 4), {"a": a},                     f"{el}110"),
         (el, fcc100, (3, 3, 4), {"a": a},                     f"{el}100"),
     ]
@@ -93,13 +93,13 @@ for el, a in A_BCC.items():
     SLAB_SPECS += [
         (el, bcc110, (3, 2, 4), {"a": a},                     f"{el}110"),
         (el, bcc100, (3, 3, 4), {"a": a},                     f"{el}100"),
-        (el, bcc111, (3, 3, 4), {"a": a, "orthogonal": True}, f"{el}111"),
+        (el, bcc111, (4, 4, 4), {"a": a, "orthogonal": True}, f"{el}111"),
     ]
 
 # --- HCP ---
 for el, (a, c) in A_HCP.items():
     SLAB_SPECS += [
-        (el, hcp0001,  (3, 3, 4), {"a": a, "c": c, "orthogonal": True}, f"{el}0001"),
+        (el, hcp0001,  (4, 4, 4), {"a": a, "c": c, "orthogonal": True}, f"{el}0001"),
         (el, hcp10m10, (3, 2, 4), {"a": a, "c": c},                     f"{el}10m10"),
     ]
 
