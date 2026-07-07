@@ -9,10 +9,11 @@ Produces a 2×2 parity-plot grid — one panel per DFT functional — each
 showing all ML calculators overlaid, with per-panel MAE / RMSE / R² / bias
 stats computed only on the data within the plot window.
 
+Legends (Calculator, Metal, Molecule) are always shown outside the panels.
+
 Reads
 -----
-  dft_binding_energies_all.csv   (from calc_binding_energy.py --all-functionals,
-                                   must have a 'functional' column)
+  dft_binding_energies_all.csv   (from calc_binding_energy.py --all-functionals)
   workflow/summary.csv           (from GOAD runs)
 
 Output
@@ -22,13 +23,7 @@ Output
 
 Usage
 -----
-    # Default: SevenNet-OMNI, panel order PBE → PBE+D3 → BEEF-vdW → r²SCAN
-    python plot_dft_vs_sevennet.py
-
-    # Both ML calculators
     python plot_dft_vs_sevennet.py \\
-        --dft  dft_binding_energies_all.csv \\
-        --ml   workflow/summary.csv \\
         --calculators sevennet_omni 5m \\
         --functionals pbe pbe_d3 beef_vdw r2scan \\
         --output results/dft_vs_mlip_all.png \\
@@ -118,11 +113,11 @@ MOLECULE_MARKERS = {
     "toluene":     "8",
 }
 
-# Default shared axis window (eV) — covers ML range with a small margin
+# Default shared axis window (eV)
 DEFAULT_AXIS_MIN = -2.5
 DEFAULT_AXIS_MAX =  0.3
 
-# ±0.2 eV grey band on parity plots
+# ±0.2 eV grey band
 BAND_WIDTH = 0.2
 
 
@@ -148,9 +143,6 @@ def normalise_func(name: str) -> str:
 # ---------------------------------------------------------------------------
 
 def load_dft_all(path: Path) -> dict:
-    """
-    Returns {functional: {(surface, molecule): E_ads_eV}}
-    """
     data = defaultdict(dict)
     with path.open() as f:
         reader = csv.DictReader(f)
@@ -167,13 +159,8 @@ def load_dft_all(path: Path) -> dict:
 
 
 def load_ml_best(path: Path, calculators: list) -> dict:
-    """
-    Returns {calc_name: {(surface, adsorbate): best_E_ads_eV}}
-    Only includes rows with state == 'finished'.
-    """
     best = {c: defaultdict(lambda: float("inf")) for c in calculators}
     skipped = 0
-
     with path.open() as f:
         reader = csv.DictReader(f)
         for row in reader:
@@ -191,99 +178,89 @@ def load_ml_best(path: Path, calculators: list) -> dict:
                     best[calc][key] = e
             except (ValueError, KeyError):
                 pass
-
     if skipped:
         print(f"  Skipped {skipped} row(s) with state != finished.")
-
     return {c: {k: v for k, v in d.items() if v != float("inf")}
             for c, d in best.items()}
 
 
 # ---------------------------------------------------------------------------
-# Stats  (computed only on points within the axis window)
+# Stats (in-window only)
 # ---------------------------------------------------------------------------
 
 def compute_stats(dft_vals, ml_vals, pairs, axis_min, axis_max):
-    """
-    Returns (mae, rmse, bias, r2, n_in, n_clipped).
-    Only pairs where BOTH x and y lie within [axis_min, axis_max] are used.
-    """
     dft_arr = np.array([dft_vals[k] for k in pairs])
     ml_arr  = np.array([ml_vals[k]  for k in pairs])
-
-    in_window = (
+    in_w = (
         (dft_arr >= axis_min) & (dft_arr <= axis_max) &
         (ml_arr  >= axis_min) & (ml_arr  <= axis_max)
     )
-    n_clipped = int((~in_window).sum())
-    dft_w = dft_arr[in_window]
-    ml_w  = ml_arr[in_window]
-
+    n_clip = int((~in_w).sum())
+    dft_w, ml_w = dft_arr[in_w], ml_arr[in_w]
     if len(dft_w) < 2:
-        return float("nan"), float("nan"), float("nan"), float("nan"), len(dft_w), n_clipped
-
+        return float("nan"), float("nan"), float("nan"), float("nan"), len(dft_w), n_clip
     mae  = float(np.mean(np.abs(ml_w - dft_w)))
     rmse = float(np.sqrt(np.mean((ml_w - dft_w) ** 2)))
     bias = float(np.mean(ml_w - dft_w))
     ss_res = np.sum((ml_w - dft_w) ** 2)
     ss_tot = np.sum((dft_w - dft_w.mean()) ** 2)
     r2 = float(1 - ss_res / ss_tot) if ss_tot > 0 else float("nan")
-    return mae, rmse, bias, r2, int(in_window.sum()), n_clipped
+    return mae, rmse, bias, r2, int(in_w.sum()), n_clip
 
 
 # ---------------------------------------------------------------------------
-# Single panel plotter
+# Single panel
 # ---------------------------------------------------------------------------
 
 def _plot_panel(ax, func, func_label, calc_pairs, dft_vals, ml_data,
                 axis_min, axis_max):
-    """Draw one parity panel on *ax* with fixed axis limits."""
-
-    multi_calc = len([c for c, p in calc_pairs.items() if p]) > 1
+    """Points are coloured by METAL and shaped by MOLECULE always."""
     n_plotted = 0
-    n_clipped_total = 0
 
     for calc, pairs in calc_pairs.items():
-        fill  = CALC_FILL.get(calc, "full")
-        lw    = CALC_LINEWIDTH.get(calc, 0.5)
+        fill = CALC_FILL.get(calc, "full")
+        lw   = CALC_LINEWIDTH.get(calc, 0.5)
+        # Use calc color as edge color when multiple calcs, metal as fill
+        multi_calc = len([c for c, p in calc_pairs.items() if p]) > 1
 
         for (surf, mol) in pairs:
             x = dft_vals[func].get((surf, mol))
             y = ml_data[calc].get((surf, mol))
             if x is None or y is None:
                 continue
-
-            # Skip points outside the window (count as clipped)
             if x < axis_min or x > axis_max or y < axis_min or y > axis_max:
-                n_clipped_total += 1
                 continue
 
             metal  = surf[:2] if len(surf) >= 2 else surf
-            color  = (CALC_COLORS.get(calc, "grey") if multi_calc
-                      else METAL_COLORS.get(metal, "grey"))
+            mcolor = METAL_COLORS.get(metal, "grey")
             marker = MOLECULE_MARKERS.get(mol, "o")
 
-            if fill == "none":
-                ax.scatter(x, y, facecolors="none", edgecolors=color,
-                           marker=marker, s=70, linewidths=lw,
+            if multi_calc:
+                # filled with metal colour, edged with calc colour
+                ec = CALC_COLORS.get(calc, "k")
+                ax.scatter(x, y, facecolors=mcolor, edgecolors=ec,
+                           marker=marker, s=70, linewidths=1.2,
                            alpha=0.9, zorder=3)
             else:
-                ax.scatter(x, y, color=color, marker=marker,
-                           s=70, alpha=0.85, linewidths=lw,
-                           edgecolors="k", zorder=3)
+                if fill == "none":
+                    ax.scatter(x, y, facecolors="none", edgecolors=mcolor,
+                               marker=marker, s=70, linewidths=lw,
+                               alpha=0.9, zorder=3)
+                else:
+                    ax.scatter(x, y, color=mcolor, marker=marker,
+                               s=70, alpha=0.85, linewidths=lw,
+                               edgecolors="k", zorder=3)
             n_plotted += 1
 
     if n_plotted == 0:
-        ax.set_title(f"DFT: {func_label}  (no data in window)", fontsize=11)
+        ax.set_title(f"DFT: {func_label}  (no data)", fontsize=11)
         ax.set_xlim(axis_min, axis_max)
         ax.set_ylim(axis_min, axis_max)
         ax.set_aspect("equal")
         return
 
-    # Parity line
+    # Parity line + band
     ax.plot([axis_min, axis_max], [axis_min, axis_max], "k--", lw=1.2, zorder=2)
-
-    # ±0.2 eV grey band
     ax.fill_between(
         [axis_min, axis_max],
         [axis_min - BAND_WIDTH, axis_max - BAND_WIDTH],
@@ -291,7 +268,7 @@ def _plot_panel(ax, func, func_label, calc_pairs, dft_vals, ml_data,
         color="grey", alpha=0.12, zorder=1
     )
 
-    # Stats box (lower right) — computed on in-window points only
+    # Stats box
     stat_lines = []
     for calc, pairs in calc_pairs.items():
         matched = [(s, m) for (s, m) in pairs
@@ -302,7 +279,7 @@ def _plot_panel(ax, func, func_label, calc_pairs, dft_vals, ml_data,
         mae, rmse, bias, r2, n_in, n_clip = compute_stats(
             dft_vals[func], ml_data[calc], matched, axis_min, axis_max)
         label = CALC_LABELS.get(calc, calc)
-        clip_note = f"  ({n_clip} clipped)" if n_clip else ""
+        clip_note = f" ({n_clip} clipped)" if n_clip else ""
         stat_lines.append(
             f"[{label}]  n={n_in}{clip_note}\n"
             f"  MAE={mae:.3f}  RMSE={rmse:.3f}\n"
@@ -323,7 +300,7 @@ def _plot_panel(ax, func, func_label, calc_pairs, dft_vals, ml_data,
 
 
 # ---------------------------------------------------------------------------
-# Main figure builder
+# Figure builder
 # ---------------------------------------------------------------------------
 
 def make_figure(functionals, calc_pairs_per_func, dft_data, ml_data,
@@ -332,6 +309,8 @@ def make_figure(functionals, calc_pairs_per_func, dft_data, ml_data,
     n = len(functionals)
     ncols = 2
     nrows = math.ceil(n / ncols)
+
+    # Extra bottom space for molecule legend, extra top for other legends
     fig, axes = plt.subplots(nrows, ncols,
                              figsize=(7.5 * ncols, 7 * nrows),
                              squeeze=False)
@@ -347,48 +326,61 @@ def make_figure(functionals, calc_pairs_per_func, dft_data, ml_data,
                     dft_data, ml_data, axis_min, axis_max)
         ax.set_ylabel(f"{ml_label}  $E_{{ads}}$ (eV)", fontsize=9)
 
-    # Hide unused panels
     for idx in range(n, nrows * ncols):
         row, col = divmod(idx, ncols)
         axes[row][col].set_visible(False)
 
-    # ── Shared legends ───────────────────────────────────────────────────────
+    # Collect all pairs for legend filtering
     all_pairs = [p for fp in calc_pairs_per_func.values()
                  for pairs in fp.values() for p in pairs]
+
+    # ── Top legend row: Calculator (left) + Metal (right) ───────────────────
     multi_calc = len(calculators) > 1
 
-    if multi_calc:
-        calc_handles = []
-        for calc in calculators:
-            fill  = CALC_FILL.get(calc, "full")
-            color = CALC_COLORS.get(calc, "grey")
-            label = CALC_LABELS.get(calc, calc)
-            if fill == "none":
-                h = plt.Line2D([0], [0], marker="o", color="w",
-                               markerfacecolor="none", markeredgecolor=color,
-                               markeredgewidth=1.4, markersize=9, label=label)
-            else:
-                h = plt.Line2D([0], [0], marker="o", color="w",
-                               markerfacecolor=color, markeredgecolor="k",
-                               markersize=9, label=label)
-            calc_handles.append(h)
-        fig.legend(handles=calc_handles, title="Calculator",
-                   loc="upper center", ncol=len(calculators),
-                   fontsize=9, title_fontsize=9,
-                   bbox_to_anchor=(0.5, 1.01))
-    else:
-        metal_handles = [
-            plt.Line2D([0], [0], marker="o", color="w",
-                       markerfacecolor=c, markeredgecolor="k",
-                       markersize=9, label=m)
-            for m, c in METAL_COLORS.items()
-            if any(k[0].startswith(m) for k in all_pairs)
-        ]
-        fig.legend(handles=metal_handles, title="Metal",
-                   loc="upper center", ncol=len(metal_handles),
-                   fontsize=9, title_fontsize=9,
-                   bbox_to_anchor=(0.5, 1.01))
+    # Calculator legend — always shown
+    calc_handles = []
+    for calc in calculators:
+        fill  = CALC_FILL.get(calc, "full")
+        color = CALC_COLORS.get(calc, "grey")
+        label = CALC_LABELS.get(calc, calc)
+        if fill == "none":
+            h = plt.Line2D([0], [0], marker="o", color="w",
+                           markerfacecolor="none", markeredgecolor=color,
+                           markeredgewidth=1.4, markersize=9, label=label)
+        else:
+            h = plt.Line2D([0], [0], marker="o", color="w",
+                           markerfacecolor=color, markeredgecolor="k",
+                           markersize=9, label=label)
+        calc_handles.append(h)
 
+    # Metal legend — always shown, coloured circles
+    metal_handles = [
+        plt.Line2D([0], [0], marker="o", color="w",
+                   markerfacecolor=c, markeredgecolor="k",
+                   markersize=9, label=m)
+        for m, c in METAL_COLORS.items()
+        if any(k[0].startswith(m) for k in all_pairs)
+    ]
+
+    # Place Calculator legend upper-left area, Metal legend upper-right area
+    leg_calc = fig.legend(
+        handles=calc_handles, title="Calculator",
+        loc="upper left",
+        bbox_to_anchor=(0.01, 1.02),
+        ncol=len(calc_handles),
+        fontsize=9, title_fontsize=9,
+        frameon=True,
+    )
+    leg_metal = fig.legend(
+        handles=metal_handles, title="Metal",
+        loc="upper right",
+        bbox_to_anchor=(0.99, 1.02),
+        ncol=len(metal_handles),
+        fontsize=9, title_fontsize=9,
+        frameon=True,
+    )
+
+    # Molecule legend — bottom centre
     mol_handles = [
         plt.Line2D([0], [0], marker=mk, color="w",
                    markerfacecolor="grey", markeredgecolor="k",
@@ -397,16 +389,20 @@ def make_figure(functionals, calc_pairs_per_func, dft_data, ml_data,
         if any(k[1] == mol for k in all_pairs)
     ]
     if mol_handles:
-        fig.legend(handles=mol_handles, title="Molecule",
-                   loc="lower center", ncol=min(len(mol_handles), 6),
-                   fontsize=8, title_fontsize=8,
-                   bbox_to_anchor=(0.5, -0.03))
+        fig.legend(
+            handles=mol_handles, title="Molecule",
+            loc="lower center",
+            bbox_to_anchor=(0.5, -0.04),
+            ncol=min(len(mol_handles), 6),
+            fontsize=8, title_fontsize=8,
+            frameon=True,
+        )
 
     window_str = f"axis window: [{axis_min:.1f}, {axis_max:.1f}] eV"
     fig.suptitle(
         f"DFT vs {ml_label}  —  Adsorption Energies (all functionals)\n"
         f"{window_str}",
-        fontsize=12, fontweight="bold", y=1.03
+        fontsize=12, fontweight="bold", y=1.04
     )
 
     fig.tight_layout()
@@ -425,7 +421,8 @@ def main():
         description=(
             "2×2 parity plot: GOAD+MLIP vs DFT, one panel per DFT functional.\n"
             "Panel order: PBE → PBE+D3 → BEEF-vdW → r²SCAN.\n"
-            "Shared axis window clips PBE/PBE+D3 outliers; clipped count shown in stats box."
+            "Metal colour + molecule marker always shown; "
+            "all legends placed outside panels."
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
@@ -468,7 +465,6 @@ def main():
     dft_data = load_dft_all(dft_path)
     ml_data  = load_ml_best(ml_path, args.calculators)
 
-    # Determine panel order
     if args.functionals:
         functionals = [normalise_func(f) for f in args.functionals]
     else:
@@ -483,7 +479,6 @@ def main():
     print(f"Functionals (panel order): {[FUNC_LABELS.get(f, f) for f in functionals]}")
     print()
 
-    # Build matched pairs + print stats
     calc_pairs_per_func = {}
     all_csv_rows = []
 
