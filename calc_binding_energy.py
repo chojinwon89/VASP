@@ -20,9 +20,9 @@ Usage
     python calc_binding_energy.py
 
     # Custom paths
-    python calc_binding_energy.py \\
-        --best-dir poscar/best \\
-        --slab-dir vasp_slab \\
+    python calc_binding_energy.py \
+        --best-dirs poscar/best poscar/best2 \
+        --slab-dir vasp_slab \
         --mol-dir  vasp_mol
 
     # Save results to CSV
@@ -102,73 +102,75 @@ def parse_surface_molecule(dir_name: str):
 # Main calculation
 # ---------------------------------------------------------------------------
 
-def calc_binding_energies(best_dir: Path, slab_dir: Path, mol_dir: Path):
+def calc_binding_energies(best_dirs, slab_dir: Path, mol_dir: Path):
     """
-    Walk poscar/best/, compute E_ads for each system.
+    Walk one or more best directories, compute E_ads for each system.
     Returns list of dicts with keys:
-        system, surface, molecule,
+        system, surface, molecule, source_dir,
         E_slab_mol, E_slab, E_mol, E_ads,
         status, note
     """
     results = []
 
-    job_dirs = sorted(
-        d for d in best_dir.iterdir()
-        if d.is_dir() and (d / "OUTCAR").exists()
-    )
+    for best_dir in best_dirs:
+        job_dirs = sorted(
+            d for d in best_dir.iterdir()
+            if d.is_dir() and (d / "OUTCAR").exists()
+        )
 
-    if not job_dirs:
-        print(f"No OUTCAR-containing directories found under {best_dir}")
-        return results
+        if not job_dirs:
+            print(f"No OUTCAR-containing directories found under {best_dir}")
+            continue
 
-    for job_dir in job_dirs:
-        system = job_dir.name
-        surface, molecule = parse_surface_molecule(system)
+        for job_dir in job_dirs:
+            system = job_dir.name
+            surface, molecule = parse_surface_molecule(system)
 
-        row = {
-            "system":     system,
-            "surface":    surface,
-            "molecule":   molecule,
-            "E_slab_mol": None,
-            "E_slab":     None,
-            "E_mol":      None,
-            "E_ads":      None,
-            "status":     "ok",
-            "note":       "",
-        }
+            row = {
+                "system":     system,
+                "surface":    surface,
+                "molecule":   molecule,
+                "source_dir": str(best_dir),
+                "E_slab_mol": None,
+                "E_slab":     None,
+                "E_mol":      None,
+                "E_ads":      None,
+                "status":     "ok",
+                "note":       "",
+            }
 
-        notes = []
+            notes = []
 
-        # 1) Slab + molecule energy
-        try:
-            row["E_slab_mol"] = read_energy_from_outcar(job_dir / "OUTCAR")
-        except (FileNotFoundError, ValueError) as e:
-            notes.append(f"slab+mol: {e}")
-            row["status"] = "error"
+            # 1) Slab + molecule energy
+            try:
+                row["E_slab_mol"] = read_energy_from_outcar(job_dir / "OUTCAR")
+            except (FileNotFoundError, ValueError) as e:
+                notes.append(f"slab+mol: {e}")
+                row["status"] = "error"
 
-        # 2) Clean slab energy
-        slab_outcar = slab_dir / surface / "OUTCAR"
-        try:
-            row["E_slab"] = read_energy_from_outcar(slab_outcar)
-        except (FileNotFoundError, ValueError) as e:
-            notes.append(f"slab: {e}")
-            row["status"] = "error"
+            # 2) Clean slab energy
+            slab_outcar = slab_dir / surface / "OUTCAR"
+            try:
+                row["E_slab"] = read_energy_from_outcar(slab_outcar)
+            except (FileNotFoundError, ValueError) as e:
+                notes.append(f"slab: {e}")
+                row["status"] = "error"
 
-        # 3) Gas molecule energy
-        mol_outcar = mol_dir / molecule / "OUTCAR"
-        try:
-            row["E_mol"] = read_energy_from_outcar(mol_outcar)
-        except (FileNotFoundError, ValueError) as e:
-            notes.append(f"mol: {e}")
-            row["status"] = "error"
+            # 3) Gas molecule energy
+            mol_outcar = mol_dir / molecule / "OUTCAR"
+            try:
+                row["E_mol"] = read_energy_from_outcar(mol_outcar)
+            except (FileNotFoundError, ValueError) as e:
+                notes.append(f"mol: {e}")
+                row["status"] = "error"
 
-        # 4) E_ads
-        if row["status"] == "ok":
-            row["E_ads"] = row["E_slab_mol"] - row["E_slab"] - row["E_mol"]
-        else:
-            row["note"] = "; ".join(notes)
+            # 4) E_ads
+            if row["status"] == "ok":
+                row["E_ads"] = row["E_slab_mol"] - row["E_slab"] - row["E_mol"]
+            else:
+                row["note"] = "; ".join(notes)
 
-        results.append(row)
+            results.append(row)
 
     return results
 
@@ -180,7 +182,7 @@ def calc_binding_energies(best_dir: Path, slab_dir: Path, mol_dir: Path):
 def print_table(results):
     """Pretty-print results to stdout."""
     header = (
-        f"{'System':<35} {'E(slab+mol)':>14} {'E(slab)':>14} "
+        f"{'System':<35} {'Source':<18} {'E(slab+mol)':>14} {'E(slab)':>14} "
         f"{'E(mol)':>12} {'E_ads(eV)':>12}  Status"
     )
     print()
@@ -191,6 +193,7 @@ def print_table(results):
         if r["status"] == "ok":
             print(
                 f"{r['system']:<35} "
+                f"{Path(r['source_dir']).name:<18} "
                 f"{r['E_slab_mol']:>14.6f} "
                 f"{r['E_slab']:>14.6f} "
                 f"{r['E_mol']:>12.6f} "
@@ -198,7 +201,7 @@ def print_table(results):
             )
         else:
             print(
-                f"{r['system']:<35} {'---':>14} {'---':>14} "
+                f"{r['system']:<35} {Path(r['source_dir']).name:<18} {'---':>14} {'---':>14} "
                 f"{'---':>12} {'---':>12}  ERROR: {r['note']}"
             )
 
@@ -220,7 +223,7 @@ def print_table(results):
 def write_csv(results, output_path: Path):
     """Write results to CSV."""
     fields = [
-        "system", "surface", "molecule",
+        "system", "surface", "molecule", "source_dir",
         "E_slab_mol", "E_slab", "E_mol", "E_ads",
         "status", "note",
     ]
@@ -240,8 +243,9 @@ def main():
         description="Calculate DFT adsorption energies from VASP OUTCARs."
     )
     parser.add_argument(
-        "--best-dir", default="poscar/best",
-        help="Directory containing slab+molecule VASP jobs (default: poscar/best)"
+        "--best-dirs", nargs="+", default=["poscar/best"],
+        help="One or more directories containing slab+molecule VASP jobs "
+             "(default: poscar/best)"
     )
     parser.add_argument(
         "--slab-dir", default="vasp_slab",
@@ -257,26 +261,27 @@ def main():
     )
     args = parser.parse_args()
 
-    best_dir = Path(args.best_dir)
+    best_dirs = [Path(d) for d in args.best_dirs]
     slab_dir = Path(args.slab_dir)
     mol_dir  = Path(args.mol_dir)
 
     # Validate directories
-    missing = [str(d) for d in [best_dir, slab_dir, mol_dir] if not d.exists()]
+    missing = [str(d) for d in [*best_dirs, slab_dir, mol_dir] if not d.exists()]
     if missing:
         print("ERROR: The following directories were not found:")
         for m in missing:
             print(f"  {m}")
         print()
         print("Make sure VASP jobs have been run and paths are correct.")
-        print("Use --best-dir / --slab-dir / --mol-dir to override defaults.")
+        print("Use --best-dirs / --slab-dir / --mol-dir to override defaults.")
         sys.exit(1)
 
-    print(f"slab+mol jobs : {best_dir}")
+    for d in best_dirs:
+        print(f"slab+mol jobs : {d}")
     print(f"slab refs     : {slab_dir}")
     print(f"molecule refs : {mol_dir}")
 
-    results = calc_binding_energies(best_dir, slab_dir, mol_dir)
+    results = calc_binding_energies(best_dirs, slab_dir, mol_dir)
 
     if not results:
         print("No results computed.")
