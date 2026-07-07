@@ -6,11 +6,12 @@ Compare GOAD+MLIP adsorption energies against DFT calculations across
 multiple DFT functionals.
 
 Produces a 2×2 parity-plot grid — one panel per DFT functional — each
-showing all ML calculators overlaid, with per-panel MAE / RMSE / R² stats.
+showing all ML calculators overlaid, with per-panel MAE / RMSE / R² / bias
+stats computed only on the data within the plot window.
 
 Reads
 -----
-  dft_binding_energies_all.csv   (from calc_binding_energy.py, merged,
+  dft_binding_energies_all.csv   (from calc_binding_energy.py --all-functionals,
                                    must have a 'functional' column)
   workflow/summary.csv           (from GOAD runs)
 
@@ -21,24 +22,20 @@ Output
 
 Usage
 -----
-    # Default: SevenNet-OMNI vs all functionals found in the CSV
+    # Default: SevenNet-OMNI, panel order PBE → PBE+D3 → BEEF-vdW → r²SCAN
     python plot_dft_vs_sevennet.py
 
-    # Both ML calculators, specific functionals, custom output
+    # Both ML calculators
     python plot_dft_vs_sevennet.py \\
         --dft  dft_binding_energies_all.csv \\
         --ml   workflow/summary.csv \\
         --calculators sevennet_omni 5m \\
-        --functionals pbe pbe_d3 r2scan beef_vdw \\
-        --output results/dft_vs_mlip_all_functionals.png \\
-        --csv-out results/dft_vs_mlip_all_functionals.csv
+        --functionals pbe pbe_d3 beef_vdw r2scan \\
+        --output results/dft_vs_mlip_all.png \\
+        --csv-out results/dft_vs_mlip_all.csv
 
-Functional name aliases accepted
----------------------------------
-    pbe, PBE
-    pbe_d3, pbe+d3, PBE+D3
-    r2scan, r²scan
-    beef_vdw, beef-vdw, BEEF-vdW
+    # Override axis limits
+    python plot_dft_vs_sevennet.py --axis-min -3.0 --axis-max 0.5
 """
 
 import argparse
@@ -77,13 +74,15 @@ CALC_LINEWIDTH = {
     "1m":            1.2,
 }
 
-# Color per ML calculator (for multi-calc panels)
 CALC_COLORS = {
     "sevennet_omni": "#E05C00",   # orange
     "5m":            "#0072B2",   # blue
     "5m_d3":         "#009E73",   # green
     "1m":            "#CC79A7",   # pink
 }
+
+# Preferred panel order
+FUNC_ORDER = ["pbe", "pbe_d3", "beef_vdw", "r2scan"]
 
 FUNC_LABELS = {
     "pbe":      "PBE",
@@ -109,7 +108,6 @@ MOLECULE_MARKERS = {
     "propane":     "v",
     "ethane":      "P",
     "propene":     "X",
-    "propanol":    "^",
     "ethene":      "*",
     "CO2":         "h",
     "isobutene":   "+",
@@ -120,7 +118,11 @@ MOLECULE_MARKERS = {
     "toluene":     "8",
 }
 
-# 0.2 eV grey band on parity plots
+# Default shared axis window (eV) — covers ML range with a small margin
+DEFAULT_AXIS_MIN = -2.5
+DEFAULT_AXIS_MAX =  0.3
+
+# ±0.2 eV grey band on parity plots
 BAND_WIDTH = 0.2
 
 
@@ -133,11 +135,10 @@ def normalise_func(name: str) -> str:
     while "__" in s:
         s = s.replace("__", "_")
     aliases = {
-        "beef_dfw":  "beef_vdw",
-        "beefvdw":   "beef_vdw",
-        "pbed3":     "pbe_d3",
-        "r2scan":    "r2scan",
-        "r_2scan":   "r2scan",
+        "beef_dfw": "beef_vdw",
+        "beefvdw":  "beef_vdw",
+        "pbed3":    "pbe_d3",
+        "r_2scan":  "r2scan",
     }
     return aliases.get(s, s)
 
@@ -149,8 +150,6 @@ def normalise_func(name: str) -> str:
 def load_dft_all(path: Path) -> dict:
     """
     Returns {functional: {(surface, molecule): E_ads_eV}}
-    Accepts both single-functional CSVs (no 'functional' column → key 'default')
-    and multi-functional CSVs with a 'functional' column.
     """
     data = defaultdict(dict)
     with path.open() as f:
@@ -201,48 +200,68 @@ def load_ml_best(path: Path, calculators: list) -> dict:
 
 
 # ---------------------------------------------------------------------------
-# Stats
+# Stats  (computed only on points within the axis window)
 # ---------------------------------------------------------------------------
 
-def compute_stats(dft_vals, ml_vals, pairs):
+def compute_stats(dft_vals, ml_vals, pairs, axis_min, axis_max):
+    """
+    Returns (mae, rmse, bias, r2, n_in, n_clipped).
+    Only pairs where BOTH x and y lie within [axis_min, axis_max] are used.
+    """
     dft_arr = np.array([dft_vals[k] for k in pairs])
     ml_arr  = np.array([ml_vals[k]  for k in pairs])
-    mae  = float(np.mean(np.abs(ml_arr - dft_arr)))
-    rmse = float(np.sqrt(np.mean((ml_arr - dft_arr) ** 2)))
-    bias = float(np.mean(ml_arr - dft_arr))
-    ss_res = np.sum((ml_arr - dft_arr) ** 2)
-    ss_tot = np.sum((dft_arr - dft_arr.mean()) ** 2)
+
+    in_window = (
+        (dft_arr >= axis_min) & (dft_arr <= axis_max) &
+        (ml_arr  >= axis_min) & (ml_arr  <= axis_max)
+    )
+    n_clipped = int((~in_window).sum())
+    dft_w = dft_arr[in_window]
+    ml_w  = ml_arr[in_window]
+
+    if len(dft_w) < 2:
+        return float("nan"), float("nan"), float("nan"), float("nan"), len(dft_w), n_clipped
+
+    mae  = float(np.mean(np.abs(ml_w - dft_w)))
+    rmse = float(np.sqrt(np.mean((ml_w - dft_w) ** 2)))
+    bias = float(np.mean(ml_w - dft_w))
+    ss_res = np.sum((ml_w - dft_w) ** 2)
+    ss_tot = np.sum((dft_w - dft_w.mean()) ** 2)
     r2 = float(1 - ss_res / ss_tot) if ss_tot > 0 else float("nan")
-    return mae, rmse, bias, r2
+    return mae, rmse, bias, r2, int(in_window.sum()), n_clipped
 
 
 # ---------------------------------------------------------------------------
 # Single panel plotter
 # ---------------------------------------------------------------------------
 
-def _plot_panel(ax, func, func_label, calc_pairs, dft_vals, ml_data):
-    """
-    Draw one parity panel on *ax*.
-    calc_pairs : {calc: [(surf, mol), ...]}
-    """
-    all_vals = []
+def _plot_panel(ax, func, func_label, calc_pairs, dft_vals, ml_data,
+                axis_min, axis_max):
+    """Draw one parity panel on *ax* with fixed axis limits."""
+
+    multi_calc = len([c for c, p in calc_pairs.items() if p]) > 1
+    n_plotted = 0
+    n_clipped_total = 0
 
     for calc, pairs in calc_pairs.items():
         fill  = CALC_FILL.get(calc, "full")
         lw    = CALC_LINEWIDTH.get(calc, 0.5)
-        # When only one ML calc → use metal colours; when multiple → use calc colour
-        multi_calc = len([c for c, p in calc_pairs.items() if p]) > 1
 
         for (surf, mol) in pairs:
-            metal  = surf[:2] if len(surf) >= 2 else surf
-            color  = (CALC_COLORS.get(calc, "grey") if multi_calc
-                      else METAL_COLORS.get(metal, "grey"))
-            marker = MOLECULE_MARKERS.get(mol, "o")
             x = dft_vals[func].get((surf, mol))
             y = ml_data[calc].get((surf, mol))
             if x is None or y is None:
                 continue
-            all_vals.extend([x, y])
+
+            # Skip points outside the window (count as clipped)
+            if x < axis_min or x > axis_max or y < axis_min or y > axis_max:
+                n_clipped_total += 1
+                continue
+
+            metal  = surf[:2] if len(surf) >= 2 else surf
+            color  = (CALC_COLORS.get(calc, "grey") if multi_calc
+                      else METAL_COLORS.get(metal, "grey"))
+            marker = MOLECULE_MARKERS.get(mol, "o")
 
             if fill == "none":
                 ax.scatter(x, y, facecolors="none", edgecolors=color,
@@ -252,36 +271,41 @@ def _plot_panel(ax, func, func_label, calc_pairs, dft_vals, ml_data):
                 ax.scatter(x, y, color=color, marker=marker,
                            s=70, alpha=0.85, linewidths=lw,
                            edgecolors="k", zorder=3)
+            n_plotted += 1
 
-    if not all_vals:
-        ax.set_title(f"DFT: {func_label}  (no data)", fontsize=11)
+    if n_plotted == 0:
+        ax.set_title(f"DFT: {func_label}  (no data in window)", fontsize=11)
+        ax.set_xlim(axis_min, axis_max)
+        ax.set_ylim(axis_min, axis_max)
+        ax.set_aspect("equal")
         return
 
-    lo = min(all_vals) - 0.15
-    hi = max(all_vals) + 0.15
-
     # Parity line
-    ax.plot([lo, hi], [lo, hi], "k--", lw=1.2, zorder=2)
+    ax.plot([axis_min, axis_max], [axis_min, axis_max], "k--", lw=1.2, zorder=2)
 
     # ±0.2 eV grey band
-    ax.fill_between([lo, hi],
-                    [lo - BAND_WIDTH, hi - BAND_WIDTH],
-                    [lo + BAND_WIDTH, hi + BAND_WIDTH],
-                    color="grey", alpha=0.12, zorder=1)
+    ax.fill_between(
+        [axis_min, axis_max],
+        [axis_min - BAND_WIDTH, axis_max - BAND_WIDTH],
+        [axis_min + BAND_WIDTH, axis_max + BAND_WIDTH],
+        color="grey", alpha=0.12, zorder=1
+    )
 
-    # Stats box (lower right)
+    # Stats box (lower right) — computed on in-window points only
     stat_lines = []
     for calc, pairs in calc_pairs.items():
         matched = [(s, m) for (s, m) in pairs
-                   if (s, m) in dft_vals.get(func, {}) and (s, m) in ml_data.get(calc, {})]
+                   if (s, m) in dft_vals.get(func, {})
+                   and (s, m) in ml_data.get(calc, {})]
         if not matched:
             continue
-        mae, rmse, bias, r2 = compute_stats(dft_vals[func], ml_data[calc],
-                                             matched)
+        mae, rmse, bias, r2, n_in, n_clip = compute_stats(
+            dft_vals[func], ml_data[calc], matched, axis_min, axis_max)
         label = CALC_LABELS.get(calc, calc)
+        clip_note = f"  ({n_clip} clipped)" if n_clip else ""
         stat_lines.append(
-            f"[{label}]\n"
-            f"  MAE={mae:.3f}  RM{chr(83)}E={rmse:.3f}\n"
+            f"[{label}]  n={n_in}{clip_note}\n"
+            f"  MAE={mae:.3f}  RMSE={rmse:.3f}\n"
             f"  R\u00b2={r2:.3f}  bias={bias:+.3f}"
         )
 
@@ -290,8 +314,8 @@ def _plot_panel(ax, func, func_label, calc_pairs, dft_vals, ml_data):
             fontsize=6.5, family="monospace",
             bbox=dict(boxstyle="round,pad=0.3", fc="white", alpha=0.85))
 
-    ax.set_xlim(lo, hi)
-    ax.set_ylim(lo, hi)
+    ax.set_xlim(axis_min, axis_max)
+    ax.set_ylim(axis_min, axis_max)
     ax.set_aspect("equal")
     ax.grid(True, alpha=0.25)
     ax.set_title(f"DFT: {func_label}", fontsize=11, fontweight="bold")
@@ -303,11 +327,8 @@ def _plot_panel(ax, func, func_label, calc_pairs, dft_vals, ml_data):
 # ---------------------------------------------------------------------------
 
 def make_figure(functionals, calc_pairs_per_func, dft_data, ml_data,
-                calculators, output_path: Path):
-    """
-    functionals          : list of functional keys to plot (max 4 for 2×2)
-    calc_pairs_per_func  : {func: {calc: [(surf, mol), ...]}}
-    """
+                calculators, output_path: Path, axis_min, axis_max):
+
     n = len(functionals)
     ncols = 2
     nrows = math.ceil(n / ncols)
@@ -315,7 +336,6 @@ def make_figure(functionals, calc_pairs_per_func, dft_data, ml_data,
                              figsize=(7.5 * ncols, 7 * nrows),
                              squeeze=False)
 
-    # Determine a single shared ML calculator label for the y-axis
     ml_label = " / ".join(CALC_LABELS.get(c, c) for c in calculators)
 
     for idx, func in enumerate(functionals):
@@ -324,22 +344,19 @@ def make_figure(functionals, calc_pairs_per_func, dft_data, ml_data,
         func_label = FUNC_LABELS.get(func, func.upper())
         _plot_panel(ax, func, func_label,
                     calc_pairs_per_func.get(func, {}),
-                    dft_data, ml_data)
+                    dft_data, ml_data, axis_min, axis_max)
         ax.set_ylabel(f"{ml_label}  $E_{{ads}}$ (eV)", fontsize=9)
 
-    # Hide any unused panels
+    # Hide unused panels
     for idx in range(n, nrows * ncols):
         row, col = divmod(idx, ncols)
         axes[row][col].set_visible(False)
 
-    # ── Shared legends ──────────────────────────────────────────────────────
-    # Collect all pairs across all functionals for legend filtering
+    # ── Shared legends ───────────────────────────────────────────────────────
     all_pairs = [p for fp in calc_pairs_per_func.values()
                  for pairs in fp.values() for p in pairs]
-
     multi_calc = len(calculators) > 1
 
-    # Calculator legend (only if >1 calc)
     if multi_calc:
         calc_handles = []
         for calc in calculators:
@@ -360,7 +377,6 @@ def make_figure(functionals, calc_pairs_per_func, dft_data, ml_data,
                    fontsize=9, title_fontsize=9,
                    bbox_to_anchor=(0.5, 1.01))
     else:
-        # Single calc → metal colour legend at top
         metal_handles = [
             plt.Line2D([0], [0], marker="o", color="w",
                        markerfacecolor=c, markeredgecolor="k",
@@ -373,7 +389,6 @@ def make_figure(functionals, calc_pairs_per_func, dft_data, ml_data,
                    fontsize=9, title_fontsize=9,
                    bbox_to_anchor=(0.5, 1.01))
 
-    # Molecule marker legend (bottom centre)
     mol_handles = [
         plt.Line2D([0], [0], marker=mk, color="w",
                    markerfacecolor="grey", markeredgecolor="k",
@@ -387,9 +402,11 @@ def make_figure(functionals, calc_pairs_per_func, dft_data, ml_data,
                    fontsize=8, title_fontsize=8,
                    bbox_to_anchor=(0.5, -0.03))
 
+    window_str = f"axis window: [{axis_min:.1f}, {axis_max:.1f}] eV"
     fig.suptitle(
-        f"DFT vs {ml_label}  —  Adsorption Energies (all functionals)",
-        fontsize=13, fontweight="bold", y=1.03
+        f"DFT vs {ml_label}  —  Adsorption Energies (all functionals)\n"
+        f"{window_str}",
+        fontsize=12, fontweight="bold", y=1.03
     )
 
     fig.tight_layout()
@@ -407,40 +424,31 @@ def main():
     parser = argparse.ArgumentParser(
         description=(
             "2×2 parity plot: GOAD+MLIP vs DFT, one panel per DFT functional.\n"
-            "Reads dft_binding_energies_all.csv (needs 'functional' column)."
+            "Panel order: PBE → PBE+D3 → BEEF-vdW → r²SCAN.\n"
+            "Shared axis window clips PBE/PBE+D3 outliers; clipped count shown in stats box."
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
+    parser.add_argument("--dft", default="dft_binding_energies_all.csv")
+    parser.add_argument("--ml",  default="workflow/summary.csv")
+    parser.add_argument("--calculators", nargs="+", default=["sevennet_omni"],
+                        metavar="CALC")
     parser.add_argument(
-        "--dft", default="dft_binding_energies_all.csv",
-        help="Multi-functional DFT CSV with 'functional' column "
-             "(default: dft_binding_energies_all.csv)"
+        "--functionals", nargs="+", default=None, metavar="FUNC",
+        help="DFT functionals to plot (default: pbe pbe_d3 beef_vdw r2scan)"
     )
     parser.add_argument(
-        "--ml", default="workflow/summary.csv",
-        help="GOAD summary CSV (default: workflow/summary.csv)"
+        "--axis-min", type=float, default=DEFAULT_AXIS_MIN,
+        help=f"Shared axis minimum in eV (default: {DEFAULT_AXIS_MIN})"
     )
     parser.add_argument(
-        "--calculators", nargs="+", default=["sevennet_omni"],
-        metavar="CALC",
-        help="ML calculator(s) to plot. Default: sevennet_omni"
+        "--axis-max", type=float, default=DEFAULT_AXIS_MAX,
+        help=f"Shared axis maximum in eV (default: {DEFAULT_AXIS_MAX})"
     )
     parser.add_argument(
-        "--functionals", nargs="+", default=None,
-        metavar="FUNC",
-        help=(
-            "DFT functionals to include (default: all found in --dft CSV). "
-            "Accepted: pbe  pbe_d3  r2scan  beef_vdw"
-        )
+        "--output", default="results/dft_vs_mlip_all_functionals.png"
     )
-    parser.add_argument(
-        "--output", default="results/dft_vs_mlip_all_functionals.png",
-        help="Output PNG (default: results/dft_vs_mlip_all_functionals.png)"
-    )
-    parser.add_argument(
-        "--csv-out", default=None,
-        help="Also write all matched pairs to this CSV"
-    )
+    parser.add_argument("--csv-out", default=None)
     args = parser.parse_args()
 
     dft_path = Path(args.dft)
@@ -454,18 +462,17 @@ def main():
     print(f"DFT CSV    : {dft_path}")
     print(f"ML CSV     : {ml_path}")
     print(f"Calculators: {[CALC_LABELS.get(c, c) for c in args.calculators]}")
+    print(f"Axis window: [{args.axis_min:.1f}, {args.axis_max:.1f}] eV")
     print()
 
     dft_data = load_dft_all(dft_path)
     ml_data  = load_ml_best(ml_path, args.calculators)
 
-    # Determine which functionals to plot
+    # Determine panel order
     if args.functionals:
         functionals = [normalise_func(f) for f in args.functionals]
     else:
-        # Use whatever is in the CSV, in a preferred display order
-        preferred = ["pbe", "pbe_d3", "r2scan", "beef_vdw"]
-        functionals = [f for f in preferred if f in dft_data]
+        functionals = [f for f in FUNC_ORDER if f in dft_data]
         extras = [f for f in dft_data if f not in functionals]
         functionals += sorted(extras)
 
@@ -473,10 +480,10 @@ def main():
         print("ERROR: No functionals found in DFT CSV.")
         raise SystemExit(1)
 
-    print(f"Functionals: {[FUNC_LABELS.get(f, f) for f in functionals]}")
+    print(f"Functionals (panel order): {[FUNC_LABELS.get(f, f) for f in functionals]}")
     print()
 
-    # Build matched pairs per functional × calculator
+    # Build matched pairs + print stats
     calc_pairs_per_func = {}
     all_csv_rows = []
 
@@ -488,13 +495,16 @@ def main():
             calc_pairs[calc] = common
             ml_only  = len(ml_data[calc]) - len(common)
             dft_only = len(func_dft) - len(common)
-            label    = CALC_LABELS.get(calc, calc)
-            fl       = FUNC_LABELS.get(func, func)
+            label = CALC_LABELS.get(calc, calc)
+            fl    = FUNC_LABELS.get(func, func)
             print(f"[{fl} | {label}]  matched={len(common)}"
                   f"  DFT-only={dft_only}  ML-only={ml_only}")
 
             if common:
-                mae, rmse, bias, r2 = compute_stats(func_dft, ml_data[calc], common)
+                mae, rmse, bias, r2, n_in, n_clip = compute_stats(
+                    func_dft, ml_data[calc], common,
+                    args.axis_min, args.axis_max)
+                print(f"  In window: {n_in}  Clipped: {n_clip}")
                 print(f"  MAE={mae:.4f}  RMSE={rmse:.4f}  "
                       f"bias={bias:+.4f}  R\u00b2={r2:.4f}")
                 for (surf, mol) in common:
@@ -508,16 +518,15 @@ def main():
                         "diff_eV":    f"{ml_data[calc][(surf,mol)]-func_dft[(surf,mol)]:.6f}",
                     })
             print()
-
         calc_pairs_per_func[func] = calc_pairs
 
-    if not any(p for cp in calc_pairs_per_func.values()
-               for p in cp.values()):
-        print("No matched pairs found for any functional/calculator combination.")
+    if not any(p for cp in calc_pairs_per_func.values() for p in cp.values()):
+        print("No matched pairs found.")
         raise SystemExit(1)
 
     make_figure(functionals, calc_pairs_per_func, dft_data, ml_data,
-                args.calculators, Path(args.output))
+                args.calculators, Path(args.output),
+                args.axis_min, args.axis_max)
 
     if args.csv_out:
         Path(args.csv_out).parent.mkdir(parents=True, exist_ok=True)
