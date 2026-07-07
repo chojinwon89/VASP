@@ -9,7 +9,12 @@ Produces a 2×2 parity-plot grid — one panel per DFT functional — each
 showing all ML calculators overlaid, with per-panel MAE / RMSE / R² / bias
 stats computed only on the data within the plot window.
 
-Legends (Calculator, Metal, Molecule) are always shown outside the panels.
+Point style encoding:
+  - Colour  → metal surface  (Cu/Pt/Pd/Ni/Ag/Au)
+  - Marker  → molecule
+  - Fill    → calculator  (SevenNet = filled, MatterSim = hollow)
+
+Legends (Calculator, Metal, Molecule) always shown outside panels.
 
 Reads
 -----
@@ -18,8 +23,8 @@ Reads
 
 Output
 ------
-  PNG : 2×2 subplot figure  (one panel per DFT functional)
-  CSV : optional flat table of all matched pairs
+  PNG : 2×2 subplot figure
+  CSV : optional flat table of matched pairs
 
 Usage
 -----
@@ -29,7 +34,6 @@ Usage
         --output results/dft_vs_mlip_all.png \\
         --csv-out results/dft_vs_mlip_all.csv
 
-    # Override axis limits
     python plot_dft_vs_sevennet.py --axis-min -3.0 --axis-max 0.5
 """
 
@@ -55,6 +59,7 @@ CALC_LABELS = {
     "1m":            "MatterSim-1M",
 }
 
+# filled = solid marker, none = hollow marker
 CALC_FILL = {
     "sevennet_omni": "full",
     "5m":            "none",
@@ -64,19 +69,18 @@ CALC_FILL = {
 
 CALC_LINEWIDTH = {
     "sevennet_omni": 0.5,
-    "5m":            1.2,
-    "5m_d3":         1.2,
-    "1m":            1.2,
+    "5m":            1.4,
+    "5m_d3":         1.4,
+    "1m":            1.4,
 }
 
 CALC_COLORS = {
-    "sevennet_omni": "#E05C00",   # orange
-    "5m":            "#0072B2",   # blue
-    "5m_d3":         "#009E73",   # green
-    "1m":            "#CC79A7",   # pink
+    "sevennet_omni": "#E05C00",
+    "5m":            "#0072B2",
+    "5m_d3":         "#009E73",
+    "1m":            "#CC79A7",
 }
 
-# Preferred panel order
 FUNC_ORDER = ["pbe", "pbe_d3", "beef_vdw", "r2scan"]
 
 FUNC_LABELS = {
@@ -113,11 +117,8 @@ MOLECULE_MARKERS = {
     "toluene":     "8",
 }
 
-# Default shared axis window (eV)
 DEFAULT_AXIS_MIN = -2.5
 DEFAULT_AXIS_MAX =  0.3
-
-# ±0.2 eV grey band
 BAND_WIDTH = 0.2
 
 
@@ -214,14 +215,17 @@ def compute_stats(dft_vals, ml_vals, pairs, axis_min, axis_max):
 
 def _plot_panel(ax, func, func_label, calc_pairs, dft_vals, ml_data,
                 axis_min, axis_max):
-    """Points are coloured by METAL and shaped by MOLECULE always."""
+    """
+    Encoding:
+      colour → metal surface
+      marker → molecule
+      fill   → calculator  (filled = SevenNet / full; hollow = MatterSim / none)
+    """
     n_plotted = 0
 
     for calc, pairs in calc_pairs.items():
         fill = CALC_FILL.get(calc, "full")
         lw   = CALC_LINEWIDTH.get(calc, 0.5)
-        # Use calc color as edge color when multiple calcs, metal as fill
-        multi_calc = len([c for c, p in calc_pairs.items() if p]) > 1
 
         for (surf, mol) in pairs:
             x = dft_vals[func].get((surf, mol))
@@ -235,21 +239,22 @@ def _plot_panel(ax, func, func_label, calc_pairs, dft_vals, ml_data,
             mcolor = METAL_COLORS.get(metal, "grey")
             marker = MOLECULE_MARKERS.get(mol, "o")
 
-            if multi_calc:
-                # filled with metal colour, edged with calc colour
-                ec = CALC_COLORS.get(calc, "k")
-                ax.scatter(x, y, facecolors=mcolor, edgecolors=ec,
-                           marker=marker, s=70, linewidths=1.2,
+            if fill == "none":
+                # hollow: no fill, metal-coloured edge
+                ax.scatter(x, y,
+                           facecolors="none",
+                           edgecolors=mcolor,
+                           marker=marker, s=70,
+                           linewidths=lw,
                            alpha=0.9, zorder=3)
             else:
-                if fill == "none":
-                    ax.scatter(x, y, facecolors="none", edgecolors=mcolor,
-                               marker=marker, s=70, linewidths=lw,
-                               alpha=0.9, zorder=3)
-                else:
-                    ax.scatter(x, y, color=mcolor, marker=marker,
-                               s=70, alpha=0.85, linewidths=lw,
-                               edgecolors="k", zorder=3)
+                # filled: metal colour fill, thin black edge
+                ax.scatter(x, y,
+                           facecolors=mcolor,
+                           edgecolors="k",
+                           marker=marker, s=70,
+                           linewidths=0.4,
+                           alpha=0.85, zorder=3)
             n_plotted += 1
 
     if n_plotted == 0:
@@ -268,7 +273,7 @@ def _plot_panel(ax, func, func_label, calc_pairs, dft_vals, ml_data,
         color="grey", alpha=0.12, zorder=1
     )
 
-    # Stats box
+    # Stats box (lower right)
     stat_lines = []
     for calc, pairs in calc_pairs.items():
         matched = [(s, m) for (s, m) in pairs
@@ -310,7 +315,6 @@ def make_figure(functionals, calc_pairs_per_func, dft_data, ml_data,
     ncols = 2
     nrows = math.ceil(n / ncols)
 
-    # Extra bottom space for molecule legend, extra top for other legends
     fig, axes = plt.subplots(nrows, ncols,
                              figsize=(7.5 * ncols, 7 * nrows),
                              squeeze=False)
@@ -330,30 +334,35 @@ def make_figure(functionals, calc_pairs_per_func, dft_data, ml_data,
         row, col = divmod(idx, ncols)
         axes[row][col].set_visible(False)
 
-    # Collect all pairs for legend filtering
     all_pairs = [p for fp in calc_pairs_per_func.values()
                  for pairs in fp.values() for p in pairs]
 
-    # ── Top legend row: Calculator (left) + Metal (right) ───────────────────
-    multi_calc = len(calculators) > 1
-
-    # Calculator legend — always shown
+    # ── Calculator legend (upper left) ──────────────────────────────────────
     calc_handles = []
     for calc in calculators:
         fill  = CALC_FILL.get(calc, "full")
-        color = CALC_COLORS.get(calc, "grey")
         label = CALC_LABELS.get(calc, calc)
+        # Use a neutral grey colour so the legend shows fill vs hollow clearly
         if fill == "none":
             h = plt.Line2D([0], [0], marker="o", color="w",
-                           markerfacecolor="none", markeredgecolor=color,
+                           markerfacecolor="none",
+                           markeredgecolor="#555555",
                            markeredgewidth=1.4, markersize=9, label=label)
         else:
             h = plt.Line2D([0], [0], marker="o", color="w",
-                           markerfacecolor=color, markeredgecolor="k",
+                           markerfacecolor="#888888",
+                           markeredgecolor="k",
                            markersize=9, label=label)
         calc_handles.append(h)
 
-    # Metal legend — always shown, coloured circles
+    fig.legend(handles=calc_handles, title="Calculator",
+               loc="upper left",
+               bbox_to_anchor=(0.01, 1.02),
+               ncol=len(calc_handles),
+               fontsize=9, title_fontsize=9,
+               frameon=True)
+
+    # ── Metal legend (upper right) ───────────────────────────────────────────
     metal_handles = [
         plt.Line2D([0], [0], marker="o", color="w",
                    markerfacecolor=c, markeredgecolor="k",
@@ -361,26 +370,14 @@ def make_figure(functionals, calc_pairs_per_func, dft_data, ml_data,
         for m, c in METAL_COLORS.items()
         if any(k[0].startswith(m) for k in all_pairs)
     ]
+    fig.legend(handles=metal_handles, title="Metal",
+               loc="upper right",
+               bbox_to_anchor=(0.99, 1.02),
+               ncol=len(metal_handles),
+               fontsize=9, title_fontsize=9,
+               frameon=True)
 
-    # Place Calculator legend upper-left area, Metal legend upper-right area
-    leg_calc = fig.legend(
-        handles=calc_handles, title="Calculator",
-        loc="upper left",
-        bbox_to_anchor=(0.01, 1.02),
-        ncol=len(calc_handles),
-        fontsize=9, title_fontsize=9,
-        frameon=True,
-    )
-    leg_metal = fig.legend(
-        handles=metal_handles, title="Metal",
-        loc="upper right",
-        bbox_to_anchor=(0.99, 1.02),
-        ncol=len(metal_handles),
-        fontsize=9, title_fontsize=9,
-        frameon=True,
-    )
-
-    # Molecule legend — bottom centre
+    # ── Molecule legend (bottom centre) ─────────────────────────────────────
     mol_handles = [
         plt.Line2D([0], [0], marker=mk, color="w",
                    markerfacecolor="grey", markeredgecolor="k",
@@ -389,14 +386,12 @@ def make_figure(functionals, calc_pairs_per_func, dft_data, ml_data,
         if any(k[1] == mol for k in all_pairs)
     ]
     if mol_handles:
-        fig.legend(
-            handles=mol_handles, title="Molecule",
-            loc="lower center",
-            bbox_to_anchor=(0.5, -0.04),
-            ncol=min(len(mol_handles), 6),
-            fontsize=8, title_fontsize=8,
-            frameon=True,
-        )
+        fig.legend(handles=mol_handles, title="Molecule",
+                   loc="lower center",
+                   bbox_to_anchor=(0.5, -0.04),
+                   ncol=min(len(mol_handles), 6),
+                   fontsize=8, title_fontsize=8,
+                   frameon=True)
 
     window_str = f"axis window: [{axis_min:.1f}, {axis_max:.1f}] eV"
     fig.suptitle(
@@ -420,9 +415,8 @@ def main():
     parser = argparse.ArgumentParser(
         description=(
             "2×2 parity plot: GOAD+MLIP vs DFT, one panel per DFT functional.\n"
-            "Panel order: PBE → PBE+D3 → BEEF-vdW → r²SCAN.\n"
-            "Metal colour + molecule marker always shown; "
-            "all legends placed outside panels."
+            "Colour = metal, marker = molecule, fill = calculator.\n"
+            "SevenNet = filled; MatterSim = hollow."
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
