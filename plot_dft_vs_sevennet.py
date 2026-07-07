@@ -24,7 +24,7 @@ Reads
 Output
 ------
   PNG : 2×2 subplot figure
-  CSV : optional flat table of matched pairs
+  CSV : optional flat table of matched pairs (after all filters)
 
 Usage
 -----
@@ -34,6 +34,10 @@ Usage
         --output results/dft_vs_mlip_all.png \\
         --csv-out results/dft_vs_mlip_all.csv
 
+    # Exclude pairs where |E_ads_DFT - E_ads_ML| > 5 eV (default)
+    python plot_dft_vs_sevennet.py --max-diff 5.0
+
+    # Override axis limits
     python plot_dft_vs_sevennet.py --axis-min -3.0 --axis-max 0.5
 """
 
@@ -119,7 +123,8 @@ MOLECULE_MARKERS = {
 
 DEFAULT_AXIS_MIN = -2.5
 DEFAULT_AXIS_MAX =  0.3
-BAND_WIDTH = 0.2
+DEFAULT_MAX_DIFF =  5.0   # eV  — pairs with |DFT - ML| > this are excluded
+BAND_WIDTH       =  0.2
 
 
 # ---------------------------------------------------------------------------
@@ -186,6 +191,59 @@ def load_ml_best(path: Path, calculators: list) -> dict:
 
 
 # ---------------------------------------------------------------------------
+# Diff filter
+# ---------------------------------------------------------------------------
+
+def apply_max_diff_filter(dft_data: dict, ml_data: dict,
+                           max_diff: float) -> tuple:
+    """
+    Returns filtered copies of dft_data and ml_data.
+
+    A (surface, molecule) key is removed from dft_data[func] if, for ANY
+    calculator, |E_ads_DFT - E_ads_ML| > max_diff.  This keeps the DFT
+    dataset consistent across calculators within each functional.
+
+    Prints a summary of how many pairs were removed per functional.
+    """
+    if max_diff is None or max_diff <= 0:
+        return dft_data, ml_data
+
+    filtered_dft = {}
+    total_removed = 0
+
+    for func, dft_vals in dft_data.items():
+        keep = {}
+        removed = []
+        for key, e_dft in dft_vals.items():
+            drop = False
+            for calc_vals in ml_data.values():
+                e_ml = calc_vals.get(key)
+                if e_ml is not None and abs(e_dft - e_ml) > max_diff:
+                    drop = True
+                    break
+            if drop:
+                removed.append((key, e_dft))
+            else:
+                keep[key] = e_dft
+
+        if removed:
+            fl = FUNC_LABELS.get(func, func)
+            print(f"  [{fl}] removed {len(removed)} pair(s) with |diff| > {max_diff} eV:")
+            for (surf, mol), e in removed:
+                print(f"    {surf}_{mol}  E_DFT={e:.3f} eV")
+            total_removed += len(removed)
+
+        filtered_dft[func] = keep
+
+    if total_removed:
+        print(f"  Total removed: {total_removed} pair(s)\n")
+    else:
+        print(f"  No pairs exceeded max-diff={max_diff} eV\n")
+
+    return filtered_dft, ml_data
+
+
+# ---------------------------------------------------------------------------
 # Stats (in-window only)
 # ---------------------------------------------------------------------------
 
@@ -215,12 +273,6 @@ def compute_stats(dft_vals, ml_vals, pairs, axis_min, axis_max):
 
 def _plot_panel(ax, func, func_label, calc_pairs, dft_vals, ml_data,
                 axis_min, axis_max):
-    """
-    Encoding:
-      colour → metal surface
-      marker → molecule
-      fill   → calculator  (filled = SevenNet / full; hollow = MatterSim / none)
-    """
     n_plotted = 0
 
     for calc, pairs in calc_pairs.items():
@@ -240,7 +292,6 @@ def _plot_panel(ax, func, func_label, calc_pairs, dft_vals, ml_data,
             marker = MOLECULE_MARKERS.get(mol, "o")
 
             if fill == "none":
-                # hollow: no fill, metal-coloured edge
                 ax.scatter(x, y,
                            facecolors="none",
                            edgecolors=mcolor,
@@ -248,7 +299,6 @@ def _plot_panel(ax, func, func_label, calc_pairs, dft_vals, ml_data,
                            linewidths=lw,
                            alpha=0.9, zorder=3)
             else:
-                # filled: metal colour fill, thin black edge
                 ax.scatter(x, y,
                            facecolors=mcolor,
                            edgecolors="k",
@@ -264,7 +314,6 @@ def _plot_panel(ax, func, func_label, calc_pairs, dft_vals, ml_data,
         ax.set_aspect("equal")
         return
 
-    # Parity line + band
     ax.plot([axis_min, axis_max], [axis_min, axis_max], "k--", lw=1.2, zorder=2)
     ax.fill_between(
         [axis_min, axis_max],
@@ -273,7 +322,6 @@ def _plot_panel(ax, func, func_label, calc_pairs, dft_vals, ml_data,
         color="grey", alpha=0.12, zorder=1
     )
 
-    # Stats box (lower right)
     stat_lines = []
     for calc, pairs in calc_pairs.items():
         matched = [(s, m) for (s, m) in pairs
@@ -309,7 +357,8 @@ def _plot_panel(ax, func, func_label, calc_pairs, dft_vals, ml_data,
 # ---------------------------------------------------------------------------
 
 def make_figure(functionals, calc_pairs_per_func, dft_data, ml_data,
-                calculators, output_path: Path, axis_min, axis_max):
+                calculators, output_path: Path, axis_min, axis_max,
+                max_diff):
 
     n = len(functionals)
     ncols = 2
@@ -337,12 +386,11 @@ def make_figure(functionals, calc_pairs_per_func, dft_data, ml_data,
     all_pairs = [p for fp in calc_pairs_per_func.values()
                  for pairs in fp.values() for p in pairs]
 
-    # ── Calculator legend (upper left) ──────────────────────────────────────
+    # Calculator legend (upper left)
     calc_handles = []
     for calc in calculators:
         fill  = CALC_FILL.get(calc, "full")
         label = CALC_LABELS.get(calc, calc)
-        # Use a neutral grey colour so the legend shows fill vs hollow clearly
         if fill == "none":
             h = plt.Line2D([0], [0], marker="o", color="w",
                            markerfacecolor="none",
@@ -356,13 +404,11 @@ def make_figure(functionals, calc_pairs_per_func, dft_data, ml_data,
         calc_handles.append(h)
 
     fig.legend(handles=calc_handles, title="Calculator",
-               loc="upper left",
-               bbox_to_anchor=(0.01, 1.02),
-               ncol=len(calc_handles),
-               fontsize=9, title_fontsize=9,
+               loc="upper left", bbox_to_anchor=(0.01, 1.02),
+               ncol=len(calc_handles), fontsize=9, title_fontsize=9,
                frameon=True)
 
-    # ── Metal legend (upper right) ───────────────────────────────────────────
+    # Metal legend (upper right)
     metal_handles = [
         plt.Line2D([0], [0], marker="o", color="w",
                    markerfacecolor=c, markeredgecolor="k",
@@ -371,13 +417,11 @@ def make_figure(functionals, calc_pairs_per_func, dft_data, ml_data,
         if any(k[0].startswith(m) for k in all_pairs)
     ]
     fig.legend(handles=metal_handles, title="Metal",
-               loc="upper right",
-               bbox_to_anchor=(0.99, 1.02),
-               ncol=len(metal_handles),
-               fontsize=9, title_fontsize=9,
+               loc="upper right", bbox_to_anchor=(0.99, 1.02),
+               ncol=len(metal_handles), fontsize=9, title_fontsize=9,
                frameon=True)
 
-    # ── Molecule legend (bottom centre) ─────────────────────────────────────
+    # Molecule legend (bottom centre)
     mol_handles = [
         plt.Line2D([0], [0], marker=mk, color="w",
                    markerfacecolor="grey", markeredgecolor="k",
@@ -387,16 +431,15 @@ def make_figure(functionals, calc_pairs_per_func, dft_data, ml_data,
     ]
     if mol_handles:
         fig.legend(handles=mol_handles, title="Molecule",
-                   loc="lower center",
-                   bbox_to_anchor=(0.5, -0.04),
+                   loc="lower center", bbox_to_anchor=(0.5, -0.04),
                    ncol=min(len(mol_handles), 6),
-                   fontsize=8, title_fontsize=8,
-                   frameon=True)
+                   fontsize=8, title_fontsize=8, frameon=True)
 
+    diff_str = f"|diff| ≤ {max_diff} eV" if max_diff else "no diff filter"
     window_str = f"axis window: [{axis_min:.1f}, {axis_max:.1f}] eV"
     fig.suptitle(
         f"DFT vs {ml_label}  —  Adsorption Energies (all functionals)\n"
-        f"{window_str}",
+        f"{window_str}   |   {diff_str}",
         fontsize=12, fontweight="bold", y=1.04
     )
 
@@ -416,7 +459,8 @@ def main():
         description=(
             "2×2 parity plot: GOAD+MLIP vs DFT, one panel per DFT functional.\n"
             "Colour = metal, marker = molecule, fill = calculator.\n"
-            "SevenNet = filled; MatterSim = hollow."
+            "SevenNet = filled; MatterSim = hollow.\n"
+            "Use --max-diff to exclude pairs where |E_DFT - E_ML| exceeds a threshold."
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
@@ -437,6 +481,13 @@ def main():
         help=f"Shared axis maximum in eV (default: {DEFAULT_AXIS_MAX})"
     )
     parser.add_argument(
+        "--max-diff", type=float, default=DEFAULT_MAX_DIFF,
+        help=(
+            f"Exclude pairs where |E_ads_DFT - E_ads_ML| > this value (eV). "
+            f"Default: {DEFAULT_MAX_DIFF}. Set to 0 to disable."
+        )
+    )
+    parser.add_argument(
         "--output", default="results/dft_vs_mlip_all_functionals.png"
     )
     parser.add_argument("--csv-out", default=None)
@@ -454,10 +505,15 @@ def main():
     print(f"ML CSV     : {ml_path}")
     print(f"Calculators: {[CALC_LABELS.get(c, c) for c in args.calculators]}")
     print(f"Axis window: [{args.axis_min:.1f}, {args.axis_max:.1f}] eV")
+    print(f"Max diff   : {args.max_diff} eV  ({'disabled' if not args.max_diff else 'active'})")
     print()
 
     dft_data = load_dft_all(dft_path)
     ml_data  = load_ml_best(ml_path, args.calculators)
+
+    # Apply |diff| filter before anything else
+    print("Applying max-diff filter...")
+    dft_data, ml_data = apply_max_diff_filter(dft_data, ml_data, args.max_diff)
 
     if args.functionals:
         functionals = [normalise_func(f) for f in args.functionals]
@@ -515,7 +571,7 @@ def main():
 
     make_figure(functionals, calc_pairs_per_func, dft_data, ml_data,
                 args.calculators, Path(args.output),
-                args.axis_min, args.axis_max)
+                args.axis_min, args.axis_max, args.max_diff)
 
     if args.csv_out:
         Path(args.csv_out).parent.mkdir(parents=True, exist_ok=True)
