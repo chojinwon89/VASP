@@ -9,14 +9,19 @@ wrap to the edges via PBC.
 Z-placement rationale
 ---------------------
 The GA encodes the molecule's centre-of-mass (COM) position, but
-we bias the *initial* orientation so that the lowest oxygen atom
-(after random rotation) is placed at surface_z_max + o_target_z
-(default 2.3 Å — the known O–metal equilibrium distance).
+we bias the *initial* orientation so that the chemically relevant
+surface-facing atom is placed at a physically motivated distance:
 
-This guarantees every generation-0 individual has an oxygen close
-to the surface, giving a real energy gradient from the very first
-evaluation instead of wasting 30+ generations on a flat landscape
-with oxygens pointing away from the surface.
+  - Molecules WITH oxygen  : lowest O atom placed at surface_z_max + o_target_z
+                             (default 2.3 Å — known O–metal equilibrium distance)
+  - Molecules WITHOUT oxygen but WITH carbon : lowest C atom placed at
+                             surface_z_max + c_target_z
+                             (default 2.1 Å — known C–metal equilibrium distance)
+  - Molecules with neither O nor C (edge case): lowest atom used with c_target_z
+
+This guarantees every generation-0 individual has the reactive atom close
+to the surface, giving a real energy gradient from the very first evaluation
+instead of wasting 30+ generations on a flat landscape.
 
 Early stopping
 --------------
@@ -28,12 +33,12 @@ _create_system rotation order
 ------------------------------
 IMPORTANT: rotation must happen BEFORE translation to the target COM.
   1. Centre molecule at origin
-  2. Rotate around origin  (preserves the O-facing-down orientation)
+  2. Rotate around origin  (preserves the O/C-facing-down orientation)
   3. Translate COM to target position
 
 Doing rotation AFTER translation would spin the molecule around its
 displaced COM, randomising which atom ends up lowest and defeating
-the O-bias encoded in _initialize_population.
+the O/C-bias encoded in _initialize_population.
 """
 
 import os
@@ -180,7 +185,10 @@ class GeneticAlgorithm:
     - Only molecule position and orientation vary
     - Support for molecular torsions
     - Molecule kept inside the central unit cell (no edge-wrapping)
-    - Initial population biased so lowest O faces the surface at o_target_z
+    - Initial population biased so the reactive atom faces the surface:
+        * Has O atoms  -> lowest O at o_target_z = 2.3 Å above surface
+        * No O, has C  -> lowest C at c_target_z = 2.1 Å above surface
+        * Neither      -> lowest atom at c_target_z
     - Early stopping when best energy has not improved by > early_stop_tol eV
       in the last early_stop_patience generations (default: 30 gens, 0.001 eV)
     """
@@ -196,6 +204,7 @@ class GeneticAlgorithm:
                  center_in_cell: bool = True,
                  n_workers: Optional[int] = None,
                  o_target_z: float = 2.3,
+                 c_target_z: float = 2.1,
                  early_stop_patience: int = 30,
                  early_stop_tol: float = 0.001):
         """
@@ -225,9 +234,14 @@ class GeneticAlgorithm:
                        GOAD_N_WORKERS env var, SLURM_CPUS_PER_TASK, os.cpu_count().
                        NOTE: always forced to 1 when a CUDA device is present to
                        avoid ProcessPoolExecutor / CUDA context deadlocks.
-            o_target_z: Target distance (Å) between the lowest oxygen atom and
-                        the surface top layer in the initial population.
-                        Default 2.3 Å — the known O–metal equilibrium distance.
+            o_target_z: Target distance (Å) between the lowest O atom and the
+                        surface top layer in the initial population.
+                        Default 2.3 Å — known O–metal equilibrium distance.
+                        Used when molecule HAS oxygen atoms.
+            c_target_z: Target distance (Å) between the lowest C atom and the
+                        surface top layer in the initial population.
+                        Default 2.1 Å — known C–metal equilibrium distance.
+                        Used when molecule has NO oxygen atoms (pure hydrocarbons).
             early_stop_patience: Stop if best energy has not improved by more
                                  than early_stop_tol eV in this many consecutive
                                  generations. Default 30.
@@ -257,8 +271,9 @@ class GeneticAlgorithm:
         self._user_search_radius = search_radius
         self.n_workers = self._resolve_worker_count(n_workers)
 
-        # O-facing-surface target distance
-        self.o_target_z = o_target_z
+        # Z-placement target distances
+        self.o_target_z = o_target_z   # O–metal: 2.3 Å
+        self.c_target_z = c_target_z   # C–metal: 2.1 Å
 
         # Early stopping
         self.early_stop_patience = early_stop_patience
@@ -275,6 +290,27 @@ class GeneticAlgorithm:
             logger.info(f"Molecule has {self.n_torsions} rotatable bonds")
         else:
             logger.info("Molecule has no rotatable bonds (rigid)")
+
+        # Determine placement strategy once at init time and log it
+        symbols = self.molecule.get_chemical_symbols()
+        self._o_idx = [i for i, s in enumerate(symbols) if s == 'O']
+        self._c_idx = [i for i, s in enumerate(symbols) if s == 'C']
+
+        if self._o_idx:
+            self._placement_mode = 'O'
+            self._placement_target_z = self.o_target_z
+            logger.info(f"Placement mode: O-facing-surface  "
+                        f"(target {self.o_target_z:.2f} Å, {len(self._o_idx)} O atoms)")
+        elif self._c_idx:
+            self._placement_mode = 'C'
+            self._placement_target_z = self.c_target_z
+            logger.info(f"Placement mode: C-facing-surface  "
+                        f"(target {self.c_target_z:.2f} Å, {len(self._c_idx)} C atoms, no O)")
+        else:
+            self._placement_mode = 'any'
+            self._placement_target_z = self.c_target_z
+            logger.warning("No O or C atoms found — using lowest atom with "
+                           f"c_target_z={self.c_target_z:.2f} Å as fallback")
 
         # Population and history
         self.population = []
@@ -330,11 +366,10 @@ class GeneticAlgorithm:
                     f"tol={self.early_stop_tol} eV")
         logger.info("Surface: FIXED during GA search (will relax in post-GA BFGS)")
         logger.info("Molecule: FREE TO MOVE")
-        logger.info(f"\nInitial placement strategy:")
-        logger.info(f"  Random rotation applied first, then lowest O placed at")
-        logger.info(f"  surface_z_max + {self.o_target_z:.1f} Å = "
-                    f"{self.surface_z_max + self.o_target_z:.2f} Å")
-        logger.info(f"  (COM Z is back-calculated from lowest-O position)")
+        logger.info(f"\nInitial placement strategy: {self._placement_mode}-facing-surface")
+        logger.info(f"  Target distance : {self._placement_target_z:.2f} Å")
+        logger.info(f"  Target Z abs    : "
+                    f"{self.surface_z_max + self._placement_target_z:.2f} Å")
         logger.info(f"\nMutation Z clamp (COM above surface_z_max):")
         logger.info(f"  [{self.surface_z_max + self.surface_buffer:.2f}, "
                     f"{self.surface_z_max + self.max_height:.2f}] Å")
@@ -386,37 +421,32 @@ class GeneticAlgorithm:
     # ------------------------------------------------------------------
     # Initial population
     # ------------------------------------------------------------------
-    def _o_indices(self, atoms: Atoms) -> List[int]:
-        """Return indices of oxygen atoms in *atoms*."""
-        return [i for i, s in enumerate(atoms.get_chemical_symbols()) if s == 'O']
-
     def _initialize_population(self):
         """
-        Initialize population with O-facing-surface bias.
+        Initialize population with chemically informed surface-facing bias.
+
+        Placement priority:
+          1. Molecule has O atoms  -> lowest O placed at surface_z_max + o_target_z (2.3 Å)
+          2. No O, has C atoms     -> lowest C placed at surface_z_max + c_target_z (2.1 Å)
+          3. Neither               -> lowest atom placed at surface_z_max + c_target_z
 
         For each individual:
           1. Apply random torsions (if any)
           2. Centre molecule at origin
           3. Apply random Euler rotation (around origin)
-          4. Find the lowest O atom in the rotated molecule
-          5. Set COM Z so that lowest O lands at surface_z_max + o_target_z
-          6. Record (x, y, com_z) as the genome position and euler_angles
-             as the genome orientation
-
-        _create_system then reproduces this exactly by:
-          centre → rotate (same euler_angles) → translate to (x, y, com_z)
-
-        If the molecule has no oxygen atoms (e.g. pure hydrocarbon),
-        we fall back to using the lowest atom instead.
+          4. Find the lowest relevant atom (O > C > any) in the rotated molecule
+          5. Set COM Z so that atom lands at surface_z_max + target_z
+          6. Record (x, y, com_z) as the genome position
         """
-        logger.info("Initializing population (O-facing-surface bias)...")
-        logger.info(f"  Target O–surface distance : {self.o_target_z:.2f} Å")
-        logger.info(f"  Target O Z absolute       : "
-                    f"{self.surface_z_max + self.o_target_z:.2f} Å")
+        mode_label = {
+            'O':   f"O-facing-surface (target {self.o_target_z:.2f} Å)",
+            'C':   f"C-facing-surface (target {self.c_target_z:.2f} Å)",
+            'any': f"lowest-atom fallback (target {self.c_target_z:.2f} Å)",
+        }[self._placement_mode]
 
-        o_idx = self._o_indices(self.molecule)
-        if not o_idx:
-            logger.warning("No O atoms found — using lowest atom for Z placement")
+        logger.info(f"Initializing population — {mode_label}")
+        logger.info(f"  Target Z absolute: "
+                    f"{self.surface_z_max + self._placement_target_z:.2f} Å")
 
         for _ in range(self.population_size):
             x = self.surface_center_xy[0] + np.random.uniform(
@@ -435,17 +465,16 @@ class GeneticAlgorithm:
             mol_tmp.translate(-mol_tmp.get_center_of_mass())   # centre at origin
             self._apply_rotation(mol_tmp, euler_angles)         # rotate around origin
 
-            if o_idx:
-                lowest_o_z = mol_tmp.positions[o_idx, 2].min()
+            # Pick the lowest atom of the relevant element type
+            if self._placement_mode == 'O':
+                lowest_z = mol_tmp.positions[self._o_idx, 2].min()
+            elif self._placement_mode == 'C':
+                lowest_z = mol_tmp.positions[self._c_idx, 2].min()
             else:
-                lowest_o_z = mol_tmp.positions[:, 2].min()
+                lowest_z = mol_tmp.positions[:, 2].min()
 
-            # COM Z so that the lowest O lands at surface_z_max + o_target_z
-            # After centring at origin, COM is at (0,0,0), so:
-            #   lowest_o_z is relative to origin
-            #   target absolute Z of lowest O = surface_z_max + o_target_z
-            #   therefore COM Z = surface_z_max + o_target_z - lowest_o_z
-            com_z = self.surface_z_max + self.o_target_z - lowest_o_z
+            # COM Z so that the target atom lands at surface_z_max + target_z
+            com_z = self.surface_z_max + self._placement_target_z - lowest_z
 
             individual = {
                 'position':    np.array([x, y, com_z]),
@@ -573,7 +602,7 @@ class GeneticAlgorithm:
         Order is critical:
           1. Apply torsions (if any)
           2. Centre molecule at origin
-          3. Rotate around origin   ← preserves O-facing-down orientation
+          3. Rotate around origin   <- preserves O/C-facing-down orientation
           4. Translate COM to target position
           5. (optional) snap COM back into unit cell in XY
         """
