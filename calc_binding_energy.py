@@ -4,11 +4,19 @@ calc_binding_energy.py
 ======================
 Calculate DFT adsorption (binding) energies from VASP OUTCARs.
 
-Directory layout expected
--------------------------
-    poscar/best/<surface>_<molecule>/OUTCAR   ← slab + adsorbed molecule
-    vasp_slab/<surface>/OUTCAR                ← clean slab reference
-    vasp_mol/<molecule>/OUTCAR                ← gas-phase molecule reference
+Directory layouts supported
+---------------------------
+Flat layout (original):
+    poscar/best/<surface>_<molecule>/OUTCAR
+    vasp_slab/<surface>/OUTCAR
+    vasp_mol/<molecule>/OUTCAR
+
+Per-functional subdirectory layout (your actual layout):
+    poscar/best/<surface>_<molecule>/<functional>/OUTCAR
+    vasp_slab/<surface>/<functional>/OUTCAR
+    vasp_mol/<molecule>/<functional>/OUTCAR
+
+    Use --functional <name> to append the subdirectory automatically.
 
 Formula
 -------
@@ -16,16 +24,16 @@ Formula
 
 Usage
 -----
-    # Auto-discover everything under poscar/best/
-    python calc_binding_energy.py
+    # Single functional (subdirectory layout)
+    python calc_binding_energy.py --functional PBE_D3 \\
+        --output dft_binding_energies_pbe_d3.csv
 
-    # Custom paths
-    python calc_binding_energy.py \
-        --best-dirs poscar/best poscar/best2 \
-        --slab-dir vasp_slab \
-        --mol-dir  vasp_mol
+    # All four functionals at once → dft_binding_energies_all.csv
+    python calc_binding_energy.py --all-functionals \\
+        --functionals beef_vdw PBE PBE_D3 r2scan \\
+        --output dft_binding_energies_all.csv
 
-    # Save results to CSV
+    # Flat layout (original behaviour)
     python calc_binding_energy.py --output dft_binding_energies.csv
 """
 
@@ -33,6 +41,30 @@ import argparse
 import csv
 import sys
 from pathlib import Path
+
+
+# ---------------------------------------------------------------------------
+# Functional name normalisation  (directory name → canonical key)
+# ---------------------------------------------------------------------------
+
+FUNC_NORMALISE = {
+    "pbe":       "pbe",
+    "PBE":       "pbe",
+    "pbe_d3":    "pbe_d3",
+    "PBE_D3":    "pbe_d3",
+    "pbe+d3":    "pbe_d3",
+    "PBE+D3":    "pbe_d3",
+    "r2scan":    "r2scan",
+    "R2SCAN":    "r2scan",
+    "beef_vdw":  "beef_vdw",
+    "BEEF_VDW":  "beef_vdw",
+    "beef-vdw":  "beef_vdw",
+    "BEEF-vdW":  "beef_vdw",
+}
+
+
+def normalise_func(name: str) -> str:
+    return FUNC_NORMALISE.get(name, name.lower().replace("+", "_").replace("-", "_"))
 
 
 # ---------------------------------------------------------------------------
@@ -86,7 +118,6 @@ def parse_surface_molecule(dir_name: str):
             surface = f"{metal}{facet}"
             if dir_name.startswith(surface + "_"):
                 remainder = dir_name[len(surface) + 1:]
-                # Strip trailing _seed<N> if present
                 molecule = remainder.split("_seed")[0]
                 return surface, molecule
 
@@ -99,27 +130,34 @@ def parse_surface_molecule(dir_name: str):
 
 
 # ---------------------------------------------------------------------------
-# Main calculation
+# Main calculation (one functional)
 # ---------------------------------------------------------------------------
 
-def calc_binding_energies(best_dirs, slab_dir: Path, mol_dir: Path):
+def calc_binding_energies(best_dirs, slab_dir: Path, mol_dir: Path,
+                          functional: str = None):
     """
     Walk one or more best directories, compute E_ads for each system.
+
+    If *functional* is given, OUTCARs are read from:
+        <job_dir>/<functional>/OUTCAR      (slab+mol)
+        <slab_dir>/<surface>/<functional>/OUTCAR
+        <mol_dir>/<molecule>/<functional>/OUTCAR
+
     Returns list of dicts with keys:
-        system, surface, molecule, source_dir,
-        E_slab_mol, E_slab, E_mol, E_ads,
-        status, note
+        functional, system, surface, molecule, source_dir,
+        E_slab_mol, E_slab, E_mol, E_ads, status, note
     """
     results = []
+    func_key = normalise_func(functional) if functional else None
 
     for best_dir in best_dirs:
         job_dirs = sorted(
             d for d in best_dir.iterdir()
-            if d.is_dir() and (d / "OUTCAR").exists()
+            if d.is_dir()
         )
 
         if not job_dirs:
-            print(f"No OUTCAR-containing directories found under {best_dir}")
+            print(f"No subdirectories found under {best_dir}")
             continue
 
         for job_dir in job_dirs:
@@ -127,6 +165,7 @@ def calc_binding_energies(best_dirs, slab_dir: Path, mol_dir: Path):
             surface, molecule = parse_surface_molecule(system)
 
             row = {
+                "functional": func_key or "default",
                 "system":     system,
                 "surface":    surface,
                 "molecule":   molecule,
@@ -141,15 +180,24 @@ def calc_binding_energies(best_dirs, slab_dir: Path, mol_dir: Path):
 
             notes = []
 
+            # Build OUTCAR paths — flat or with functional subdirectory
+            if functional:
+                slab_mol_outcar = job_dir / functional / "OUTCAR"
+                slab_outcar     = slab_dir / surface  / functional / "OUTCAR"
+                mol_outcar      = mol_dir  / molecule / functional / "OUTCAR"
+            else:
+                slab_mol_outcar = job_dir / "OUTCAR"
+                slab_outcar     = slab_dir / surface  / "OUTCAR"
+                mol_outcar      = mol_dir  / molecule / "OUTCAR"
+
             # 1) Slab + molecule energy
             try:
-                row["E_slab_mol"] = read_energy_from_outcar(job_dir / "OUTCAR")
+                row["E_slab_mol"] = read_energy_from_outcar(slab_mol_outcar)
             except (FileNotFoundError, ValueError) as e:
                 notes.append(f"slab+mol: {e}")
                 row["status"] = "error"
 
             # 2) Clean slab energy
-            slab_outcar = slab_dir / surface / "OUTCAR"
             try:
                 row["E_slab"] = read_energy_from_outcar(slab_outcar)
             except (FileNotFoundError, ValueError) as e:
@@ -157,7 +205,6 @@ def calc_binding_energies(best_dirs, slab_dir: Path, mol_dir: Path):
                 row["status"] = "error"
 
             # 3) Gas molecule energy
-            mol_outcar = mol_dir / molecule / "OUTCAR"
             try:
                 row["E_mol"] = read_energy_from_outcar(mol_outcar)
             except (FileNotFoundError, ValueError) as e:
@@ -179,21 +226,25 @@ def calc_binding_energies(best_dirs, slab_dir: Path, mol_dir: Path):
 # Output helpers
 # ---------------------------------------------------------------------------
 
-def print_table(results):
+def print_table(results, functional=None):
     """Pretty-print results to stdout."""
+    func_label = f"  [{functional}]" if functional else ""
     header = (
-        f"{'System':<35} {'Source':<18} {'E(slab+mol)':>14} {'E(slab)':>14} "
+        f"{'System':<35} {'Functional':<10} {'E(slab+mol)':>14} {'E(slab)':>14} "
         f"{'E(mol)':>12} {'E_ads(eV)':>12}  Status"
     )
     print()
+    print(f"{'─'*len(header)}")
+    if func_label:
+        print(f"Functional: {functional}{func_label}")
     print(header)
-    print("-" * len(header))
+    print("─" * len(header))
 
     for r in results:
         if r["status"] == "ok":
             print(
                 f"{r['system']:<35} "
-                f"{Path(r['source_dir']).name:<18} "
+                f"{r['functional']:<10} "
                 f"{r['E_slab_mol']:>14.6f} "
                 f"{r['E_slab']:>14.6f} "
                 f"{r['E_mol']:>12.6f} "
@@ -201,12 +252,11 @@ def print_table(results):
             )
         else:
             print(
-                f"{r['system']:<35} {Path(r['source_dir']).name:<18} {'---':>14} {'---':>14} "
+                f"{r['system']:<35} {r['functional']:<10} {'---':>14} {'---':>14} "
                 f"{'---':>12} {'---':>12}  ERROR: {r['note']}"
             )
 
     print()
-
     ok_results = [r for r in results if r["status"] == "ok"]
     if ok_results:
         print(f"Summary: {len(ok_results)}/{len(results)} systems computed successfully")
@@ -220,18 +270,21 @@ def print_table(results):
     print()
 
 
-def write_csv(results, output_path: Path):
+def write_csv(results, output_path: Path, include_functional: bool = True):
     """Write results to CSV."""
     fields = [
-        "system", "surface", "molecule", "source_dir",
+        "functional", "system", "surface", "molecule", "source_dir",
         "E_slab_mol", "E_slab", "E_mol", "E_ads",
         "status", "note",
     ]
+    if not include_functional:
+        fields = [f for f in fields if f != "functional"]
+
     with output_path.open("w", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=fields)
+        writer = csv.DictWriter(f, fieldnames=fields, extrasaction="ignore")
         writer.writeheader()
         writer.writerows(results)
-    print(f"Results saved to: {output_path}")
+    print(f"Results saved to: {output_path}  ({len(results)} rows)")
 
 
 # ---------------------------------------------------------------------------
@@ -240,12 +293,27 @@ def write_csv(results, output_path: Path):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Calculate DFT adsorption energies from VASP OUTCARs."
+        description="Calculate DFT adsorption energies from VASP OUTCARs.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples
+--------
+  # Single functional (subdirectory layout)
+  python calc_binding_energy.py --functional PBE_D3 \\
+      --output dft_binding_energies_pbe_d3.csv
+
+  # All functionals at once → dft_binding_energies_all.csv
+  python calc_binding_energy.py --all-functionals \\
+      --functionals beef_vdw PBE PBE_D3 r2scan \\
+      --output dft_binding_energies_all.csv
+
+  # Flat layout (no functional subdir)
+  python calc_binding_energy.py --output dft_binding_energies.csv
+"""
     )
     parser.add_argument(
         "--best-dirs", nargs="+", default=["poscar/best"],
-        help="One or more directories containing slab+molecule VASP jobs "
-             "(default: poscar/best)"
+        help="Directories containing slab+molecule VASP jobs (default: poscar/best)"
     )
     parser.add_argument(
         "--slab-dir", default="vasp_slab",
@@ -256,16 +324,41 @@ def main():
         help="Directory containing gas molecule VASP jobs (default: vasp_mol)"
     )
     parser.add_argument(
+        "--functional", default=None,
+        metavar="NAME",
+        help=(
+            "Functional subdirectory name to append to all paths "
+            "(e.g. PBE_D3, r2scan, beef_vdw, PBE). "
+            "Omit for flat layout."
+        )
+    )
+    parser.add_argument(
+        "--all-functionals", action="store_true",
+        help=(
+            "Run for all functionals listed in --functionals and merge "
+            "into a single CSV with a 'functional' column."
+        )
+    )
+    parser.add_argument(
+        "--functionals", nargs="+",
+        default=["beef_vdw", "PBE", "PBE_D3", "r2scan"],
+        metavar="NAME",
+        help=(
+            "Functional subdirectory names to use with --all-functionals. "
+            "Default: beef_vdw PBE PBE_D3 r2scan"
+        )
+    )
+    parser.add_argument(
         "--output", default=None,
         help="Save results to this CSV file (default: print to screen only)"
     )
     args = parser.parse_args()
 
     best_dirs = [Path(d) for d in args.best_dirs]
-    slab_dir = Path(args.slab_dir)
-    mol_dir  = Path(args.mol_dir)
+    slab_dir  = Path(args.slab_dir)
+    mol_dir   = Path(args.mol_dir)
 
-    # Validate directories
+    # Validate base directories
     missing = [str(d) for d in [*best_dirs, slab_dir, mol_dir] if not d.exists()]
     if missing:
         print("ERROR: The following directories were not found:")
@@ -276,21 +369,44 @@ def main():
         print("Use --best-dirs / --slab-dir / --mol-dir to override defaults.")
         sys.exit(1)
 
-    for d in best_dirs:
-        print(f"slab+mol jobs : {d}")
-    print(f"slab refs     : {slab_dir}")
-    print(f"molecule refs : {mol_dir}")
+    # ── All-functionals mode ────────────────────────────────────────────────
+    if args.all_functionals:
+        all_results = []
+        for func in args.functionals:
+            print(f"\n{'='*60}")
+            print(f"Processing functional: {func}  →  {normalise_func(func)}")
+            print(f"{'='*60}")
+            results = calc_binding_energies(best_dirs, slab_dir, mol_dir,
+                                            functional=func)
+            print_table(results, functional=func)
+            all_results.extend(results)
 
-    results = calc_binding_energies(best_dirs, slab_dir, mol_dir)
+        print(f"\nTotal rows across all functionals: {len(all_results)}")
+        if args.output:
+            write_csv(all_results, Path(args.output), include_functional=True)
+        return
+
+    # ── Single-functional or flat mode ─────────────────────────────────────
+    for d in best_dirs:
+        print(f"slab+mol jobs : {d}"
+              + (f"/{args.functional}" if args.functional else ""))
+    print(f"slab refs     : {slab_dir}"
+          + (f"/<surface>/{args.functional}" if args.functional else ""))
+    print(f"molecule refs : {mol_dir}"
+          + (f"/<molecule>/{args.functional}" if args.functional else ""))
+
+    results = calc_binding_energies(best_dirs, slab_dir, mol_dir,
+                                    functional=args.functional)
 
     if not results:
         print("No results computed.")
         sys.exit(0)
 
-    print_table(results)
+    print_table(results, functional=args.functional)
 
     if args.output:
-        write_csv(results, Path(args.output))
+        write_csv(results, Path(args.output),
+                  include_functional=bool(args.functional))
 
 
 if __name__ == "__main__":
