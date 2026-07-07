@@ -184,6 +184,49 @@ def step_timeout(seconds: int, label: str = "operation"):
 
 
 # ---------------------------------------------------------------------------
+# Distance diagnostics
+# ---------------------------------------------------------------------------
+
+def mol_surface_distances(system, n_surface_atoms, surface_z_max):
+    """
+    Compute molecule–surface distances for logging.
+
+    Returns a dict with:
+      z_min    : minimum vertical gap (Å) = lowest mol atom Z - surface_z_max
+      dist_3d  : minimum 3D distance (Å) between any mol atom and any surface atom
+      mol_atom : index (within molecule) of the closest mol atom (3D)
+      surf_atom: index (within surface)  of the closest surf atom (3D)
+    """
+    surf_pos = system.get_positions()[:n_surface_atoms]
+    mol_pos  = system.get_positions()[n_surface_atoms:]
+
+    # Vertical gap: lowest molecule atom Z minus surface top Z
+    z_min = mol_pos[:, 2].min() - surface_z_max
+
+    # 3D minimum distance (brute-force; slab is small enough)
+    diffs = mol_pos[:, np.newaxis, :] - surf_pos[np.newaxis, :, :]  # (Nm, Ns, 3)
+    dists = np.linalg.norm(diffs, axis=2)                            # (Nm, Ns)
+    mol_idx, surf_idx = np.unravel_index(dists.argmin(), dists.shape)
+
+    return {
+        "z_min":     float(z_min),
+        "dist_3d":   float(dists[mol_idx, surf_idx]),
+        "mol_atom":  int(mol_idx),
+        "surf_atom": int(surf_idx),
+    }
+
+
+def log_distances(label, system, n_surface_atoms, surface_z_max):
+    """Log both Z-gap and 3D minimum distance for a given structure."""
+    d = mol_surface_distances(system, n_surface_atoms, surface_z_max)
+    log.info(f"[{label}] Molecule–surface distances:")
+    log.info(f"  Z-gap (lowest mol atom above surface top) : {d['z_min']:+.3f} Å")
+    log.info(f"  3D minimum distance                       : {d['dist_3d']:.3f} Å"
+             f"  (mol atom {d['mol_atom']} ↔ surf atom {d['surf_atom']})")
+    return d
+
+
+# ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
@@ -227,6 +270,9 @@ def run_one_system(system, calc):
     log.info("\n" + sa.get_info_text())
     log.info("\n" + ma.get_info_text())
 
+    surface_z_max   = surface.get_positions()[:, 2].max()
+    n_surface_atoms = len(surface)
+
     # 2. Reference energies
     fix_bottom_layers(surface, sa, N_FIXED_LAYERS)
     surface_relaxed,  E_surf = relax(surface,  calc, RELAX_FMAX, RELAX_STEPS_REF,
@@ -262,6 +308,14 @@ def run_one_system(system, calc):
     log.info(f"\nBest GA seed: {best_overall['seed']}, "
              f"E_ads (pre-relax) = {best_overall['E_ads']:.4f} eV")
 
+    # --- Initial distance (best GA structure, before final BFGS) ---
+    d_initial = log_distances(
+        "GA best (pre-relax)",
+        best_overall["structure"],
+        n_surface_atoms,
+        surface_z_max,
+    )
+
     # 4. Final relaxation of best adsorbed configuration
     best_struct = best_overall["structure"].copy()
     fix_bottom_layers(best_struct, sa, N_FIXED_LAYERS)
@@ -270,6 +324,14 @@ def run_one_system(system, calc):
     E_ads_final = E_total - (E_surf + E_mol)
     log.info(f"FINAL E_ads = {E_ads_final:.4f} eV  "
              f"(E_total={E_total:.4f}, E_surf={E_surf:.4f}, E_mol={E_mol:.4f})")
+
+    # --- Final distance (after BFGS relaxation) ---
+    d_final = log_distances(
+        "Final (post-relax)",
+        final,
+        n_surface_atoms,
+        surface_z_max,
+    )
 
     # 5. Save GA history
     np.savetxt(f"{sysdir}/ga_history.txt", best_overall["history"],
@@ -288,6 +350,10 @@ def run_one_system(system, calc):
         "E_total_eV":        float(E_total),
         "E_ads_eV":          float(E_ads_final),
         "E_ads_pre_relax_eV": float(best_overall["E_ads"]),
+        "distances": {
+            "initial": d_initial,
+            "final":   d_final,
+        },
         "best_individual":   {
             "position":    best_overall["individual"]["position"].tolist(),
             "orientation": best_overall["individual"]["orientation"].tolist(),
@@ -336,6 +402,12 @@ def main():
     for e in entries:
         log.info(f"{e['system']}:  E_ads = {e['E_ads_eV']:.4f} eV  "
                  f"({e['calculator']})")
+        d = e.get("distances", {})
+        if d:
+            log.info(f"  Initial Z-gap: {d['initial']['z_min']:+.3f} Å  "
+                     f"3D: {d['initial']['dist_3d']:.3f} Å")
+            log.info(f"  Final   Z-gap: {d['final']['z_min']:+.3f} Å  "
+                     f"3D: {d['final']['dist_3d']:.3f} Å")
 
 
 if __name__ == "__main__":
