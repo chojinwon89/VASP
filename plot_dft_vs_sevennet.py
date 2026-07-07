@@ -11,10 +11,10 @@ stats computed only on the data within the plot window.
 
 Point style encoding:
   - Colour  → metal surface  (Cu/Pt/Pd/Ni/Ag/Au)
-  - Marker  → molecule
+  - Marker  → molecule class
   - Fill    → calculator  (SevenNet = filled, MatterSim = hollow)
 
-Legends (Calculator, Metal, Molecule) always shown outside panels.
+Legends (Calculator, Metal, Molecule class) always shown outside panels.
 
 Reads
 -----
@@ -103,28 +103,164 @@ METAL_COLORS = {
     "Au": "#56B4E9",
 }
 
-MOLECULE_MARKERS = {
-    "glycerol":    "o",
-    "isopropanol": "s",
-    "propanol":    "^",
-    "ethanol":     "D",
-    "propane":     "v",
-    "ethane":      "P",
-    "propene":     "X",
-    "ethene":      "*",
-    "CO2":         "h",
-    "isobutene":   "+",
-    "1-butene":    "x",
-    "butadiene":   "<",
-    "isoprene":    ">",
-    "benzene":     "H",
-    "toluene":     "8",
+CLASS_MARKERS = {
+    "Alkane":            "v",
+    "Alkene":            "^",
+    "Aromatic":          "h",
+    "Alcohol":           "o",
+    "Aldehyde":          "D",
+    "Ketone":            "s",
+    "Carboxylic acid":   "P",
+    "Hydroxy/keto acid": "X",
+    "Ester/ether":       "*",
+    "C1 ref":            "+",
+    "Inorganic":         "x",
+}
+
+LINE_MARKERS = {"+", "x"}
+
+CLASS_ORDER = [
+    "Alkane",
+    "Alkene",
+    "Aromatic",
+    "Alcohol",
+    "Aldehyde",
+    "Ketone",
+    "Carboxylic acid",
+    "Hydroxy/keto acid",
+    "Ester/ether",
+    "C1 ref",
+    "Inorganic",
+]
+
+MOL_CLASS = {
+    # Alkane
+    "ethane":            ("Alkane", CLASS_MARKERS["Alkane"]),
+    "propane":           ("Alkane", CLASS_MARKERS["Alkane"]),
+    "butane":            ("Alkane", CLASS_MARKERS["Alkane"]),
+    "isobutane":         ("Alkane", CLASS_MARKERS["Alkane"]),
+    "pentane":           ("Alkane", CLASS_MARKERS["Alkane"]),
+    "isopentane":        ("Alkane", CLASS_MARKERS["Alkane"]),
+    "hexane":            ("Alkane", CLASS_MARKERS["Alkane"]),
+    "heptane":           ("Alkane", CLASS_MARKERS["Alkane"]),
+    "octane":            ("Alkane", CLASS_MARKERS["Alkane"]),
+    # Alkene
+    "ethene":            ("Alkene", CLASS_MARKERS["Alkene"]),
+    "ethylene":          ("Alkene", CLASS_MARKERS["Alkene"]),
+    "propene":           ("Alkene", CLASS_MARKERS["Alkene"]),
+    "1-butene":          ("Alkene", CLASS_MARKERS["Alkene"]),
+    "2-butene":          ("Alkene", CLASS_MARKERS["Alkene"]),
+    "isobutene":         ("Alkene", CLASS_MARKERS["Alkene"]),
+    "butadiene":         ("Alkene", CLASS_MARKERS["Alkene"]),
+    "1-pentene":         ("Alkene", CLASS_MARKERS["Alkene"]),
+    "isoprene":          ("Alkene", CLASS_MARKERS["Alkene"]),
+    # Aromatic
+    "furan":             ("Aromatic", CLASS_MARKERS["Aromatic"]),
+    "pyrrole":           ("Aromatic", CLASS_MARKERS["Aromatic"]),
+    "thiophene":         ("Aromatic", CLASS_MARKERS["Aromatic"]),
+    "benzene":           ("Aromatic", CLASS_MARKERS["Aromatic"]),
+    "phenol":            ("Aromatic", CLASS_MARKERS["Aromatic"]),
+    "aniline":           ("Aromatic", CLASS_MARKERS["Aromatic"]),
+    "toluene":           ("Aromatic", CLASS_MARKERS["Aromatic"]),
+    "styrene":           ("Aromatic", CLASS_MARKERS["Aromatic"]),
+    "xylene":            ("Aromatic", CLASS_MARKERS["Aromatic"]),
+    "naphthalene":       ("Aromatic", CLASS_MARKERS["Aromatic"]),
+    # Alcohol
+    "methanol":          ("Alcohol", CLASS_MARKERS["Alcohol"]),
+    "ethanol":           ("Alcohol", CLASS_MARKERS["Alcohol"]),
+    "isopropanol":       ("Alcohol", CLASS_MARKERS["Alcohol"]),
+    "propanol":          ("Alcohol", CLASS_MARKERS["Alcohol"]),
+    "glycerol":          ("Alcohol", CLASS_MARKERS["Alcohol"]),
+    "1-butanol":         ("Alcohol", CLASS_MARKERS["Alcohol"]),
+    "2-butanol":         ("Alcohol", CLASS_MARKERS["Alcohol"]),
+    "pentanol":          ("Alcohol", CLASS_MARKERS["Alcohol"]),
+    "xylitol":           ("Alcohol", CLASS_MARKERS["Alcohol"]),
+    "sorbitol":          ("Alcohol", CLASS_MARKERS["Alcohol"]),
+    # Aldehyde
+    "acetaldehyde":      ("Aldehyde", CLASS_MARKERS["Aldehyde"]),
+    "propanal":          ("Aldehyde", CLASS_MARKERS["Aldehyde"]),
+    "butanal":           ("Aldehyde", CLASS_MARKERS["Aldehyde"]),
+    "furfural":          ("Aldehyde", CLASS_MARKERS["Aldehyde"]),
+    "valeraldehyde":     ("Aldehyde", CLASS_MARKERS["Aldehyde"]),
+    "5-HMF":             ("Aldehyde", CLASS_MARKERS["Aldehyde"]),
+    "hexanal":           ("Aldehyde", CLASS_MARKERS["Aldehyde"]),
+    "5-methylfurfural":  ("Aldehyde", CLASS_MARKERS["Aldehyde"]),
+    "benzaldehyde":      ("Aldehyde", CLASS_MARKERS["Aldehyde"]),
+    # Ketone
+    "acetone":           ("Ketone", CLASS_MARKERS["Ketone"]),
+    "methylethylketone": ("Ketone", CLASS_MARKERS["Ketone"]),
+    "cyclobutanone":     ("Ketone", CLASS_MARKERS["Ketone"]),
+    "cyclopentanone":    ("Ketone", CLASS_MARKERS["Ketone"]),
+    "2-pentanone":       ("Ketone", CLASS_MARKERS["Ketone"]),
+    "2-hexanone":        ("Ketone", CLASS_MARKERS["Ketone"]),
+    "cyclohexanone":     ("Ketone", CLASS_MARKERS["Ketone"]),
+    "5-heptanone":       ("Ketone", CLASS_MARKERS["Ketone"]),
+    "2-heptanone":       ("Ketone", CLASS_MARKERS["Ketone"]),
+    "acetophenone":      ("Ketone", CLASS_MARKERS["Ketone"]),
+    # Carboxylic acid
+    "formic_acid":       ("Carboxylic acid", CLASS_MARKERS["Carboxylic acid"]),
+    "acetic_acid":       ("Carboxylic acid", CLASS_MARKERS["Carboxylic acid"]),
+    "oxalic_acid":       ("Carboxylic acid", CLASS_MARKERS["Carboxylic acid"]),
+    "propionic_acid":    ("Carboxylic acid", CLASS_MARKERS["Carboxylic acid"]),
+    "malonic_acid":      ("Carboxylic acid", CLASS_MARKERS["Carboxylic acid"]),
+    "butyric_acid":      ("Carboxylic acid", CLASS_MARKERS["Carboxylic acid"]),
+    "succinic_acid":     ("Carboxylic acid", CLASS_MARKERS["Carboxylic acid"]),
+    "valeric_acid":      ("Carboxylic acid", CLASS_MARKERS["Carboxylic acid"]),
+    "glutaric_acid":     ("Carboxylic acid", CLASS_MARKERS["Carboxylic acid"]),
+    "caproic_acid":      ("Carboxylic acid", CLASS_MARKERS["Carboxylic acid"]),
+    # Hydroxy/keto acid
+    "glycolic_acid":           ("Hydroxy/keto acid", CLASS_MARKERS["Hydroxy/keto acid"]),
+    "lactic_acid":             ("Hydroxy/keto acid", CLASS_MARKERS["Hydroxy/keto acid"]),
+    "pyruvic_acid":            ("Hydroxy/keto acid", CLASS_MARKERS["Hydroxy/keto acid"]),
+    "3-hydroxypropionic_acid": ("Hydroxy/keto acid", CLASS_MARKERS["Hydroxy/keto acid"]),
+    "malic_acid":              ("Hydroxy/keto acid", CLASS_MARKERS["Hydroxy/keto acid"]),
+    "tartaric_acid":           ("Hydroxy/keto acid", CLASS_MARKERS["Hydroxy/keto acid"]),
+    "itaconic_acid":           ("Hydroxy/keto acid", CLASS_MARKERS["Hydroxy/keto acid"]),
+    "levulinic_acid":          ("Hydroxy/keto acid", CLASS_MARKERS["Hydroxy/keto acid"]),
+    "citric_acid":             ("Hydroxy/keto acid", CLASS_MARKERS["Hydroxy/keto acid"]),
+    "gluconic_acid":           ("Hydroxy/keto acid", CLASS_MARKERS["Hydroxy/keto acid"]),
+    # Ester/ether
+    "DME":                ("Ester/ether", CLASS_MARKERS["Ester/ether"]),
+    "DMSO":               ("Ester/ether", CLASS_MARKERS["Ester/ether"]),
+    "diethyl_ether":      ("Ester/ether", CLASS_MARKERS["Ester/ether"]),
+    "THF":                ("Ester/ether", CLASS_MARKERS["Ester/ether"]),
+    "ethyl_acetate":      ("Ester/ether", CLASS_MARKERS["Ester/ether"]),
+    "3-MTHF":             ("Ester/ether", CLASS_MARKERS["Ester/ether"]),
+    "methylmethacrylate": ("Ester/ether", CLASS_MARKERS["Ester/ether"]),
+    "furfuryl_alcohol":   ("Ester/ether", CLASS_MARKERS["Ester/ether"]),
+    "gamma_valerolactone": ("Ester/ether", CLASS_MARKERS["Ester/ether"]),
+    "dimethyl_succinate": ("Ester/ether", CLASS_MARKERS["Ester/ether"]),
+    # C1 ref
+    "CO":                 ("C1 ref", CLASS_MARKERS["C1 ref"]),
+    "CO2":                ("C1 ref", CLASS_MARKERS["C1 ref"]),
+    "methane":            ("C1 ref", CLASS_MARKERS["C1 ref"]),
+    "formaldehyde":       ("C1 ref", CLASS_MARKERS["C1 ref"]),
+    "formate":            ("C1 ref", CLASS_MARKERS["C1 ref"]),
+    "CH4":                ("C1 ref", CLASS_MARKERS["C1 ref"]),
+    "NH3":                ("C1 ref", CLASS_MARKERS["C1 ref"]),
+    "NO":                 ("C1 ref", CLASS_MARKERS["C1 ref"]),
+    # Inorganic
+    "H2":                 ("Inorganic", CLASS_MARKERS["Inorganic"]),
+    "H2O":                ("Inorganic", CLASS_MARKERS["Inorganic"]),
+    "N2":                 ("Inorganic", CLASS_MARKERS["Inorganic"]),
+    "O2":                 ("Inorganic", CLASS_MARKERS["Inorganic"]),
+    "NO2":                ("Inorganic", CLASS_MARKERS["Inorganic"]),
+    "SO2":                ("Inorganic", CLASS_MARKERS["Inorganic"]),
+    "H2S":                ("Inorganic", CLASS_MARKERS["Inorganic"]),
 }
 
 DEFAULT_AXIS_MIN = -2.5
 DEFAULT_AXIS_MAX =  0.3
 DEFAULT_MAX_DIFF =  5.0   # eV  — pairs with |DFT - ML| > this are excluded
 BAND_WIDTH       =  0.2
+
+
+# ---------------------------------------------------------------------------
+# Molecule style helpers
+# ---------------------------------------------------------------------------
+
+def get_molecule_class_and_marker(name: str) -> tuple[str, str]:
+    return MOL_CLASS.get(name, ("Unknown", "o"))
 
 
 # ---------------------------------------------------------------------------
@@ -289,9 +425,15 @@ def _plot_panel(ax, func, func_label, calc_pairs, dft_vals, ml_data,
 
             metal  = surf[:2] if len(surf) >= 2 else surf
             mcolor = METAL_COLORS.get(metal, "grey")
-            marker = MOLECULE_MARKERS.get(mol, "o")
+            _, marker = get_molecule_class_and_marker(mol)
 
-            if fill == "none":
+            if marker in LINE_MARKERS:
+                ax.scatter(x, y,
+                           color=mcolor,
+                           marker=marker, s=70,
+                           linewidths=max(lw, 1.2),
+                           alpha=0.9, zorder=3)
+            elif fill == "none":
                 ax.scatter(x, y,
                            facecolors="none",
                            edgecolors=mcolor,
@@ -421,18 +563,29 @@ def make_figure(functionals, calc_pairs_per_func, dft_data, ml_data,
                ncol=len(metal_handles), fontsize=9, title_fontsize=9,
                frameon=True)
 
-    # Molecule legend (bottom centre)
-    mol_handles = [
-        plt.Line2D([0], [0], marker=mk, color="w",
-                   markerfacecolor="grey", markeredgecolor="k",
-                   markersize=9, label=mol)
-        for mol, mk in MOLECULE_MARKERS.items()
-        if any(k[1] == mol for k in all_pairs)
-    ]
-    if mol_handles:
-        fig.legend(handles=mol_handles, title="Molecule",
+    # Molecule-class legend (bottom centre)
+    classes_in_pairs = {
+        get_molecule_class_and_marker(mol)[0]
+        for _, mol in all_pairs
+        if get_molecule_class_and_marker(mol)[0] != "Unknown"
+    }
+    class_handles = []
+    for cls in CLASS_ORDER:
+        if cls not in classes_in_pairs:
+            continue
+        marker = CLASS_MARKERS[cls]
+        if marker in LINE_MARKERS:
+            handle = plt.Line2D([0], [0], marker=marker, color="grey",
+                                linestyle="None", markersize=9, label=cls)
+        else:
+            handle = plt.Line2D([0], [0], marker=marker, color="w",
+                                markerfacecolor="grey", markeredgecolor="k",
+                                linestyle="None", markersize=9, label=cls)
+        class_handles.append(handle)
+    if class_handles:
+        fig.legend(handles=class_handles, title="Molecule class",
                    loc="lower center", bbox_to_anchor=(0.5, -0.04),
-                   ncol=min(len(mol_handles), 6),
+                   ncol=min(len(class_handles), 6),
                    fontsize=8, title_fontsize=8, frameon=True)
 
     diff_str = f"|diff| ≤ {max_diff} eV" if max_diff else "no diff filter"
@@ -458,7 +611,7 @@ def main():
     parser = argparse.ArgumentParser(
         description=(
             "2×2 parity plot: GOAD+MLIP vs DFT, one panel per DFT functional.\n"
-            "Colour = metal, marker = molecule, fill = calculator.\n"
+            "Colour = metal, marker = molecule class, fill = calculator.\n"
             "SevenNet = filled; MatterSim = hollow.\n"
             "Use --max-diff to exclude pairs where |E_DFT - E_ML| exceeds a threshold."
         ),

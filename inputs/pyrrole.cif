@@ -1,0 +1,35 @@
+data_image0
+_chemical_formula_structural       C3NCH5
+_chemical_formula_sum              "C4 N1 H5"
+_cell_length_a       40.0
+_cell_length_b       40.0
+_cell_length_c       40.0
+_cell_angle_alpha    90.0
+_cell_angle_beta     90.0
+_cell_angle_gamma    90.0
+
+_space_group_name_H-M_alt    "P 1"
+_space_group_IT_number       1
+
+loop_
+  _space_group_symop_operation_xyz
+  'x, y, z'
+
+loop_
+  _atom_site_type_symbol
+  _atom_site_label
+  _atom_site_symmetry_multiplicity
+  _atom_site_fract_x
+  _atom_site_fract_y
+  _atom_site_fract_z
+  _atom_site_occupancy
+  C   C1        1.0  0.49748148219150334  0.5234189901730439  0.5144506901726781  1.0000
+  C   C2        1.0  0.4740205439350475  0.502393813691653  0.49833439227273646  1.0000
+  C   C3        1.0  0.4910355790175179  0.4745479327769788  0.48736562159810193  1.0000
+  N   N1        1.0  0.523929301380798  0.4780408774098135  0.49630059863796777  1.0000
+  C   C4        1.0  0.5281004837169457  0.5077646039675381  0.5128273279771454  1.0000
+  H   H1        1.0  0.492565301949734  0.5473920020991824  0.525993637879763  1.0000
+  H   H2        1.0  0.4475685542310255  0.5070668962742466  0.4950834997111222  1.0000
+  H   H3        1.0  0.48258345441016703  0.4526079979008176  0.474006362120237  1.0000
+  H   H4        1.0  0.5422637949040892  0.4612970259942727  0.49145446415907434  1.0000
+  H   H5        1.0  0.5524314457689744  0.5152039920325103  0.5219885877791128  1.0000
