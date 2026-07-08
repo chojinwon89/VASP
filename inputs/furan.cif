@@ -1,0 +1,34 @@
+data_image0
+_chemical_formula_structural       C3OCH4
+_chemical_formula_sum              "C4 O1 H4"
+_cell_length_a       40.0
+_cell_length_b       40.0
+_cell_length_c       40.0
+_cell_angle_alpha    90.0
+_cell_angle_beta     90.0
+_cell_angle_gamma    90.0
+
+_space_group_name_H-M_alt    "P 1"
+_space_group_IT_number       1
+
+loop_
+  _space_group_symop_operation_xyz
+  'x, y, z'
+
+loop_
+  _atom_site_type_symbol
+  _atom_site_label
+  _atom_site_symmetry_multiplicity
+  _atom_site_fract_x
+  _atom_site_fract_y
+  _atom_site_fract_z
+  _atom_site_occupancy
+  C   C1        1.0  0.5000998994655387  0.5202837782871668  0.5153443112102674  1.0000
+  C   C2        1.0  0.471871376003471  0.5040789203255405  0.5014295067787731  1.0000
+  C   C3        1.0  0.48400769142516425  0.4770966099712731  0.4839033458573698  1.0000
+  O   O1        1.0  0.5178584265049216  0.4757250980425516  0.48618369511992177  1.0000
+  C   C4        1.0  0.5274885723693835  0.502057218961744  0.5053365792811984  1.0000
+  H   H1        1.0  0.5004893610476809  0.5424773990527528  0.5307496800735886  1.0000
+  H   H2        1.0  0.4459035962687571  0.5111419057560344  0.5038424981767231  1.0000
+  H   H3        1.0  0.47249270584776193  0.45752260094724717  0.4692503199264117  1.0000
+  H   H4        1.0  0.5540964037312429  0.5043679667140512  0.5094756200945952  1.0000
