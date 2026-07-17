@@ -7,65 +7,217 @@
 - Install RDKit with conda if it is not already available:
   - `conda install -c conda-forge rdkit`
 
-## Supported surfaces (18 total)
+## Supported surfaces
 
-| Metal | (111) | (110) | (100/001) |
-|-------|-------|-------|----------|
-| Cu    | Cu111 | Cu110 | Cu001     |
-| Pt    | Pt111 | Pt110 | Pt100     |
-| Pd    | Pd111 | Pd110 | Pd100     |
-| Ni    | Ni111 | Ni110 | Ni100     |
-| Ag    | Ag111 | Ag110 | Ag100     |
-| Au    | Au111 | Au110 | Au100     |
+| Metal | Structure | (111/0001) | (110) | (100) |
+|-------|-----------|------------|-------|-------|
+| Cu    | FCC       | Cu111      | Cu110 | Cu001 |
+| Pt    | FCC       | Pt111      | Pt110 | Pt100 |
+| Pd    | FCC       | Pd111      | Pd110 | Pd100 |
+| Ni    | FCC       | Ni111      | Ni110 | Ni100 |
+| Ag    | FCC       | Ag111      | Ag110 | Ag100 |
+| Au    | FCC       | Au111      | Au110 | Au100 |
+| Ir    | FCC       | Ir111      | Ir110 | Ir100 |
+| Rh    | FCC       | Rh111      | Rh110 | Rh100 |
+| Fe    | BCC       | Fe111      | Fe110 | Fe100 |
+| Cr    | BCC       | Cr111      | Cr110 | Cr100 |
+| Mo    | BCC       | Mo111      | Mo110 | Mo100 |
+| Ru    | HCP       | Ru0001     | —     | —     |
+| Co    | HCP       | Co0001     | —     | —     |
+| Ti    | HCP       | Ti0001     | —     | —     |
+| Zn    | HCP       | Zn0001     | —     | —     |
 
-All slabs: 4×4×4, 15 Å vacuum, built with ASE default lattice constants.
+All slabs: 4×4×4, 15 Å vacuum, built with ASE using experimental lattice constants.
 
-## Supported molecules (9 total)
+## Supported molecules
 
-| Name        | SMILES      | Notes                              |
-|-------------|-------------|------------------------------------|
-| isopropanol | `CC(C)O`    | 3 heavy atoms, 1 OH                |
-| CO2         | `O=C=O`     | rigid linear molecule              |
-| ethanol     | `CCO`        |                                    |
-| ethene      | `C=C`        | rigid (C=C double bond)            |
-| ethane      | `CC`         | saturated C2                       |
-| propane     | `CCC`        |                                    |
-| propene     | `CC=C`       |                                    |
-| propanol    | `CCCO`       | 3 rotatable bonds                  |
-| glycerol    | `OCC(O)CO`  | 5 rotatable bonds; larger GA search |
+### Alkane
+| Name       | SMILES       | Carbon |
+|------------|--------------|--------|
+| methane    | `C`          | C1     |
+| ethane     | `CC`         | C2     |
+| propane    | `CCC`        | C3     |
+| butane     | `CCCC`       | C4     |
+| isobutane  | `CC(C)C`     | C4     |
+| pentane    | `CCCCC`      | C5     |
+| isopentane | `CC(C)CC`    | C5     |
+| hexane     | `CCCCCC`     | C6     |
+| heptane    | `CCCCCCC`    | C7     |
+| octane     | `CCCCCCCC`   | C8     |
 
-> **Note on glycerol:** the genome has 11 variables. `batch_isopropanol.py`
-> automatically uses `population_size=60` and `generations=100` for glycerol,
-> and `population_size=50`, `generations=100` for propanol.
+### Alkene
+| Name      | SMILES       | Carbon |
+|-----------|--------------|--------|
+| ethene    | `C=C`        | C2     |
+| propene   | `CC=C`       | C3     |
+| 1-butene  | `CCC=C`      | C4     |
+| 2-butene  | `CC=CC`      | C4     |
+| isobutene | `CC(=C)C`    | C4     |
+| 1-pentene | `CCCC=C`     | C5     |
+| butadiene | `C=CC=C`     | C4     |
+| isoprene  | `CC(=C)C=C`  | C5     |
 
-## Task count
+### Aromatic
+| Name        | SMILES            | Carbon |
+|-------------|-------------------|--------|
+| benzene     | `c1ccccc1`        | C6     |
+| toluene     | `Cc1ccccc1`       | C7     |
+| furan       | `c1ccoc1`         | C4     |
+| pyrrole     | `c1cc[nH]c1`      | C4     |
+| thiophene   | `c1ccsc1`         | C4     |
+| styrene     | `C=Cc1ccccc1`     | C8     |
+| xylene      | `Cc1ccc(C)cc1`    | C8     |
+| phenol      | `Oc1ccccc1`       | C6     |
+| aniline     | `Nc1ccccc1`       | C6     |
+| naphthalene | `c1ccc2ccccc2c1`  | C10    |
 
-18 surfaces × 9 molecules × 3 seeds = **486 Slurm array tasks** (task_id 0–485)
+### Alcohol
+| Name        | SMILES                | Carbon |
+|-------------|-----------------------|--------|
+| methanol    | `CO`                  | C1     |
+| ethanol     | `CCO`                 | C2     |
+| isopropanol | `CC(C)O`              | C3     |
+| propanol    | `CCCO`                | C3     |
+| glycerol    | `OCC(O)CO`            | C3     |
+| 1-butanol   | `CCCCO`               | C4     |
+| 2-butanol   | `CCC(O)C`             | C4     |
+| pentanol    | `CCCCCO`              | C5     |
+| sorbitol    | `OCC(O)C(O)C(O)C(O)CO` | C6   |
+| xylitol     | `OCC(O)C(O)C(O)CO`    | C5     |
+
+### Aldehyde
+| Name             | SMILES          | Carbon |
+|------------------|-----------------|--------|
+| formaldehyde     | `C=O`           | C1     |
+| acetaldehyde     | `CC=O`          | C2     |
+| propanal         | `CCC=O`         | C3     |
+| butanal          | `CCCC=O`        | C4     |
+| furfural         | `O=Cc1ccco1`    | C5     |
+| valeraldehyde    | `CCCCC=O`       | C5     |
+| hexanal          | `CCCCCC=O`      | C6     |
+| 5-HMF            | `OCc1ccc(C=O)o1` | C6    |
+| 5-methylfurfural | `Cc1ccc(C=O)o1` | C6     |
+| benzaldehyde     | `O=Cc1ccccc1`   | C7     |
+
+### Ketone
+| Name              | SMILES             | Carbon |
+|-------------------|--------------------|--------|
+| acetone           | `CC(=O)C`          | C3     |
+| methylethylketone | `CCC(=O)C`         | C4     |
+| cyclobutanone     | `O=C1CCC1`         | C4     |
+| 2-pentanone       | `CCCC(=O)C`        | C5     |
+| cyclopentanone    | `O=C1CCCC1`        | C5     |
+| 2-hexanone        | `CCCCC(=O)C`       | C6     |
+| cyclohexanone     | `O=C1CCCCC1`       | C6     |
+| 5-heptanone       | `CCCCC(=O)CC`      | C7     |
+| 2-heptanone       | `CCCCCC(=O)C`      | C7     |
+| acetophenone      | `CC(=O)c1ccccc1`   | C8     |
+
+### Carboxylic acid
+| Name          | SMILES              | Carbon |
+|---------------|---------------------|--------|
+| formic_acid   | `OC=O`              | C1     |
+| acetic_acid   | `CC(=O)O`           | C2     |
+| oxalic_acid   | `OC(=O)C(=O)O`      | C2     |
+| propionic_acid | `CCC(=O)O`         | C3     |
+| malonic_acid  | `OC(=O)CC(=O)O`     | C3     |
+| butyric_acid  | `CCCC(=O)O`         | C4     |
+| succinic_acid | `OC(=O)CCC(=O)O`    | C4     |
+| valeric_acid  | `CCCCC(=O)O`        | C5     |
+| glutaric_acid | `OC(=O)CCCC(=O)O`   | C5     |
+| caproic_acid  | `CCCCCC(=O)O`       | C6     |
+
+### Hydroxy/keto acid
+| Name                    | SMILES                             | Carbon |
+|-------------------------|------------------------------------|--------|
+| glycolic_acid           | `OCC(=O)O`                         | C2     |
+| lactic_acid             | `CC(O)C(=O)O`                      | C3     |
+| pyruvic_acid            | `CC(=O)C(=O)O`                     | C3     |
+| 3-hydroxypropionic_acid | `OCCC(=O)O`                        | C3     |
+| malic_acid              | `OC(CC(=O)O)C(=O)O`                | C4     |
+| tartaric_acid           | `OC(C(O)C(=O)O)C(=O)O`             | C4     |
+| itaconic_acid           | `OC(=O)CC(=C)C(=O)O`               | C5     |
+| levulinic_acid          | `CC(=O)CCC(=O)O`                   | C5     |
+| citric_acid             | `OC(=O)CC(O)(C(=O)O)CC(=O)O`       | C6     |
+| gluconic_acid           | `OCC(O)C(O)C(O)C(O)C(=O)O`         | C6     |
+| muconic_acid            | `OC(=O)C=CC=CC(=O)O`               | C6     |
+
+### Ester/ether
+| Name                | SMILES                  | Carbon |
+|---------------------|-------------------------|--------|
+| DME                 | `COC`                   | C2     |
+| DMSO                | `CS(=O)C`               | C2     |
+| 3-MTHF              | `CC1CCCO1`              | C5     |
+| methylmethacrylate  | `COC(=O)C(=C)C`         | C5     |
+| diethyl_ether       | `CCOCC`                 | C4     |
+| THF                 | `C1CCOC1`               | C4     |
+| ethyl_acetate       | `CC(=O)OCC`             | C4     |
+| furfuryl_alcohol    | `OCc1ccco1`             | C5     |
+| gamma_valerolactone | `CC1CCC(=O)O1`          | C5     |
+| dimethyl_succinate  | `COC(=O)CCC(=O)OC`      | C6     |
+
+### C1 reference
+| Name         | Notes                                    |
+|--------------|------------------------------------------|
+| CO           | carbon monoxide                          |
+| CO2          | carbon dioxide                           |
+| methane / CH4 | same structure                          |
+| methanol     | simplest alcohol                         |
+| formaldehyde | simplest aldehyde                        |
+| formate      | carboxylate anion (approximation)        |
+
+### Inorganic
+| Name | Formula | Notes                  |
+|------|---------|------------------------|
+| H2   | H₂      | hydrogen gas           |
+| H2O  | H₂O     | water                  |
+| N2   | N₂      | nitrogen gas           |
+| O2   | O₂      | oxygen gas             |
+| NH3  | NH₃     | ammonia                |
+| NO   | NO      | nitric oxide           |
+| NO2  | NO₂     | nitrogen dioxide       |
+| SO2  | SO₂     | sulfur dioxide         |
+| H2S  | H₂S     | hydrogen sulfide       |
+
+## Skip-if-finished behaviour
+
+`workflow/run_one_task.py` automatically skips any task whose run directory
+already contains a `status.json` with `state == "finished"`, exiting with
+code 0 so Slurm treats it as success.  This makes bulk re-submission via
+`submit_missing.sh` (generated by `find_missing_tasks.py`) safe to repeat
+without wasting compute on already-completed work.
+
+Use `--force` to override this check:
+
+```bash
+python workflow/run_one_task.py --task-id 42 --force
+```
 
 ## Step-by-step
 
 ### Step 1 — Generate input structures
 ```bash
 cd /scratch/jcho5/goad-global-optimization
-python prep_inputs.py
+python generate_surface_cifs.py
+python generate_molecule_cifs.py
 ```
-Builds all 18 surface CIFs and all 9 molecule CIFs under `inputs/`.
+Builds all surface CIFs and all molecule CIFs under `inputs/`.
 
 ### Step 2 — Generate task table
 ```bash
-python workflow/make_tasks.py
+python workflow/make_tasks_custom.py
 ```
-Writes `workflow/tasks.csv` with 486 rows.
+Writes `workflow/tasks_custom.csv`.
 
 ### Step 3 — Test one task interactively
 ```bash
-python workflow/run_one_task.py --task-id 0 --tasks-csv workflow/tasks.csv
+python workflow/run_one_task.py --task-id 0 --tasks-csv workflow/tasks_custom.csv
 ```
 
 ### Step 4 — Submit full Slurm array
 ```bash
 mkdir -p slurm-logs runs
-sbatch --array=0-485%50 goad_array_kestrel.slurm
+sbatch --array=0-<N>%50 goad_array_kestrel.slurm workflow/tasks_custom.csv
 ```
 
 ### Step 5 — Monitor
@@ -96,6 +248,7 @@ python setup_vasp_jobs.py --all-seeds
 python setup_slab_jobs.py
 ```
 Creates `vasp_slab/<SurfaceName>/` with POSCAR (Selective Dynamics), INCAR, KPOINTS, POTCAR, Slurm script.
+Supports all metals listed in the Supported surfaces table above (FCC, BCC, HCP).
 
 ### Step 10 — Set up DFT gas-phase molecule jobs
 ```bash

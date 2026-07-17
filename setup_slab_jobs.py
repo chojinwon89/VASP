@@ -12,6 +12,11 @@ The slabs are built from ASE using the same geometry as GOAD
 (4x4x4, 15 Ang vacuum). Bottom N layers are frozen via Selective Dynamics,
 matching the constraint used in batch_isopropanol.py.
 
+Supported metals and facets (matches generate_surface_cifs.py):
+  FCC : Cu, Pd, Pt, Ni, Ag, Au, Ir, Rh  ->  111, 110, 100
+  BCC : Fe, Cr, Mo                        ->  110, 100, 111
+  HCP : Ru, Co, Ti, Zn                    ->  0001
+
 Output layout
 -------------
     vasp_slab/
@@ -19,13 +24,17 @@ Output layout
             POSCAR  INCAR  KPOINTS  POTCAR  slm.vasp.kestrel
         Cu110/
             ...
-        Cu001/
+        Ir111/
+            ...
+        Fe110/
+            ...
+        Ru0001/
             ...
 
 Usage
 -----
     python setup_slab_jobs.py
-    python setup_slab_jobs.py --surfaces Cu111 Cu110 Cu001
+    python setup_slab_jobs.py --surfaces Cu111 Cu110 Cu001 Ir111 Fe110 Ru0001
     python setup_slab_jobs.py --out-dir /scratch/jcho5/slab_jobs
     python setup_slab_jobs.py --dry-run
 
@@ -39,7 +48,7 @@ import argparse
 import os
 from pathlib import Path
 
-from ase.build import fcc111, fcc100, fcc110
+from ase.build import fcc111, fcc100, fcc110, bcc110, bcc100, bcc111, hcp0001
 from ase import Atoms
 
 
@@ -135,38 +144,55 @@ POTCAR_MAP = {
     "Co": ["Co_pv", "Co"],
     "Zn": ["Zn_pv", "Zn"],
     "Al": ["Al"],
+    # Additional metals matching generate_surface_cifs.py
+    "Ir": ["Ir_pv", "Ir"],
+    "Rh": ["Rh_pv", "Rh"],
+    "Cr": ["Cr_pv", "Cr"],
+    "Mo": ["Mo_pv", "Mo"],
+    "Ru": ["Ru_pv", "Ru"],
+    "Ti": ["Ti_pv", "Ti"],
+}
+
+# ---------------------------------------------------------------------------
+# Lattice constants — same values as generate_surface_cifs.py
+# ---------------------------------------------------------------------------
+_A_FCC = {
+    "Cu": 3.615, "Pd": 3.890, "Pt": 3.924,
+    "Ni": 3.524, "Au": 4.078, "Ag": 4.086,
+    "Ir": 3.840, "Rh": 3.803,
+}
+_A_BCC = {
+    "Fe": 2.870, "Cr": 2.885, "Mo": 3.147,
+}
+_A_HCP = {
+    # (a, c)
+    "Ru": (2.706, 4.282), "Co": (2.507, 4.069),
+    "Ti": (2.951, 4.686), "Zn": (2.665, 4.947),
 }
 
 # ---------------------------------------------------------------------------
 # Slab builder registry
 # ---------------------------------------------------------------------------
-SLAB_BUILDERS = {
-    # Cu
-    "Cu111": (fcc111, {"symbol": "Cu", "size": (4, 4, 4), "vacuum": 15.0, "orthogonal": True}),
-    "Cu110": (fcc110, {"symbol": "Cu", "size": (4, 4, 4), "vacuum": 15.0}),
-    "Cu100": (fcc100, {"symbol": "Cu", "size": (4, 4, 4), "vacuum": 15.0}),
-    "Cu001": (fcc100, {"symbol": "Cu", "size": (4, 4, 4), "vacuum": 15.0}),
-    # Pt
-    "Pt111": (fcc111, {"symbol": "Pt", "size": (4, 4, 4), "vacuum": 15.0, "orthogonal": True}),
-    "Pt110": (fcc110, {"symbol": "Pt", "size": (4, 4, 4), "vacuum": 15.0}),
-    "Pt100": (fcc100, {"symbol": "Pt", "size": (4, 4, 4), "vacuum": 15.0}),
-    # Pd
-    "Pd111": (fcc111, {"symbol": "Pd", "size": (4, 4, 4), "vacuum": 15.0, "orthogonal": True}),
-    "Pd110": (fcc110, {"symbol": "Pd", "size": (4, 4, 4), "vacuum": 15.0}),
-    "Pd100": (fcc100, {"symbol": "Pd", "size": (4, 4, 4), "vacuum": 15.0}),
-    # Ni
-    "Ni111": (fcc111, {"symbol": "Ni", "size": (4, 4, 4), "vacuum": 15.0, "orthogonal": True}),
-    "Ni110": (fcc110, {"symbol": "Ni", "size": (4, 4, 4), "vacuum": 15.0}),
-    "Ni100": (fcc100, {"symbol": "Ni", "size": (4, 4, 4), "vacuum": 15.0}),
-    # Ag
-    "Ag111": (fcc111, {"symbol": "Ag", "size": (4, 4, 4), "vacuum": 15.0, "orthogonal": True}),
-    "Ag110": (fcc110, {"symbol": "Ag", "size": (4, 4, 4), "vacuum": 15.0}),
-    "Ag100": (fcc100, {"symbol": "Ag", "size": (4, 4, 4), "vacuum": 15.0}),
-    # Au
-    "Au111": (fcc111, {"symbol": "Au", "size": (4, 4, 4), "vacuum": 15.0, "orthogonal": True}),
-    "Au110": (fcc110, {"symbol": "Au", "size": (4, 4, 4), "vacuum": 15.0}),
-    "Au100": (fcc100, {"symbol": "Au", "size": (4, 4, 4), "vacuum": 15.0}),
-}
+SLAB_BUILDERS = {}
+
+# --- FCC: 111 (orthogonal), 110, 100 ---
+for _el, _a in _A_FCC.items():
+    SLAB_BUILDERS[f"{_el}111"] = (fcc111, {"symbol": _el, "a": _a, "size": (4, 4, 4), "vacuum": 15.0, "orthogonal": True})
+    SLAB_BUILDERS[f"{_el}110"] = (fcc110, {"symbol": _el, "a": _a, "size": (4, 4, 4), "vacuum": 15.0})
+    SLAB_BUILDERS[f"{_el}100"] = (fcc100, {"symbol": _el, "a": _a, "size": (4, 4, 4), "vacuum": 15.0})
+
+# Cu001 alias (backwards compatibility)
+SLAB_BUILDERS["Cu001"] = (fcc100, {"symbol": "Cu", "a": _A_FCC["Cu"], "size": (4, 4, 4), "vacuum": 15.0})
+
+# --- BCC: 110, 100, 111 (orthogonal) ---
+for _el, _a in _A_BCC.items():
+    SLAB_BUILDERS[f"{_el}110"] = (bcc110, {"symbol": _el, "a": _a, "size": (4, 4, 4), "vacuum": 15.0})
+    SLAB_BUILDERS[f"{_el}100"] = (bcc100, {"symbol": _el, "a": _a, "size": (4, 4, 4), "vacuum": 15.0})
+    SLAB_BUILDERS[f"{_el}111"] = (bcc111, {"symbol": _el, "a": _a, "size": (4, 4, 4), "vacuum": 15.0, "orthogonal": True})
+
+# --- HCP: 0001 (orthogonal) ---
+for _el, (_a, _c) in _A_HCP.items():
+    SLAB_BUILDERS[f"{_el}0001"] = (hcp0001, {"symbol": _el, "a": _a, "c": _c, "size": (4, 4, 4), "vacuum": 15.0, "orthogonal": True})
 
 
 # ---------------------------------------------------------------------------
@@ -371,8 +397,24 @@ def main():
     )
     parser.add_argument(
         "--surfaces", nargs="+",
-        default=["Cu111","Cu110","Cu001","Pt111","Pt110","Pt100","Pd111","Pd110","Pd100","Ni111","Ni110","Ni100","Ag111","Ag110","Ag100","Au111","Au110","Au100"],
-        help="Surface names to set up (default: all 18 surfaces)"
+        default=[
+            # FCC
+            "Cu111", "Cu110", "Cu001",
+            "Pt111", "Pt110", "Pt100",
+            "Pd111", "Pd110", "Pd100",
+            "Ni111", "Ni110", "Ni100",
+            "Ag111", "Ag110", "Ag100",
+            "Au111", "Au110", "Au100",
+            "Ir111", "Ir110", "Ir100",
+            "Rh111", "Rh110", "Rh100",
+            # BCC
+            "Fe110", "Fe100", "Fe111",
+            "Cr110", "Cr100", "Cr111",
+            "Mo110", "Mo100", "Mo111",
+            # HCP
+            "Ru0001", "Co0001", "Ti0001", "Zn0001",
+        ],
+        help="Surface names to set up (default: all surfaces matching generate_surface_cifs.py)"
     )
     parser.add_argument(
         "--out-dir", default="vasp_slab",
