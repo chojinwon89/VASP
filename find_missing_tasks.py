@@ -14,6 +14,13 @@ Automatically writes submit_missing.sh with chunked sbatch commands
 covering BOTH failed and missing tasks so all incomplete work is
 resubmitted in one go.
 
+The generated ``submit_missing.sh`` now self-paces submissions by polling
+``squeue`` before each chunk so large resubmission waves do not exceed a
+cluster's account-wide pending+running array-task limit.  Tune this with
+``--max-in-flight`` (default: 9000; set to 0 to disable pacing and restore
+the old straight-through ``sbatch`` behavior) and ``--poll-interval``
+(default: 60 seconds).
+
 Note on bulk resubmission
 -------------------------
 ``run_one_task.py`` now self-skips any task whose run directory already
@@ -36,6 +43,10 @@ Usage
 
     # Custom chunk size and throttle (default: 200 IDs per chunk, 20 concurrent)
     python find_missing_tasks.py --chunk-size 150 --throttle 30
+
+    # Tune or disable self-pacing for submit_missing.sh generation
+    python find_missing_tasks.py --max-in-flight 3000 --poll-interval 30
+    python find_missing_tasks.py --max-in-flight 0
 
     # Only resubmit truly missing (skip failed/crashed)
     python find_missing_tasks.py --missing-only
@@ -216,6 +227,18 @@ def main():
              DEFAULT_THROTTLE)
     )
     parser.add_argument(
+        "--max-in-flight", type=int, default=9000,
+        help="Maximum number of the user's pending+running job array tasks "
+             "allowed before pausing further submissions (default: 9000, "
+             "leaving headroom under a typical MaxSubmitPU=10000 QOS limit). "
+             "Set to 0 to disable pacing entirely (old behavior)."
+    )
+    parser.add_argument(
+        "--poll-interval", type=int, default=60,
+        help="Seconds to wait between queue-depth checks while paced "
+             "submission is waiting for headroom (default: 60)."
+    )
+    parser.add_argument(
         "--out", default="submit_missing.sh",
         help="Output shell script (default: submit_missing.sh)"
     )
@@ -358,6 +381,8 @@ def main():
             len(ids), label, n_chunks),
         "# Chunk size  : {}".format(args.chunk_size),
         "# Throttle    : {} concurrent jobs per chunk".format(args.throttle),
+        "# Max in-flight : {} (0 = pacing disabled)".format(args.max_in_flight),
+        "# Poll interval : {}s".format(args.poll_interval),
         "# Tasks CSV   : {}".format(tasks_path),
         "# Slurm script: {}".format(args.slurm_script),
         "",
@@ -365,10 +390,30 @@ def main():
         "",
     ]
 
+    if args.max_in_flight > 0:
+        lines.extend([
+            "MAX_IN_FLIGHT={}".format(args.max_in_flight),
+            "POLL_INTERVAL={}".format(args.poll_interval),
+            "",
+            "wait_for_headroom() {",
+            '    while true; do',
+            '        in_flight=$(squeue -u "$USER" -h -t PENDING,RUNNING -r | wc -l)',
+            '        if [ "$in_flight" -lt "$MAX_IN_FLIGHT" ]; then',
+            "            break",
+            "        fi",
+            '        echo "[wait] In-flight tasks: ${in_flight}/${MAX_IN_FLIGHT} -- waiting ${POLL_INTERVAL}s for headroom..."',
+            '        sleep "$POLL_INTERVAL"',
+            "    done",
+            "}",
+            "",
+        ])
+
     for i, chunk in enumerate(chunks):
         ids_str = ",".join(chunk)
         lines.append("# Chunk {}/{}  ({} tasks)".format(
             i + 1, n_chunks, len(chunk)))
+        if args.max_in_flight > 0:
+            lines.append("wait_for_headroom")
         lines.append(
             "sbatch --array={}%{} {} {}".format(
                 ids_str, args.throttle, args.slurm_script, tasks_path)
