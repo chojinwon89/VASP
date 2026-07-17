@@ -116,11 +116,23 @@ KNOWN_MOLECULE_NAMES: set = {
     "styrene", "xylene", "phenol", "aniline", "naphthalene",
     # Alcohols
     "ethanol", "isopropanol", "propanol", "glycerol",
-    "1-butanol", "2-butanol", "pentanol", "sorbitol", "xylitol",
+    "1-butanol", "2-butanol", "pentanol", "ethylene_glycol",
+    "sorbitol", "xylitol",
+    # Carbonyls
+    "glyoxal",
     # Aldehydes
     "acetaldehyde", "furfural", "5-HMF",
     "propanal", "butanal", "valeraldehyde", "hexanal",
     "benzaldehyde", "5-methylfurfural",
+    # Phenols
+    "2-ethylphenol", "hydroquinone",
+    # Guaiacols
+    "guaiacol", "4-methylguaiacol", "eugenol", "isoeugenol",
+    # Syringols
+    "syringol", "propyl_syringol", "syringaldehyde",
+    # Sugars
+    "levoglucosan", "alpha-D-glucopyranose", "D-fructofuranose",
+    "D-xylopyranose", "1,6-anhydroglucofuranose",
     # Ketones
     "acetone", "methylethylketone", "cyclobutanone",
     "2-pentanone", "2-hexanone", "cyclopentanone", "cyclohexanone",
@@ -135,8 +147,13 @@ KNOWN_MOLECULE_NAMES: set = {
     "levulinic_acid", "citric_acid", "gluconic_acid", "muconic_acid",
     # Esters/ethers
     "DME", "DMSO", "3-MTHF", "methylmethacrylate",
-    "diethyl_ether", "THF", "ethyl_acetate",
+    "diethyl_ether", "THF", "ethyl_acetate", "methyl_formate",
+    "angelica_lactone", "gamma_butyrolactone",
     "furfuryl_alcohol", "gamma_valerolactone", "dimethyl_succinate",
+    # Furan
+    "2-furanone",
+    # Oxygenates
+    "hydroxyacetaldehyde", "acetal", "methylcyclopentenolone", "vanillin",
 }
 
 # ---------------------------------------------------------------------------

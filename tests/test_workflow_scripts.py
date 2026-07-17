@@ -7,6 +7,33 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
+NEW_BIO_OIL_MOLECULES = {
+    "methyl_formate": "COC=O",
+    "angelica_lactone": "CC1=CCC(=O)O1",
+    "gamma_butyrolactone": "O=C1CCCO1",
+    "ethylene_glycol": "OCCO",
+    "glyoxal": "O=CC=O",
+    "2-ethylphenol": "CCc1ccccc1O",
+    "hydroquinone": "Oc1ccc(O)cc1",
+    "guaiacol": "COc1ccccc1O",
+    "4-methylguaiacol": "Cc1ccc(O)c(OC)c1",
+    "eugenol": "C=CCc1ccc(O)c(OC)c1",
+    "isoeugenol": "C/C=C/c1ccc(O)c(OC)c1",
+    "syringol": "COc1cccc(OC)c1O",
+    "propyl_syringol": "CCCc1cc(OC)c(O)c(OC)c1",
+    "syringaldehyde": "COc1cc(C=O)cc(OC)c1O",
+    "levoglucosan": "OC1C(O)C(O)C2COC1O2",
+    "alpha-D-glucopyranose": "OCC1OC(O)C(O)C(O)C1O",
+    "D-fructofuranose": "OCC1(O)OCC(O)C1O",
+    "D-xylopyranose": "OC1COC(O)C(O)C1O",
+    "1,6-anhydroglucofuranose": "OC1C2COC1OC2O",
+    "2-furanone": "O=C1C=CCO1",
+    "hydroxyacetaldehyde": "OCC=O",
+    "acetal": "CC(OCC)OCC",
+    "methylcyclopentenolone": "CC1=C(O)CCC1=O",
+    "vanillin": "COc1cc(C=O)ccc1O",
+}
+
 
 def test_make_tasks_generates_expected_task_matrix(tmp_path):
     workflow_dir = tmp_path / "workflow"
@@ -138,3 +165,49 @@ def test_discover_classifies_molecules_not_surfaces(tmp_path):
     for surf in surface_stems:
         assert surf in surfaces, f"'{surf}' not found in surfaces list"
         assert surf not in molecules, f"'{surf}' was misclassified as a molecule"
+
+
+def test_new_bio_oil_molecules_added_consistently():
+    import sys
+    sys.path.insert(0, str(REPO_ROOT))
+
+    from batch_isopropanol import MOLECULE_SMILES
+    from setup_molecule_jobs import MOLECULE_REGISTRY
+
+    for name, smiles in NEW_BIO_OIL_MOLECULES.items():
+        assert MOLECULE_SMILES.get(name) == smiles
+        assert MOLECULE_REGISTRY.get(name) == f"inputs/{name}.cif"
+
+
+def test_new_bio_oil_carbon_counts():
+    import sys
+    sys.path.insert(0, str(REPO_ROOT))
+    from batch_isopropanol import carbon_count
+
+    assert carbon_count("eugenol") == 10
+    assert carbon_count("glyoxal") == 2
+    assert carbon_count("gamma_butyrolactone") == 4
+
+
+def test_new_bio_oil_names_are_never_surface_classified(tmp_path):
+    import sys
+    sys.path.insert(0, str(REPO_ROOT))
+    from workflow.make_tasks_custom import (
+        _SURFACE_RE,
+        KNOWN_MOLECULE_NAMES,
+        discover_surfaces_and_molecules,
+    )
+
+    inputs_dir = tmp_path / "inputs"
+    inputs_dir.mkdir()
+    surface_stems = ["Cu111", "Pt111", "Ir111"]
+    for stem in surface_stems + list(NEW_BIO_OIL_MOLECULES):
+        (inputs_dir / f"{stem}.cif").write_text("# fake CIF\n")
+
+    surfaces, molecules = discover_surfaces_and_molecules(inputs_dir)
+
+    for name in NEW_BIO_OIL_MOLECULES:
+        assert name in KNOWN_MOLECULE_NAMES
+        assert name in molecules
+        assert name not in surfaces
+        assert _SURFACE_RE.match(name) is None

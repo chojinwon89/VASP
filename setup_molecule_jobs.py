@@ -193,18 +193,37 @@ MOLECULE_REGISTRY = {
     "styrene":     "inputs/styrene.cif",
     "xylene":      "inputs/xylene.cif",
     "phenol":      "inputs/phenol.cif",
+    "2-ethylphenol": "inputs/2-ethylphenol.cif",
+    "hydroquinone":  "inputs/hydroquinone.cif",
     "aniline":     "inputs/aniline.cif",
     "naphthalene": "inputs/naphthalene.cif",
+    # Guaiacols
+    "guaiacol":         "inputs/guaiacol.cif",
+    "4-methylguaiacol": "inputs/4-methylguaiacol.cif",
+    "eugenol":          "inputs/eugenol.cif",
+    "isoeugenol":       "inputs/isoeugenol.cif",
+    # Syringols
+    "syringol":        "inputs/syringol.cif",
+    "propyl_syringol": "inputs/propyl_syringol.cif",
+    "syringaldehyde":  "inputs/syringaldehyde.cif",
     # Alcohols
     "1-butanol": "inputs/1-butanol.cif",
     "2-butanol": "inputs/2-butanol.cif",
+    "ethylene_glycol": "inputs/ethylene_glycol.cif",
     "pentanol":  "inputs/pentanol.cif",
     "sorbitol":  "inputs/sorbitol.cif",
     "xylitol":   "inputs/xylitol.cif",
+    # Sugars (approximate cyclic forms)
+    "levoglucosan":             "inputs/levoglucosan.cif",
+    "alpha-D-glucopyranose":    "inputs/alpha-D-glucopyranose.cif",
+    "D-fructofuranose":         "inputs/D-fructofuranose.cif",
+    "D-xylopyranose":           "inputs/D-xylopyranose.cif",
+    "1,6-anhydroglucofuranose": "inputs/1,6-anhydroglucofuranose.cif",
     # Aldehydes
     "acetaldehyde":    "inputs/acetaldehyde.cif",
     "furfural":        "inputs/furfural.cif",
     "5-HMF":           "inputs/5-HMF.cif",
+    "glyoxal":         "inputs/glyoxal.cif",
     "propanal":        "inputs/propanal.cif",
     "butanal":         "inputs/butanal.cif",
     "valeraldehyde":   "inputs/valeraldehyde.cif",
@@ -256,6 +275,16 @@ MOLECULE_REGISTRY = {
     "furfuryl_alcohol":   "inputs/furfuryl_alcohol.cif",
     "gamma_valerolactone": "inputs/gamma_valerolactone.cif",
     "dimethyl_succinate": "inputs/dimethyl_succinate.cif",
+    "methyl_formate":     "inputs/methyl_formate.cif",
+    "angelica_lactone":   "inputs/angelica_lactone.cif",
+    "gamma_butyrolactone": "inputs/gamma_butyrolactone.cif",
+    # Furan
+    "2-furanone":         "inputs/2-furanone.cif",
+    # Oxygenates
+    "hydroxyacetaldehyde":  "inputs/hydroxyacetaldehyde.cif",
+    "acetal":               "inputs/acetal.cif",
+    "methylcyclopentenolone": "inputs/methylcyclopentenolone.cif",
+    "vanillin":             "inputs/vanillin.cif",
 }
 
 

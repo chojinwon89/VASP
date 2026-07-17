@@ -61,6 +61,11 @@ MOLECULE_SMILES = {
     "oxalic_acid":              "OC(=O)C(=O)O",
     "glycolic_acid":            "OCC(=O)O",
     "DMSO":                     "CS(=O)C",
+    # C2 — esters/alcohols/carbonyls/oxygenates
+    "methyl_formate":           "COC=O",
+    "ethylene_glycol":          "OCCO",
+    "glyoxal":                  "O=CC=O",
+    "hydroxyacetaldehyde":      "OCC=O",
     # C3
     "isopropanol":              "CC(C)O",
     "propanol":                 "CCCO",
@@ -97,6 +102,9 @@ MOLECULE_SMILES = {
     "furan":                    "c1ccoc1",
     "pyrrole":                  "c1cc[nH]c1",
     "thiophene":                "c1ccsc1",
+    # C4 — esters/furans
+    "gamma_butyrolactone":      "O=C1CCCO1",
+    "2-furanone":               "O=C1C=CCO1",
     # C5
     "valeric_acid":             "CCCCC(=O)O",
     "1-pentene":                "CCCC=C",
@@ -114,6 +122,9 @@ MOLECULE_SMILES = {
     "gamma_valerolactone":      "CC1CCC(=O)O1",
     "furfuryl_alcohol":         "OCc1ccco1",
     "xylitol":                  "OCC(O)C(O)C(O)CO",
+    # C5 — esters/sugars
+    "angelica_lactone":         "CC1=CCC(=O)O1",
+    "D-xylopyranose":           "OC1COC(O)C(O)C1O",
     # C6
     "caproic_acid":             "CCCCCC(=O)O",
     "5-HMF":                    "OCc1ccc(C=O)o1",
@@ -130,19 +141,39 @@ MOLECULE_SMILES = {
     "phenol":                   "Oc1ccccc1",
     "aniline":                  "Nc1ccccc1",
     "5-methylfurfural":         "Cc1ccc(C=O)o1",
+    # C6 — phenols/sugars/oxygenates
+    "hydroquinone":             "Oc1ccc(O)cc1",
+    "levoglucosan":             "OC1C(O)C(O)C2COC1O2",
+    "alpha-D-glucopyranose":    "OCC1OC(O)C(O)C(O)C1O",
+    "D-fructofuranose":         "OCC1(O)OCC(O)C1O",
+    "1,6-anhydroglucofuranose": "OC1C2COC1OC2O",
+    "acetal":                   "CC(OCC)OCC",
+    "methylcyclopentenolone":   "CC1=C(O)CCC1=O",
     # C7
     "5-heptanone":              "CCCCC(=O)CC",
     "toluene":                  "Cc1ccccc1",
     "heptane":                  "CCCCCCC",
     "benzaldehyde":             "O=Cc1ccccc1",
     "2-heptanone":              "CCCCCC(=O)C",
+    "guaiacol":                 "COc1ccccc1O",
     # C8
     "octane":                   "CCCCCCCC",
     "styrene":                  "C=Cc1ccccc1",
     "xylene":                   "Cc1ccc(C)cc1",
     "acetophenone":             "CC(=O)c1ccccc1",
+    # C8 — phenols/guaiacols/syringols/oxygenates
+    "2-ethylphenol":            "CCc1ccccc1O",
+    "4-methylguaiacol":         "Cc1ccc(O)c(OC)c1",
+    "syringol":                 "COc1cccc(OC)c1O",
+    "vanillin":                 "COc1cc(C=O)ccc1O",
+    # C9
+    "syringaldehyde":           "COc1cc(C=O)cc(OC)c1O",
     # C10
     "naphthalene":              "c1ccc2ccccc2c1",
+    "eugenol":                  "C=CCc1ccc(O)c(OC)c1",
+    "isoeugenol":               "C/C=C/c1ccc(O)c(OC)c1",
+    # C11
+    "propyl_syringol":          "CCCc1cc(OC)c(O)c(OC)c1",
     # C3 multi-OH
     "glycerol":                 "OCC(O)CO",
 }
