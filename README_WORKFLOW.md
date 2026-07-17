@@ -71,11 +71,17 @@ All slabs: 4×4×4, 15 Å vacuum, built with ASE using experimental lattice cons
 | aniline     | `Nc1ccccc1`       | C6     |
 | naphthalene | `c1ccc2ccccc2c1`  | C10    |
 
+### Furan
+| Name       | SMILES        | Carbon |
+|------------|---------------|--------|
+| 2-furanone | `O=C1C=CCO1`  | C4     |
+
 ### Alcohol
 | Name        | SMILES                | Carbon |
 |-------------|-----------------------|--------|
 | methanol    | `CO`                  | C1     |
 | ethanol     | `CCO`                 | C2     |
+| ethylene_glycol | `OCCO`            | C2     |
 | isopropanol | `CC(C)O`              | C3     |
 | propanol    | `CCCO`                | C3     |
 | glycerol    | `OCC(O)CO`            | C3     |
@@ -98,6 +104,11 @@ All slabs: 4×4×4, 15 Å vacuum, built with ASE using experimental lattice cons
 | 5-HMF            | `OCc1ccc(C=O)o1` | C6    |
 | 5-methylfurfural | `Cc1ccc(C=O)o1` | C6     |
 | benzaldehyde     | `O=Cc1ccccc1`   | C7     |
+
+### Carbonyl
+| Name    | SMILES   | Carbon |
+|---------|----------|--------|
+| glyoxal | `O=CC=O` | C2     |
 
 ### Ketone
 | Name              | SMILES             | Carbon |
@@ -142,19 +153,60 @@ All slabs: 4×4×4, 15 Å vacuum, built with ASE using experimental lattice cons
 | gluconic_acid           | `OCC(O)C(O)C(O)C(O)C(=O)O`         | C6     |
 | muconic_acid            | `OC(=O)C=CC=CC(=O)O`               | C6     |
 
+### Phenols
+| Name          | SMILES          | Carbon |
+|---------------|-----------------|--------|
+| 2-ethylphenol | `CCc1ccccc1O`   | C8     |
+| hydroquinone  | `Oc1ccc(O)cc1`  | C6     |
+
+### Guaiacols
+| Name            | SMILES                  | Carbon |
+|-----------------|-------------------------|--------|
+| guaiacol        | `COc1ccccc1O`           | C7     |
+| 4-methylguaiacol | `Cc1ccc(O)c(OC)c1`     | C8     |
+| eugenol         | `C=CCc1ccc(O)c(OC)c1`   | C10    |
+| isoeugenol      | `C/C=C/c1ccc(O)c(OC)c1` | C10    |
+
+### Syringols
+| Name             | SMILES                        | Carbon |
+|------------------|-------------------------------|--------|
+| syringol         | `COc1cccc(OC)c1O`             | C8     |
+| propyl_syringol  | `CCCc1cc(OC)c(O)c(OC)c1`      | C11    |
+| syringaldehyde   | `COc1cc(C=O)cc(OC)c1O`        | C9     |
+
+### Sugars
+| Name                     | SMILES                 | Carbon |
+|--------------------------|------------------------|--------|
+| levoglucosan             | `OC1C(O)C(O)C2COC1O2`  | C6     |
+| alpha-D-glucopyranose    | `OCC1OC(O)C(O)C(O)C1O` | C6     |
+| D-fructofuranose         | `OCC1(O)OCC(O)C1O`     | C6     |
+| D-xylopyranose           | `OC1COC(O)C(O)C1O`     | C5     |
+| 1,6-anhydroglucofuranose | `OC1C2COC1OC2O`        | C6     |
+
 ### Ester/ether
 | Name                | SMILES                  | Carbon |
 |---------------------|-------------------------|--------|
 | DME                 | `COC`                   | C2     |
 | DMSO                | `CS(=O)C`               | C2     |
+| methyl_formate      | `COC=O`                 | C2     |
 | 3-MTHF              | `CC1CCCO1`              | C5     |
 | methylmethacrylate  | `COC(=O)C(=C)C`         | C5     |
+| angelica_lactone    | `CC1=CCC(=O)O1`         | C5     |
+| gamma_butyrolactone | `O=C1CCCO1`             | C4     |
 | diethyl_ether       | `CCOCC`                 | C4     |
 | THF                 | `C1CCOC1`               | C4     |
 | ethyl_acetate       | `CC(=O)OCC`             | C4     |
 | furfuryl_alcohol    | `OCc1ccco1`             | C5     |
 | gamma_valerolactone | `CC1CCC(=O)O1`          | C5     |
 | dimethyl_succinate  | `COC(=O)CCC(=O)OC`      | C6     |
+
+### Oxygenates
+| Name                  | SMILES              | Carbon |
+|-----------------------|---------------------|--------|
+| hydroxyacetaldehyde   | `OCC=O`             | C2     |
+| acetal                | `CC(OCC)OCC`        | C6     |
+| methylcyclopentenolone | `CC1=C(O)CCC1=O`   | C6     |
+| vanillin              | `COc1cc(C=O)ccc1O`  | C8     |
 
 ### C1 reference
 | Name         | Notes                                    |

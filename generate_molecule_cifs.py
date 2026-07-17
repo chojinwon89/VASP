@@ -165,6 +165,51 @@ SMILES_MOLECULES = {
     "furfuryl_alcohol":    "OCc1ccco1",
     "DMSO":               "CS(=O)C",
 
+    # --- Esters ---
+    "methyl_formate":      "COC=O",
+    "angelica_lactone":    "CC1=CCC(=O)O1",
+    "gamma_butyrolactone": "O=C1CCCO1",
+
+    # --- Alcohols ---
+    "ethylene_glycol": "OCCO",
+
+    # --- Carbonyls ---
+    "glyoxal": "O=CC=O",
+
+    # --- Phenols ---
+    "2-ethylphenol": "CCc1ccccc1O",
+    "hydroquinone":  "Oc1ccc(O)cc1",
+
+    # --- Guaiacols ---
+    "guaiacol":         "COc1ccccc1O",
+    "4-methylguaiacol": "Cc1ccc(O)c(OC)c1",
+    "eugenol":          "C=CCc1ccc(O)c(OC)c1",
+    "isoeugenol":       "C/C=C/c1ccc(O)c(OC)c1",
+
+    # --- Syringols ---
+    "syringol":         "COc1cccc(OC)c1O",
+    "propyl_syringol":  "CCCc1cc(OC)c(O)c(OC)c1",
+    "syringaldehyde":   "COc1cc(C=O)cc(OC)c1O",
+
+    # --- Sugars ---
+    # NOTE: these cyclic polyols/anhydrosugars are approximate structures;
+    # stereochemistry may not be perfectly resolved by RDKit MMFF and should
+    # be manually verified before production DFT/MLIP use.
+    "levoglucosan":            "OC1C(O)C(O)C2COC1O2",
+    "alpha-D-glucopyranose":   "OCC1OC(O)C(O)C(O)C1O",
+    "D-fructofuranose":        "OCC1(O)OCC(O)C1O",
+    "D-xylopyranose":          "OC1COC(O)C(O)C1O",
+    "1,6-anhydroglucofuranose": "OC1C2COC1OC2O",
+
+    # --- Furan ---
+    "2-furanone": "O=C1C=CCO1",
+
+    # --- Oxygenates ---
+    "hydroxyacetaldehyde":  "OCC=O",
+    "acetal":               "CC(OCC)OCC",
+    "methylcyclopentenolone": "CC1=C(O)CCC1=O",
+    "vanillin":             "COc1cc(C=O)ccc1O",
+
     # --- Inorganic (fallback via RDKit for those ASE doesn't have) ---
     "H2S": "S",
 
