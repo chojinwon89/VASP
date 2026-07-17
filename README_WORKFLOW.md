@@ -245,6 +245,21 @@ Use `--force` to override this check:
 python workflow/run_one_task.py --task-id 42 --force
 ```
 
+`find_missing_tasks.py` now also generates a self-pacing `submit_missing.sh`
+by default: before each chunked `sbatch` call, the script polls `squeue` and
+waits until the user's pending+running array-task count drops below
+`--max-in-flight` (default: `9000`), checking every `--poll-interval` seconds
+(default: `60`). This helps avoid cluster-wide QOS submit caps such as
+`MaxSubmitPU`.
+
+```bash
+# Use a lower cap if your cluster's QOS MaxSubmitPU is smaller than 9000
+python find_missing_tasks.py --max-in-flight 3000 --poll-interval 30
+
+# Disable pacing entirely (e.g. no such QOS restriction on your cluster)
+python find_missing_tasks.py --max-in-flight 0
+```
+
 ## Step-by-step
 
 ### Step 1 — Generate input structures
