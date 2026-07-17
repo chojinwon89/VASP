@@ -14,6 +14,16 @@ Automatically writes submit_missing.sh with chunked sbatch commands
 covering BOTH failed and missing tasks so all incomplete work is
 resubmitted in one go.
 
+Note on bulk resubmission
+-------------------------
+``run_one_task.py`` now self-skips any task whose run directory already
+contains a ``status.json`` with ``state == "finished"``.  This means
+running ``bash submit_missing.sh`` multiple times is safe — tasks that
+finished between classification runs will be silently skipped with exit
+code 0, so the Slurm array job is treated as successful.  Pass
+``--force`` to ``run_one_task.py`` (via the Slurm script) if you need
+to deliberately re-run already-finished tasks.
+
 Usage
 -----
     # Default: checks workflow/tasks_custom.csv vs ./runs/

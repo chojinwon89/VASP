@@ -88,6 +88,58 @@ INPUTS_DIR = Path("inputs")
 _SURFACE_RE = re.compile(r'^[A-Z][a-z]?\d+$')
 
 # ---------------------------------------------------------------------------
+# Explicit set of known molecule names that must NEVER be classified as
+# surfaces, even if their CIF stem happens to match _SURFACE_RE.
+# This prevents short inorganic names like H2, O2, N2, NO from being
+# mis-bucketed as metal+facet entries.
+#
+# Covers every molecule defined in:
+#   - generate_molecule_cifs.py  (ASE_NAMED + SMILES_MOLECULES)
+#   - batch_isopropanol.py       (MOLECULE_SMILES)
+#   - setup_molecule_jobs.py     (MOLECULE_REGISTRY)
+# ---------------------------------------------------------------------------
+KNOWN_MOLECULE_NAMES: set = {
+    # Inorganics / simple gases
+    "H2", "O2", "N2", "CO", "NO",
+    "CO2", "NO2", "SO2", "H2S", "NH3", "H2O",
+    # C1 references
+    "CH4", "methane", "methanol", "formaldehyde",
+    "formate", "carbonate", "HCO", "CH2", "CH3",
+    # Alkanes
+    "ethane", "propane", "butane", "isobutane",
+    "pentane", "isopentane", "hexane", "heptane", "octane",
+    # Alkenes
+    "ethylene", "ethene", "propene", "1-butene", "2-butene",
+    "isobutene", "1-pentene", "butadiene", "isoprene",
+    # Aromatics
+    "benzene", "toluene", "furan", "pyrrole", "thiophene",
+    "styrene", "xylene", "phenol", "aniline", "naphthalene",
+    # Alcohols
+    "ethanol", "isopropanol", "propanol", "glycerol",
+    "1-butanol", "2-butanol", "pentanol", "sorbitol", "xylitol",
+    # Aldehydes
+    "acetaldehyde", "furfural", "5-HMF",
+    "propanal", "butanal", "valeraldehyde", "hexanal",
+    "benzaldehyde", "5-methylfurfural",
+    # Ketones
+    "acetone", "methylethylketone", "cyclobutanone",
+    "2-pentanone", "2-hexanone", "cyclopentanone", "cyclohexanone",
+    "acetophenone", "5-heptanone", "2-heptanone",
+    # Carboxylic acids
+    "formic_acid", "acetic_acid", "propionic_acid", "butyric_acid",
+    "valeric_acid", "caproic_acid", "oxalic_acid", "malonic_acid",
+    "succinic_acid", "glutaric_acid",
+    # Hydroxy/keto acids
+    "lactic_acid", "pyruvic_acid", "3-hydroxypropionic_acid",
+    "itaconic_acid", "glycolic_acid", "malic_acid", "tartaric_acid",
+    "levulinic_acid", "citric_acid", "gluconic_acid", "muconic_acid",
+    # Esters/ethers
+    "DME", "DMSO", "3-MTHF", "methylmethacrylate",
+    "diethyl_ether", "THF", "ethyl_acetate",
+    "furfuryl_alcohol", "gamma_valerolactone", "dimethyl_succinate",
+}
+
+# ---------------------------------------------------------------------------
 # AUTO-DISCOVER surfaces and molecules from inputs/*.cif
 # ---------------------------------------------------------------------------
 
@@ -95,8 +147,12 @@ def discover_surfaces_and_molecules(inputs_dir: Path):
     """
     Scan inputs/*.cif and split into surfaces and molecules.
 
-    Surface  : stem matches <Metal><facet> regex  e.g. Cu111, Ru0001
-    Molecule : everything else                     e.g. glycerol, 1-butene
+    Surface  : stem matches <Metal><facet> regex AND is NOT in KNOWN_MOLECULE_NAMES
+    Molecule : everything in KNOWN_MOLECULE_NAMES, OR stems that don't match the regex
+
+    The KNOWN_MOLECULE_NAMES check takes priority over the regex so that
+    short inorganic names like H2, O2, N2, NO are never mis-bucketed as
+    metal+facet surfaces.
     """
     if not inputs_dir.exists():
         print(f"WARNING: inputs/ not found at {inputs_dir.resolve()}")
@@ -108,7 +164,11 @@ def discover_surfaces_and_molecules(inputs_dir: Path):
 
     for cif in sorted(inputs_dir.glob("*.cif")):
         name = cif.stem
-        if _SURFACE_RE.match(name):
+        # Known molecule names are always treated as molecules, regardless of
+        # whether their stem happens to match the surface regex (e.g. H2, NO).
+        if name in KNOWN_MOLECULE_NAMES:
+            molecules[name] = DEFAULT["generations"]
+        elif _SURFACE_RE.match(name):
             surfaces.append(name)
         else:
             molecules[name] = DEFAULT["generations"]
