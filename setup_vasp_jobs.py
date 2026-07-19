@@ -9,6 +9,7 @@ with the remaining VASP input files needed for DFT verification:
     KPOINTS          -- Monkhorst-Pack 2x2x1
     POTCAR           -- concatenated PBE PAW potentials (species order from POSCAR)
     slm.vasp.kestrel -- Kestrel Slurm submission script
+    vdw_kernel.bindat -- copied for beef-vdw jobs when available
 
 A functional-named subfolder is created inside each system directory so that
 multiple functionals can coexist side-by-side:
@@ -60,6 +61,10 @@ Usage
     python setup_vasp_jobs.py --poscar-dir ... --functional pbe \\
                                --pp-path /path/to/potpaw_PBE
 
+    # Override the default vdw_kernel.bindat path for beef-vdw:
+    python setup_vasp_jobs.py --poscar-dir ... --functional beef-vdw \\
+                               --vdw-kernel-path /path/to/vdw_kernel.bindat
+
 Prerequisites
 -------------
 POTCAR library is set by default to:
@@ -68,6 +73,14 @@ POTCAR library is set by default to:
 
 This can be overridden with --pp-path or the VASP_PP_PATH environment variable
 (--pp-path takes priority over both).
+
+For beef-vdw, vdw_kernel.bindat is set by default to:
+
+    /projects/2dmgcat/vdw_kernel.bindat
+
+This can be overridden with --vdw-kernel-path or the
+VASP_VDW_KERNEL_PATH environment variable (--vdw-kernel-path takes priority
+over both).
 """
 
 import argparse
@@ -80,6 +93,7 @@ from pathlib import Path
 # Default POTCAR library path for Kestrel
 # ---------------------------------------------------------------------------
 DEFAULT_PP_PATH = "/projects/2dmgcat/paw64/potpaw_PBE_64"
+DEFAULT_VDW_KERNEL_PATH = "/projects/2dmgcat/vdw_kernel.bindat"
 
 
 # ---------------------------------------------------------------------------
@@ -292,7 +306,8 @@ def setup_job_dir(job_dir: Path, system_name: str,
                   pp_root: Path, xc_block: str,
                   ionic_block: str, ediffg_line: str,
                   dry_run: bool = False,
-                  system_dir: Path | None = None) -> dict:
+                  system_dir: Path | None = None,
+                  vdw_kernel_path: Path | None = None) -> dict:
     """Write INCAR, KPOINTS, POTCAR, slm.vasp.kestrel into job_dir.
 
     job_dir is the functional subfolder, e.g. poscar/best/C1/Cu001_CO2/PBE
@@ -326,6 +341,20 @@ def setup_job_dir(job_dir: Path, system_name: str,
         )
         (job_dir / "INCAR").write_text(incar_text)
         (job_dir / "KPOINTS").write_text(KPOINTS_TEMPLATE)
+
+    if vdw_kernel_path is not None:
+        if vdw_kernel_path.exists():
+            if not dry_run:
+                (job_dir / "vdw_kernel.bindat").write_bytes(
+                    vdw_kernel_path.read_bytes()
+                )
+                status["vdw_kernel_written"] = True
+        else:
+            status["warnings"].append(
+                f"vdw_kernel.bindat not found at: {vdw_kernel_path}. "
+                "beef-vdw jobs will be missing this file; copy it manually."
+            )
+            status["status"] = "partial"
 
     potcar_path = job_dir / "POTCAR"
     if pp_root is not None:
@@ -426,6 +455,14 @@ def main():
         ),
     )
     parser.add_argument(
+        "--vdw-kernel-path", default=None,
+        help=(
+            "Path to vdw_kernel.bindat for beef-vdw jobs. "
+            "Priority: --vdw-kernel-path > VASP_VDW_KERNEL_PATH env var > "
+            f"built-in default ({DEFAULT_VDW_KERNEL_PATH})"
+        ),
+    )
+    parser.add_argument(
         "--dry-run", action="store_true",
         help="Print what would be done without writing any files",
     )
@@ -479,6 +516,24 @@ def main():
                   else "default")
         print(f"Using POTCAR library ({source}): {pp_root}")
 
+    # ---- Resolve vdW kernel path ---------------------------------------------
+    vdw_kernel_path_str = (args.vdw_kernel_path
+                           or os.environ.get("VASP_VDW_KERNEL_PATH", "")
+                           or DEFAULT_VDW_KERNEL_PATH)
+    vdw_kernel_path = Path(vdw_kernel_path_str)
+
+    if not vdw_kernel_path.exists():
+        print(f"WARNING: vdw_kernel.bindat not found at: {vdw_kernel_path}")
+        print("         beef-vdw jobs will be missing this file.")
+        print("         Copy it manually or override with --vdw-kernel-path")
+        print("         or VASP_VDW_KERNEL_PATH.")
+        print()
+    elif args.functional == "beef-vdw":
+        source = ("--vdw-kernel-path" if args.vdw_kernel_path
+                  else "VASP_VDW_KERNEL_PATH" if os.environ.get("VASP_VDW_KERNEL_PATH")
+                  else "default")
+        print(f"Using vdw_kernel.bindat ({source}): {vdw_kernel_path}")
+
     # ---- Collect system directories with a POSCAR ----------------------------
     system_dirs = []
     if (poscar_dir / "POSCAR").exists():
@@ -522,6 +577,7 @@ def main():
             ediffg_line=ediffg_line,
             dry_run=args.dry_run,
             system_dir=sys_dir,
+            vdw_kernel_path=vdw_kernel_path if args.functional == "beef-vdw" else None,
         )
 
         print(f"    species:  {' '.join(result.get('species', []))}")
@@ -530,6 +586,8 @@ def main():
             files = ["POSCAR", "INCAR", "KPOINTS", "slm.vasp.kestrel"]
             if result["status"] == "ok":
                 files.append("POTCAR")
+            if result.get("vdw_kernel_written"):
+                files.append("vdw_kernel.bindat")
             print(f"    written:  {', '.join(files)}")
 
         for w in result.get("warnings", []):
@@ -544,8 +602,10 @@ def main():
     print("=" * 65)
     print()
     if not all_ok:
-        print("1. Some POTCARs were not built — check warnings above.")
-        print(f"   Verify the library path: {pp_root or DEFAULT_PP_PATH}")
+        print("1. Some input files were not built automatically — check warnings above.")
+        print(f"   Verify the POTCAR library path: {pp_root or DEFAULT_PP_PATH}")
+        if args.functional == "beef-vdw":
+            print(f"   Verify the vdW kernel path: {vdw_kernel_path}")
         print(f"   Then re-run:")
         print()
         print(f"     python setup_vasp_jobs.py --poscar-dir {poscar_dir} "
