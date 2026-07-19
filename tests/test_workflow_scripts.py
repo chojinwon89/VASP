@@ -56,27 +56,64 @@ def _write_minimal_poscar(path: Path):
     )
 
 
-def _run_setup_vasp_jobs(tmp_path: Path, calc_type: str | None):
+def _write_fake_potcar_library(path: Path):
+    for element in ("Cu", "H"):
+        potcar = path / element / "POTCAR"
+        potcar.parent.mkdir(parents=True, exist_ok=True)
+        potcar.write_text(f"{element} POTCAR\n")
+
+
+def _run_setup_vasp_jobs(
+    tmp_path: Path,
+    calc_type: str | None,
+    *,
+    functional: str = "pbe",
+    vdw_kernel_path: Path | None = None,
+    dry_run: bool = False,
+    capture_output: bool = False,
+):
     tmp_path.mkdir(parents=True, exist_ok=True)
     (tmp_path / "setup_vasp_jobs.py").write_text(
         (REPO_ROOT / "setup_vasp_jobs.py").read_text()
     )
     poscar_root = tmp_path / "poscar" / "best"
     _write_minimal_poscar(poscar_root / "C1" / "Cu001_CO" / "POSCAR")
+    pp_root = tmp_path / "fake_pp"
+    _write_fake_potcar_library(pp_root)
     cmd = [
         sys.executable,
         "setup_vasp_jobs.py",
         "--poscar-dir",
         "poscar/best",
         "--functional",
-        "pbe",
+        functional,
+        "--pp-path",
+        str(pp_root),
     ]
     if calc_type is not None:
         cmd.extend(["--calc-type", calc_type])
-    subprocess.run(cmd, cwd=tmp_path, check=True)
+    if vdw_kernel_path is not None:
+        cmd.extend(["--vdw-kernel-path", str(vdw_kernel_path)])
+    if dry_run:
+        cmd.append("--dry-run")
+    result = subprocess.run(
+        cmd,
+        cwd=tmp_path,
+        check=True,
+        capture_output=capture_output,
+        text=capture_output,
+    )
+    subfolder = {
+        "pbe": "PBE",
+        "pbe-d3": "PBE_D3",
+        "r2scan": "r2scan",
+        "beef-vdw": "beef_vdw",
+    }[functional]
     if calc_type == "single-point":
-        return poscar_root / "C1" / "Cu001_CO" / "singlepoint" / "PBE" / "INCAR"
-    return poscar_root / "C1" / "Cu001_CO" / "PBE" / "INCAR"
+        job_dir = poscar_root / "C1" / "Cu001_CO" / "singlepoint" / subfolder
+    else:
+        job_dir = poscar_root / "C1" / "Cu001_CO" / subfolder
+    return result, job_dir
 
 
 def _write_tasks_custom_csv(path: Path, rows: list[dict[str, str]]):
@@ -344,8 +381,10 @@ def test_new_bio_oil_names_are_never_surface_classified(tmp_path):
 
 
 def test_setup_vasp_jobs_relax_default_and_explicit(tmp_path):
-    incar_default = _run_setup_vasp_jobs(tmp_path / "default", calc_type=None)
-    incar_explicit = _run_setup_vasp_jobs(tmp_path / "explicit_relax", calc_type="relax")
+    _, default_job_dir = _run_setup_vasp_jobs(tmp_path / "default", calc_type=None)
+    _, explicit_job_dir = _run_setup_vasp_jobs(tmp_path / "explicit_relax", calc_type="relax")
+    incar_default = default_job_dir / "INCAR"
+    incar_explicit = explicit_job_dir / "INCAR"
 
     default_text = incar_default.read_text()
     explicit_text = incar_explicit.read_text()
@@ -362,7 +401,8 @@ def test_setup_vasp_jobs_relax_default_and_explicit(tmp_path):
 
 
 def test_setup_vasp_jobs_single_point_incar_and_subfolder(tmp_path):
-    incar_path = _run_setup_vasp_jobs(tmp_path, calc_type="single-point")
+    _, job_dir = _run_setup_vasp_jobs(tmp_path, calc_type="single-point")
+    incar_path = job_dir / "INCAR"
     incar_text = incar_path.read_text()
 
     assert "NSW    = 0" in incar_text
@@ -373,6 +413,90 @@ def test_setup_vasp_jobs_single_point_incar_and_subfolder(tmp_path):
     # single-point must be nested under singlepoint/<Functional>/
     assert incar_path.parent.name == "PBE"
     assert incar_path.parent.parent.name == "singlepoint"
+
+
+def test_setup_vasp_jobs_beef_vdw_copies_vdw_kernel_in_relax_mode(tmp_path):
+    source = tmp_path / "vdw_kernel.bindat"
+    source.write_bytes(b"fake-vdw-kernel\n")
+
+    result, job_dir = _run_setup_vasp_jobs(
+        tmp_path / "relax_beef_vdw",
+        calc_type="relax",
+        functional="beef-vdw",
+        vdw_kernel_path=source,
+        capture_output=True,
+    )
+
+    copied = job_dir / "vdw_kernel.bindat"
+    assert copied.exists()
+    assert copied.read_bytes() == source.read_bytes()
+    assert "written:  POSCAR, INCAR, KPOINTS, slm.vasp.kestrel, POTCAR, vdw_kernel.bindat" in result.stdout
+
+
+def test_setup_vasp_jobs_beef_vdw_copies_vdw_kernel_in_single_point_mode(tmp_path):
+    source = tmp_path / "singlepoint_vdw_kernel.bindat"
+    source.write_bytes(b"single-point-vdw-kernel\n")
+
+    _, job_dir = _run_setup_vasp_jobs(
+        tmp_path / "singlepoint_beef_vdw",
+        calc_type="single-point",
+        functional="beef-vdw",
+        vdw_kernel_path=source,
+    )
+
+    copied = job_dir / "vdw_kernel.bindat"
+    assert job_dir.parent.name == "singlepoint"
+    assert copied.exists()
+    assert copied.read_bytes() == source.read_bytes()
+
+
+def test_setup_vasp_jobs_non_beef_functional_does_not_copy_vdw_kernel(tmp_path):
+    source = tmp_path / "unused_vdw_kernel.bindat"
+    source.write_bytes(b"unused-vdw-kernel\n")
+
+    _, job_dir = _run_setup_vasp_jobs(
+        tmp_path / "pbe_run",
+        calc_type="relax",
+        functional="pbe",
+        vdw_kernel_path=source,
+    )
+
+    assert not (job_dir / "vdw_kernel.bindat").exists()
+
+
+def test_setup_vasp_jobs_missing_vdw_kernel_warns_without_crashing(tmp_path):
+    missing = tmp_path / "does_not_exist" / "vdw_kernel.bindat"
+
+    result, job_dir = _run_setup_vasp_jobs(
+        tmp_path / "missing_vdw",
+        calc_type="relax",
+        functional="beef-vdw",
+        vdw_kernel_path=missing,
+        capture_output=True,
+    )
+
+    assert (job_dir / "INCAR").exists()
+    assert (job_dir / "KPOINTS").exists()
+    assert (job_dir / "POTCAR").exists()
+    assert (job_dir / "slm.vasp.kestrel").exists()
+    assert not (job_dir / "vdw_kernel.bindat").exists()
+    assert "WARNING: vdw_kernel.bindat not found at:" in result.stdout
+    assert "copy it manually" in result.stdout
+
+
+def test_setup_vasp_jobs_dry_run_does_not_copy_vdw_kernel(tmp_path):
+    source = tmp_path / "dry_run_vdw_kernel.bindat"
+    source.write_bytes(b"dry-run-vdw-kernel\n")
+
+    _, job_dir = _run_setup_vasp_jobs(
+        tmp_path / "dry_run_beef_vdw",
+        calc_type="relax",
+        functional="beef-vdw",
+        vdw_kernel_path=source,
+        dry_run=True,
+    )
+
+    assert not job_dir.exists()
 
 
 def test_setup_vasp_jobs_processes_multiple_carbon_buckets(tmp_path):
