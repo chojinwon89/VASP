@@ -493,8 +493,8 @@ def test_extract_poscar_collects_bucketed_layout_and_writes_outputs(tmp_path):
 
     assert "Found 1 completed run(s)" in result.stdout
     assert "No completed runs" not in result.stdout
-    assert (out_dir / "Ir100_formic_acid_sevennet_omni_seed1" / "POSCAR").exists()
-    assert (out_dir / "best" / "Ir100_formic_acid" / "POSCAR").exists()
+    assert (out_dir / "C1" / "Ir100_formic_acid_sevennet_omni_seed1" / "POSCAR").exists()
+    assert (out_dir / "best" / "C1" / "Ir100_formic_acid" / "POSCAR").exists()
 
 
 def test_extract_poscar_includes_finished_run_by_default(tmp_path):
@@ -511,7 +511,7 @@ def test_extract_poscar_includes_finished_run_by_default(tmp_path):
 
     assert "Found 1 completed run(s)" in result.stdout
     assert "Skipped (not finished per status.json)" not in result.stdout
-    assert (out_dir / "Ir100_formic_acid_sevennet_omni_seed1" / "POSCAR").exists()
+    assert (out_dir / "C1" / "Ir100_formic_acid_sevennet_omni_seed1" / "POSCAR").exists()
 
 
 def test_extract_poscar_excludes_non_finished_run_by_default(tmp_path):
@@ -528,8 +528,8 @@ def test_extract_poscar_excludes_non_finished_run_by_default(tmp_path):
 
     assert "No completed runs" in result.stdout
     assert "Skipped (not finished per status.json): 1" in result.stdout
-    assert not (out_dir / "Ir100_formic_acid_sevennet_omni_seed1" / "POSCAR").exists()
-    assert not (out_dir / "best" / "Ir100_formic_acid" / "POSCAR").exists()
+    assert not (out_dir / "C1" / "Ir100_formic_acid_sevennet_omni_seed1" / "POSCAR").exists()
+    assert not (out_dir / "best" / "C1" / "Ir100_formic_acid" / "POSCAR").exists()
 
 
 def test_extract_poscar_treats_missing_status_as_not_finished(tmp_path):
@@ -546,7 +546,7 @@ def test_extract_poscar_treats_missing_status_as_not_finished(tmp_path):
 
     assert "No completed runs" in result.stdout
     assert "Skipped (not finished per status.json): 1" in result.stdout
-    assert not (out_dir / "Ir100_formic_acid_sevennet_omni_seed1" / "POSCAR").exists()
+    assert not (out_dir / "C1" / "Ir100_formic_acid_sevennet_omni_seed1" / "POSCAR").exists()
 
 
 def test_extract_poscar_include_unfinished_restores_old_behavior(tmp_path):
@@ -563,7 +563,7 @@ def test_extract_poscar_include_unfinished_restores_old_behavior(tmp_path):
 
     assert "Found 1 completed run(s)" in result.stdout
     assert "Skipped (not finished per status.json)" not in result.stdout
-    assert (out_dir / "Ir100_formic_acid_sevennet_omni_seed1" / "POSCAR").exists()
+    assert (out_dir / "C1" / "Ir100_formic_acid_sevennet_omni_seed1" / "POSCAR").exists()
 
 
 def test_extract_poscar_collects_runs_from_multiple_buckets(tmp_path):
@@ -585,10 +585,10 @@ def test_extract_poscar_collects_runs_from_multiple_buckets(tmp_path):
     result = _run_extract_poscar(runs_dir, out_dir)
 
     assert "Found 2 completed run(s)" in result.stdout
-    assert (out_dir / "Ir100_formic_acid_sevennet_omni_seed1" / "POSCAR").exists()
-    assert (out_dir / "Cu111_propanol_5m_seed0" / "POSCAR").exists()
-    assert (out_dir / "best" / "Ir100_formic_acid" / "POSCAR").exists()
-    assert (out_dir / "best" / "Cu111_propanol" / "POSCAR").exists()
+    assert (out_dir / "C1" / "Ir100_formic_acid_sevennet_omni_seed1" / "POSCAR").exists()
+    assert (out_dir / "C3" / "Cu111_propanol_5m_seed0" / "POSCAR").exists()
+    assert (out_dir / "best" / "C1" / "Ir100_formic_acid" / "POSCAR").exists()
+    assert (out_dir / "best" / "C3" / "Cu111_propanol" / "POSCAR").exists()
 
 
 def test_extract_poscar_mixed_finished_and_unfinished_runs(tmp_path):
@@ -617,13 +617,13 @@ def test_extract_poscar_mixed_finished_and_unfinished_runs(tmp_path):
 
     assert "Found 1 completed run(s)" in default_result.stdout
     assert "Skipped (not finished per status.json): 1" in default_result.stdout
-    assert (out_dir_default / "Ir100_formic_acid_sevennet_omni_seed1" / "POSCAR").exists()
-    assert not (out_dir_default / "Cu111_propanol_5m_seed0" / "POSCAR").exists()
+    assert (out_dir_default / "C1" / "Ir100_formic_acid_sevennet_omni_seed1" / "POSCAR").exists()
+    assert not (out_dir_default / "C3" / "Cu111_propanol_5m_seed0" / "POSCAR").exists()
 
     assert "Found 2 completed run(s)" in include_result.stdout
     assert "Skipped (not finished per status.json)" not in include_result.stdout
-    assert (out_dir_include / "Ir100_formic_acid_sevennet_omni_seed1" / "POSCAR").exists()
-    assert (out_dir_include / "Cu111_propanol_5m_seed0" / "POSCAR").exists()
+    assert (out_dir_include / "C1" / "Ir100_formic_acid_sevennet_omni_seed1" / "POSCAR").exists()
+    assert (out_dir_include / "C3" / "Cu111_propanol_5m_seed0" / "POSCAR").exists()
 
 
 def test_extract_poscar_collects_when_runs_dir_points_to_single_bucket_or_flat_layout(tmp_path):
@@ -639,8 +639,24 @@ def test_extract_poscar_collects_when_runs_dir_points_to_single_bucket_or_flat_l
     result = _run_extract_poscar(runs_dir, out_dir)
 
     assert "Found 1 completed run(s)" in result.stdout
-    assert (out_dir / "Ir100_formic_acid_sevennet_omni_seed1" / "POSCAR").exists()
-    assert (out_dir / "best" / "Ir100_formic_acid" / "POSCAR").exists()
+    assert (out_dir / "C1" / "Ir100_formic_acid_sevennet_omni_seed1" / "POSCAR").exists()
+    assert (out_dir / "best" / "C1" / "Ir100_formic_acid" / "POSCAR").exists()
+
+
+def test_extract_poscar_best_only_layout_is_bucketed(tmp_path):
+    runs_dir = tmp_path / "runs"
+    out_dir = tmp_path / "poscar"
+    _write_extract_poscar_run(
+        runs_dir / "C1" / "Ir100_formic_acid_seed1_sevennet_omni",
+        "Ir100",
+        "formic_acid",
+        e_ads=-1.23,
+    )
+
+    _run_extract_poscar(runs_dir, out_dir, "--best-only")
+
+    assert (out_dir / "C1" / "Ir100_formic_acid" / "POSCAR").exists()
+    assert not (out_dir / "best" / "C1" / "Ir100_formic_acid" / "POSCAR").exists()
 
 
 def test_extract_poscar_empty_bucketed_layout_exits_cleanly_with_no_completed_runs(tmp_path):

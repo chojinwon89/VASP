@@ -16,19 +16,22 @@ Directory layout written by batch_isopropanol.py:
 Output (default, without --best-only):
 
     poscar/
-        Cu111_isopropanol_seed0/POSCAR
-        Cu110_isopropanol_seed0/POSCAR
+        C3/
+            Cu111_isopropanol_sevennet_omni_seed0/POSCAR
+            Cu110_isopropanol_5m_seed0/POSCAR
         ...
         best/
-            Cu111_isopropanol/POSCAR    <- lowest E_ads across all seeds per surface
-            Cu110_isopropanol/POSCAR
+            C3/
+                Cu111_isopropanol/POSCAR    <- lowest E_ads across all seeds per surface
+                Cu110_isopropanol/POSCAR
             ...
 
 Output with --best-only (best POSCARs written directly into --out-dir):
 
     poscar/best2/
-        Cu111_isopropanol/POSCAR
-        Cu110_isopropanol/POSCAR
+        C3/
+            Cu111_isopropanol/POSCAR
+            Cu110_isopropanol/POSCAR
         ...
 
 Usage
@@ -69,10 +72,17 @@ Usage
 import argparse
 import json
 import io
+import sys
 from pathlib import Path
 
 from ase.io import read, write
 from ase import Atoms
+
+REPO_ROOT = Path(__file__).resolve().parent
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from molecule_utils import carbon_count
 
 
 # ---------------------------------------------------------------------------
@@ -323,10 +333,10 @@ def main():
         "--out-dir", default="poscar",
         help=(
             "Output root directory for POSCAR files (default: ./poscar). "
-            "Without --best-only, per-seed POSCARs go into OUT_DIR/<label>/POSCAR "
-            "and best POSCARs go into OUT_DIR/best/<label>/POSCAR. "
+            "Without --best-only, per-seed POSCARs go into OUT_DIR/C<n>/<label>/POSCAR "
+            "and best POSCARs go into OUT_DIR/best/C<n>/<label>/POSCAR. "
             "With --best-only, best POSCARs are written directly into "
-            "OUT_DIR/<label>/POSCAR with NO extra best/ subdirectory."
+            "OUT_DIR/C<n>/<label>/POSCAR with NO extra best/ subdirectory."
         ),
     )
     parser.add_argument(
@@ -350,7 +360,7 @@ def main():
         "--best-only", action="store_true",
         help=(
             "Only write the best-seed POSCAR per (surface, adsorbate). "
-            "POSCARs are placed directly in --out-dir/<system>/POSCAR "
+            "POSCARs are placed directly in --out-dir/C<n>/<system>/POSCAR "
             "(no extra best/ subdirectory)."
         ),
     )
@@ -410,7 +420,8 @@ def main():
         for e in entries:
             label   = "{}_{}_{}_seed{}".format(
                 e["surface"], e["adsorbate"], e["calculator"], e["seed"])
-            poscar  = out_dir / label / "POSCAR"
+            n_carbon = carbon_count(e["adsorbate"])
+            poscar  = out_dir / "C{}".format(n_carbon) / label / "POSCAR"
             e_str   = "{:.4f} eV".format(e["E_ads_eV"]) \
                       if e["E_ads_eV"] is not None else "E_ads unknown"
             comment = ("{} + {} | seed={} | calc={} | E_ads={}".format(
@@ -429,7 +440,8 @@ def main():
 
     for key, e in sorted(best.items()):
         label   = "{}_{}".format(e["surface"], e["adsorbate"])
-        poscar  = best_dir / label / "POSCAR"
+        n_carbon = carbon_count(e["adsorbate"])
+        poscar  = best_dir / "C{}".format(n_carbon) / label / "POSCAR"
         e_str   = "{:.4f} eV".format(e["E_ads_eV"]) \
                   if e["E_ads_eV"] is not None else "E_ads unknown"
         comment = ("{} + {} | BEST seed={} | calc={} | E_ads={}".format(
@@ -445,11 +457,11 @@ def main():
     print("\nWrote {} POSCAR file(s) under {}/".format(written, out_dir))
     print()
     if args.best_only:
-        print("Best-seed layout:  {}/<surface>_<adsorbate>/POSCAR".format(out_dir))
+        print("Best-seed layout:  {}/C<n>/<surface>_<adsorbate>/POSCAR".format(out_dir))
     else:
-        print("Per-seed layout:   {}/<surface>_<adsorbate>_<calc>_seed<N>/POSCAR".format(
+        print("Per-seed layout:   {}/C<n>/<surface>_<adsorbate>_<calc>_seed<N>/POSCAR".format(
               out_dir))
-        print("Best-seed layout:  {}/best/<surface>_<adsorbate>/POSCAR  <- use for DFT".format(
+        print("Best-seed layout:  {}/best/C<n>/<surface>_<adsorbate>/POSCAR  <- use for DFT".format(
               out_dir))
     print()
     print("Next steps:")
@@ -458,7 +470,7 @@ def main():
     print("     # or single-point DFT energy only (no ionic relaxation):")
     print("     python setup_vasp_jobs.py --poscar-dir {} --functional r2scan --calc-type single-point".format(
           best_dir))
-    print("  2. for d in {}/*/*/; do (cd \"$d\" && sbatch slm.vasp.kestrel); done".format(
+    print("  2. for d in {}/*/*/*/; do (cd \"$d\" && sbatch slm.vasp.kestrel); done".format(
           best_dir))
     print("  3. python calc_binding_energy.py --best-dir {} --output dft_eads.csv".format(
           best_dir))
