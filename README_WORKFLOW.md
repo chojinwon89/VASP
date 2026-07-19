@@ -325,7 +325,7 @@ for func in pbe pbe-d3 r2scan beef-vdw; do
                                --calc-type single-point
 done
 
-for d in poscar/best/*/{PBE,PBE_D3,r2scan,beef_vdw}/; do
+for d in poscar/best/*/singlepoint/{PBE,PBE_D3,r2scan,beef_vdw}/; do
     (cd "$d" && sbatch slm.vasp.kestrel)
 done
 ```

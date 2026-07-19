@@ -13,10 +13,18 @@ with the remaining VASP input files needed for DFT verification:
 A functional-named subfolder is created inside each system directory so that
 multiple functionals can coexist side-by-side:
 
-    poscar/best/Cu001_CO2/PBE/          <- --functional pbe
-    poscar/best/Cu001_CO2/PBE_D3/       <- --functional pbe-d3
-    poscar/best/Cu001_CO2/r2scan/       <- --functional r2scan
-    poscar/best/Cu001_CO2/beef_vdw/     <- --functional beef-vdw
+    poscar/best/Cu001_CO2/PBE/          <- --functional pbe          (relax, default)
+    poscar/best/Cu001_CO2/PBE_D3/       <- --functional pbe-d3       (relax, default)
+    poscar/best/Cu001_CO2/r2scan/       <- --functional r2scan       (relax, default)
+    poscar/best/Cu001_CO2/beef_vdw/     <- --functional beef-vdw     (relax, default)
+
+With --calc-type single-point, an extra singlepoint/ level is inserted so
+relax and single-point jobs never collide:
+
+    poscar/best/Cu001_CO2/singlepoint/PBE/       <- --functional pbe      --calc-type single-point
+    poscar/best/Cu001_CO2/singlepoint/PBE_D3/    <- --functional pbe-d3   --calc-type single-point
+    poscar/best/Cu001_CO2/singlepoint/r2scan/    <- --functional r2scan   --calc-type single-point
+    poscar/best/Cu001_CO2/singlepoint/beef_vdw/  <- --functional beef-vdw --calc-type single-point
 
 Usage
 -----
@@ -37,6 +45,11 @@ Usage
         python setup_vasp_jobs.py --poscar-dir /scratch/jcho5/.../poscar/best \\
                                    --functional $func \\
                                    --calc-type single-point
+    done
+
+    # Submit single-point jobs (note the singlepoint/ segment in the glob):
+    for d in /scratch/jcho5/.../poscar/best/*/singlepoint/{PBE,PBE_D3,r2scan,beef_vdw}/; do
+        (cd "$d" && sbatch slm.vasp.kestrel)
     done
 
     # Dry-run: see what would be written without touching any files:
@@ -278,13 +291,17 @@ def build_potcar(species: list, pp_root: Path, out_path: Path,
 def setup_job_dir(job_dir: Path, system_name: str,
                   pp_root: Path, xc_block: str,
                   ionic_block: str, ediffg_line: str,
-                  dry_run: bool = False) -> dict:
+                  dry_run: bool = False,
+                  system_dir: Path | None = None) -> dict:
     """Write INCAR, KPOINTS, POTCAR, slm.vasp.kestrel into job_dir.
 
-    job_dir is the functional subfolder, e.g. poscar/best/Cu001_CO2/PBE.
-    The POSCAR is read from the parent system directory.
+    job_dir is the functional subfolder, e.g. poscar/best/Cu001_CO2/PBE
+    or poscar/best/Cu001_CO2/singlepoint/PBE.  system_dir is the system
+    root that contains the source POSCAR; if omitted it defaults to
+    job_dir.parent (backward-compatible for relax mode).
     """
-    poscar = job_dir.parent / "POSCAR"
+    poscar_root = system_dir if system_dir is not None else job_dir.parent
+    poscar = poscar_root / "POSCAR"
     if not poscar.exists():
         return {"status": "skipped", "reason": "no POSCAR"}
 
@@ -356,10 +373,15 @@ def main():
             "Populate VASP job directories (from extract_poscar.py output) "
             "with INCAR, KPOINTS, POTCAR, and slm.vasp.kestrel.\n\n"
             "A functional-named subfolder is created inside each system directory:\n"
-            "  poscar/best/Cu001_CO2/PBE/\n"
-            "  poscar/best/Cu001_CO2/PBE_D3/\n"
-            "  poscar/best/Cu001_CO2/r2scan/\n"
-            "  poscar/best/Cu001_CO2/beef_vdw/"
+            "  poscar/best/Cu001_CO2/PBE/          <- --functional pbe          (relax, default)\n"
+            "  poscar/best/Cu001_CO2/PBE_D3/       <- --functional pbe-d3       (relax, default)\n"
+            "  poscar/best/Cu001_CO2/r2scan/       <- --functional r2scan       (relax, default)\n"
+            "  poscar/best/Cu001_CO2/beef_vdw/     <- --functional beef-vdw     (relax, default)\n\n"
+            "With --calc-type single-point, an extra singlepoint/ level is inserted:\n"
+            "  poscar/best/Cu001_CO2/singlepoint/PBE/       <- --functional pbe      --calc-type single-point\n"
+            "  poscar/best/Cu001_CO2/singlepoint/PBE_D3/    <- --functional pbe-d3   --calc-type single-point\n"
+            "  poscar/best/Cu001_CO2/singlepoint/r2scan/    <- --functional r2scan   --calc-type single-point\n"
+            "  poscar/best/Cu001_CO2/singlepoint/beef_vdw/  <- --functional beef-vdw --calc-type single-point"
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
@@ -473,7 +495,10 @@ def main():
     all_ok = True
     for sys_dir in system_dirs:
         system_name = sys_dir.name
-        job_dir     = sys_dir / subfolder
+        if args.calc_type == "single-point":
+            job_dir = sys_dir / "singlepoint" / subfolder
+        else:
+            job_dir = sys_dir / subfolder
         action = "[DRY-RUN]" if args.dry_run else "writing"
         print(f"  {action}: {job_dir}/")
 
@@ -484,6 +509,7 @@ def main():
             ionic_block=ionic_block,
             ediffg_line=ediffg_line,
             dry_run=args.dry_run,
+            system_dir=sys_dir,
         )
 
         print(f"    species:  {' '.join(result.get('species', []))}")
@@ -515,7 +541,10 @@ def main():
         print()
     print("2. Submit each job:")
     print()
-    print(f"     for d in {poscar_dir}/*/{subfolder}/; do")
+    if args.calc_type == "single-point":
+        print(f"     for d in {poscar_dir}/*/singlepoint/{subfolder}/; do")
+    else:
+        print(f"     for d in {poscar_dir}/*/{subfolder}/; do")
     print("       (cd \"$d\" && sbatch slm.vasp.kestrel)")
     print("     done")
     print()
