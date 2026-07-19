@@ -7,7 +7,7 @@ ready for DFT single-point or full relaxation verification.
 
 Directory layout written by batch_isopropanol.py:
 
-    runs/<surface>_<adsorbate>_seed<N>_<calc>/
+    runs/C<n>/<surface>_<adsorbate>_seed<N>_<calc>/
         <adsorbate>_on_<surface>/
             final_adsorbed.cif      <- source geometry (lowest-energy adsorbed config)
             final_adsorbed.traj     <- ASE trajectory (alternative source)
@@ -180,6 +180,10 @@ def collect_runs(runs_dir: Path, calculator_filter: str = None) -> list:
     Walk runs_dir and collect all task entries that have a final_adsorbed
     geometry.
 
+    Supports both:
+      - runs/C<n>/<surface>_<adsorbate>_seed<N>_<calc>/... (current layout)
+      - runs/<surface>_<adsorbate>_seed<N>_<calc>/...      (legacy/flat)
+
     Parameters
     ----------
     calculator_filter : str or None
@@ -189,52 +193,60 @@ def collect_runs(runs_dir: Path, calculator_filter: str = None) -> list:
     entries  = []
     skipped  = 0
 
-    for task_dir in sorted(runs_dir.iterdir()):
-        if not task_dir.is_dir():
+    for first_level_dir in sorted(runs_dir.iterdir()):
+        if not first_level_dir.is_dir():
             continue
 
-        name = task_dir.name
+        # If first-level names already look like run directories, treat runs_dir
+        # as flat/single-bucket. Otherwise, treat first-level dirs as buckets.
+        if "_seed" in first_level_dir.name:
+            task_dirs = [first_level_dir]
+        else:
+            task_dirs = sorted(d for d in first_level_dir.iterdir() if d.is_dir())
 
-        # ---- Calculator filter ----
-        calc = parse_calculator_from_dirname(name)
-        if calculator_filter and calc != calculator_filter:
-            skipped += 1
-            continue
+        for task_dir in task_dirs:
+            name = task_dir.name
 
-        parts = name.split("_seed")
-        if len(parts) != 2:
-            continue
+            # ---- Calculator filter ----
+            calc = parse_calculator_from_dirname(name)
+            if calculator_filter and calc != calculator_filter:
+                skipped += 1
+                continue
 
-        surface_adsorbate = parts[0]       # e.g. Cu111_isopropanol
-        seed_str, *_      = parts[1].split("_")
+            parts = name.split("_seed")
+            if len(parts) != 2:
+                continue
 
-        atoms, meta = load_final_geometry(task_dir)
-        if atoms is None:
-            continue   # no final geometry — task may still be running
+            surface_adsorbate = parts[0]       # e.g. Cu111_isopropanol
+            seed_str, *_      = parts[1].split("_")
 
-        # Parse surface/adsorbate from result.json first (most reliable)
-        surface   = meta.get("surface_cif",  "").replace("inputs/", "").replace(".cif", "")
-        adsorbate = meta.get("molecule_cif", "").replace("inputs/", "").replace(".cif", "")
+            atoms, meta = load_final_geometry(task_dir)
+            if atoms is None:
+                continue   # no final geometry — task may still be running
 
-        # Fall back to directory name parsing
-        if not surface or not adsorbate:
-            tokens    = surface_adsorbate.split("_")
-            surface   = tokens[0]
-            adsorbate = "_".join(tokens[1:])
+            # Parse surface/adsorbate from result.json first (most reliable)
+            surface   = meta.get("surface_cif",  "").replace("inputs/", "").replace(".cif", "")
+            adsorbate = meta.get("molecule_cif", "").replace("inputs/", "").replace(".cif", "")
 
-        entries.append({
-            "run_dir":       task_dir,
-            "surface":       surface,
-            "adsorbate":     adsorbate,
-            "seed":          int(seed_str) if seed_str.isdigit() else seed_str,
-            "calculator":    calc,
-            "atoms":         atoms,
-            "E_ads_eV":      meta.get("E_ads_eV",      None),
-            "E_total_eV":    meta.get("E_total_eV",    None),
-            "E_surface_eV":  meta.get("E_surface_eV",  None),
-            "E_molecule_eV": meta.get("E_molecule_eV", None),
-            "timestamp":     meta.get("timestamp",     ""),
-        })
+            # Fall back to directory name parsing
+            if not surface or not adsorbate:
+                tokens    = surface_adsorbate.split("_")
+                surface   = tokens[0]
+                adsorbate = "_".join(tokens[1:])
+
+            entries.append({
+                "run_dir":       task_dir,
+                "surface":       surface,
+                "adsorbate":     adsorbate,
+                "seed":          int(seed_str) if seed_str.isdigit() else seed_str,
+                "calculator":    calc,
+                "atoms":         atoms,
+                "E_ads_eV":      meta.get("E_ads_eV",      None),
+                "E_total_eV":    meta.get("E_total_eV",    None),
+                "E_surface_eV":  meta.get("E_surface_eV",  None),
+                "E_molecule_eV": meta.get("E_molecule_eV", None),
+                "timestamp":     meta.get("timestamp",     ""),
+            })
 
     if calculator_filter:
         print("Calculator filter : '{}' — skipped {} non-matching dirs, "

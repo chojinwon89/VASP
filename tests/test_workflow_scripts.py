@@ -6,6 +6,9 @@ import subprocess
 import sys
 from pathlib import Path
 
+from ase import Atoms
+from ase.io import write
+
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -112,6 +115,46 @@ def _run_find_missing_tasks(
             str(out_path),
         ],
         cwd=tmp_path,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+
+def _write_extract_poscar_run(
+    run_dir: Path,
+    surface: str,
+    adsorbate: str,
+    e_ads: float = -1.0,
+    with_final_geometry: bool = True,
+):
+    run_dir.mkdir(parents=True, exist_ok=True)
+    if with_final_geometry:
+        geom_dir = run_dir / f"{adsorbate}_on_{surface}"
+        geom_dir.mkdir(parents=True, exist_ok=True)
+        atoms = Atoms("CuH", positions=[[0, 0, 0], [0.5, 0.5, 0.5]], cell=[5, 5, 5], pbc=True)
+        write(str(geom_dir / "final_adsorbed.cif"), atoms)
+    (run_dir / "result.json").write_text(
+        json.dumps(
+            {
+                "E_ads_eV": e_ads,
+                "surface_cif": f"inputs/{surface}.cif",
+                "molecule_cif": f"inputs/{adsorbate}.cif",
+            }
+        )
+    )
+
+
+def _run_extract_poscar(runs_dir: Path, out_dir: Path):
+    return subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "extract_poscar.py"),
+            "--runs-dir",
+            str(runs_dir),
+            "--out-dir",
+            str(out_dir),
+        ],
         check=True,
         capture_output=True,
         text=True,
@@ -434,3 +477,87 @@ def test_find_missing_tasks_import_and_helper_do_not_create_runs_dir(tmp_path, m
         tmp_path / "runs" / "C1" / "Ir100_formic_acid_seed0_sevennet_omni"
     )
     assert not (tmp_path / "runs").exists()
+
+
+def test_extract_poscar_collects_bucketed_layout_and_writes_outputs(tmp_path):
+    runs_dir = tmp_path / "runs"
+    out_dir = tmp_path / "poscar"
+    run_dir = runs_dir / "C1" / "Ir100_formic_acid_seed1_sevennet_omni"
+    _write_extract_poscar_run(run_dir, "Ir100", "formic_acid", e_ads=-1.23)
+
+    result = _run_extract_poscar(runs_dir, out_dir)
+
+    assert "Found 1 completed run(s)" in result.stdout
+    assert "No completed runs" not in result.stdout
+    assert (out_dir / "Ir100_formic_acid_sevennet_omni_seed1" / "POSCAR").exists()
+    assert (out_dir / "best" / "Ir100_formic_acid" / "POSCAR").exists()
+
+
+def test_extract_poscar_collects_runs_from_multiple_buckets(tmp_path):
+    runs_dir = tmp_path / "runs"
+    out_dir = tmp_path / "poscar"
+    _write_extract_poscar_run(
+        runs_dir / "C1" / "Ir100_formic_acid_seed1_sevennet_omni",
+        "Ir100",
+        "formic_acid",
+        e_ads=-1.23,
+    )
+    _write_extract_poscar_run(
+        runs_dir / "C3" / "Cu111_propanol_seed0_5m",
+        "Cu111",
+        "propanol",
+        e_ads=-0.80,
+    )
+
+    result = _run_extract_poscar(runs_dir, out_dir)
+
+    assert "Found 2 completed run(s)" in result.stdout
+    assert (out_dir / "Ir100_formic_acid_sevennet_omni_seed1" / "POSCAR").exists()
+    assert (out_dir / "Cu111_propanol_5m_seed0" / "POSCAR").exists()
+    assert (out_dir / "best" / "Ir100_formic_acid" / "POSCAR").exists()
+    assert (out_dir / "best" / "Cu111_propanol" / "POSCAR").exists()
+
+
+def test_extract_poscar_collects_when_runs_dir_points_to_single_bucket_or_flat_layout(tmp_path):
+    runs_dir = tmp_path / "runs_C1"
+    out_dir = tmp_path / "poscar"
+    _write_extract_poscar_run(
+        runs_dir / "Ir100_formic_acid_seed1_sevennet_omni",
+        "Ir100",
+        "formic_acid",
+        e_ads=-1.23,
+    )
+
+    result = _run_extract_poscar(runs_dir, out_dir)
+
+    assert "Found 1 completed run(s)" in result.stdout
+    assert (out_dir / "Ir100_formic_acid_sevennet_omni_seed1" / "POSCAR").exists()
+    assert (out_dir / "best" / "Ir100_formic_acid" / "POSCAR").exists()
+
+
+def test_extract_poscar_empty_bucketed_layout_exits_cleanly_with_no_completed_runs(tmp_path):
+    runs_dir = tmp_path / "runs"
+    out_dir = tmp_path / "poscar"
+    _write_extract_poscar_run(
+        runs_dir / "C1" / "Ir100_formic_acid_seed1_sevennet_omni",
+        "Ir100",
+        "formic_acid",
+        with_final_geometry=False,
+    )
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "extract_poscar.py"),
+            "--runs-dir",
+            str(runs_dir),
+            "--out-dir",
+            str(out_dir),
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 0
+    assert "No completed runs" in result.stdout
