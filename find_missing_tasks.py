@@ -156,12 +156,14 @@ def show_not_finished(failed_tasks, missing_tasks,
 
     # Summary counts per state
     state_counts = Counter(s for _, s in all_incomplete)
+    filter_parts = []
+    if filter_calc:
+        filter_parts.append("calc={}".format(filter_calc))
+    if filter_surface:
+        filter_parts.append("surface={}".format(filter_surface))
+    filter_suffix = " [{}]".format(", ".join(filter_parts)) if filter_parts else ""
     print("Not-finished tasks{}: {} total".format(
-        " [calc={}{]]".format(
-            filter_calc or "",
-            ", surface=" + filter_surface if filter_surface else ""
-        ) if filter_calc or filter_surface else "",
-        len(all_incomplete)
+        filter_suffix, len(all_incomplete)
     ))
     for state, n in sorted(state_counts.items()):
         print("  {:<20}: {}".format(state, n))
