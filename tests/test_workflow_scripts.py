@@ -69,6 +69,8 @@ def _run_setup_vasp_jobs(tmp_path: Path, calc_type: str | None):
     if calc_type is not None:
         cmd.extend(["--calc-type", calc_type])
     subprocess.run(cmd, cwd=tmp_path, check=True)
+    if calc_type == "single-point":
+        return poscar_root / "Cu001_CO" / "singlepoint" / "PBE" / "INCAR"
     return poscar_root / "Cu001_CO" / "PBE" / "INCAR"
 
 
@@ -263,6 +265,9 @@ def test_setup_vasp_jobs_relax_default_and_explicit(tmp_path):
     assert "! Exchange-correlation" in default_text
     assert "GGA = PE" in default_text
     assert default_text == explicit_text
+    # relax mode must NOT use the singlepoint/ subdirectory
+    assert "singlepoint" not in str(incar_default)
+    assert "singlepoint" not in str(incar_explicit)
 
 
 def test_setup_vasp_jobs_single_point_incar_and_subfolder(tmp_path):
@@ -274,4 +279,6 @@ def test_setup_vasp_jobs_single_point_incar_and_subfolder(tmp_path):
     assert "EDIFFG" not in incar_text
     assert "! Exchange-correlation" in incar_text
     assert "GGA = PE" in incar_text
+    # single-point must be nested under singlepoint/<Functional>/
     assert incar_path.parent.name == "PBE"
+    assert incar_path.parent.parent.name == "singlepoint"
