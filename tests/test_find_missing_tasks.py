@@ -43,7 +43,10 @@ def write_tasks_csv(path: Path):
 
 
 def write_finished_run(runs_dir: Path, row: dict):
-    run_dir = runs_dir / (
+    sys.path.insert(0, str(REPO_ROOT))
+    from molecule_utils import carbon_count
+
+    run_dir = runs_dir / f"C{carbon_count(row['adsorbate'])}" / (
         f"{row['surface']}_{row['adsorbate']}_seed{row['seed']}_{row['calculator']}"
     )
     run_dir.mkdir(parents=True)

@@ -2,12 +2,14 @@
 """
 find_missing_tasks.py
 =====================
-Compare workflow/tasks_custom.csv against the runs/ directory and
+Compare workflow/tasks_custom.csv against the carbon-bucketed runs/
+directory layout and
 classify every task into one of three buckets:
 
-  finished — run dir exists AND status.json has state == "finished"
-  failed   — run dir exists but state != "finished" (failed / crashed / still running)
-  missing  — run directory does not exist at all
+  finished — runs/C{n}/<name>/ exists AND status.json has state == "finished"
+  failed   — runs/C{n}/<name>/ exists but state != "finished"
+             (failed / crashed / still running)
+  missing  — expected runs/C{n}/<name>/ directory does not exist at all
 
 Automatically writes submit_missing.sh with chunked sbatch commands
 (to stay under Slurm's --array argument length limit of ~4096 chars)
@@ -33,7 +35,7 @@ to deliberately re-run already-finished tasks.
 
 Usage
 -----
-    # Default: checks workflow/tasks_custom.csv vs ./runs/
+    # Default: checks workflow/tasks_custom.csv vs ./runs/C{n}/...
     python find_missing_tasks.py
 
     # Custom paths
@@ -81,8 +83,16 @@ Output
 import argparse
 import csv
 import json
+import sys
 from collections import Counter
 from pathlib import Path
+
+
+REPO_ROOT = Path(__file__).resolve().parent
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from molecule_utils import carbon_count
 
 
 DEFAULT_CHUNK    = 200
@@ -112,6 +122,12 @@ def get_run_state(run_dir: Path) -> str:
         return "finished" if state == "finished" else state or "failed"
     except (json.JSONDecodeError, OSError):
         return "failed"
+
+
+def get_task_run_dir(runs_dir: Path, task: dict) -> Path:
+    n_carbon = carbon_count(task["adsorbate"])
+    run_name = "{surface}_{adsorbate}_seed{seed}_{calculator}".format(**task)
+    return runs_dir / f"C{n_carbon}" / run_name
 
 
 def show_not_finished(failed_tasks, missing_tasks,
@@ -295,10 +311,7 @@ def main():
     missing_tasks  = []
 
     for task in tasks:
-        run_name = (
-            "{surface}_{adsorbate}_seed{seed}_{calculator}".format(**task)
-        )
-        state = get_run_state(runs_dir / run_name)
+        state = get_run_state(get_task_run_dir(runs_dir, task))
         if state == "finished":
             finished_tasks.append(task)
         elif state == "missing":

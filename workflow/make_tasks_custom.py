@@ -48,10 +48,11 @@ import sys
 from pathlib import Path
 
 # ---------------------------------------------------------------------------
-# Import carbon_count from batch_isopropanol.py (single source of truth)
+# Import carbon_count from a side-effect-free shared module.
+# batch_isopropanol.py re-exports it for backward compatibility.
 # ---------------------------------------------------------------------------
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from batch_isopropanol import carbon_count
+from molecule_utils import carbon_count
 
 # ---------------------------------------------------------------------------
 # Seed lists
