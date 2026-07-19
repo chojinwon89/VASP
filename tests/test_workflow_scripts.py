@@ -62,7 +62,7 @@ def _run_setup_vasp_jobs(tmp_path: Path, calc_type: str | None):
         (REPO_ROOT / "setup_vasp_jobs.py").read_text()
     )
     poscar_root = tmp_path / "poscar" / "best"
-    _write_minimal_poscar(poscar_root / "Cu001_CO" / "POSCAR")
+    _write_minimal_poscar(poscar_root / "C1" / "Cu001_CO" / "POSCAR")
     cmd = [
         sys.executable,
         "setup_vasp_jobs.py",
@@ -75,8 +75,8 @@ def _run_setup_vasp_jobs(tmp_path: Path, calc_type: str | None):
         cmd.extend(["--calc-type", calc_type])
     subprocess.run(cmd, cwd=tmp_path, check=True)
     if calc_type == "single-point":
-        return poscar_root / "Cu001_CO" / "singlepoint" / "PBE" / "INCAR"
-    return poscar_root / "Cu001_CO" / "PBE" / "INCAR"
+        return poscar_root / "C1" / "Cu001_CO" / "singlepoint" / "PBE" / "INCAR"
+    return poscar_root / "C1" / "Cu001_CO" / "PBE" / "INCAR"
 
 
 def _write_tasks_custom_csv(path: Path, rows: list[dict[str, str]]):
@@ -373,6 +373,56 @@ def test_setup_vasp_jobs_single_point_incar_and_subfolder(tmp_path):
     # single-point must be nested under singlepoint/<Functional>/
     assert incar_path.parent.name == "PBE"
     assert incar_path.parent.parent.name == "singlepoint"
+
+
+def test_setup_vasp_jobs_processes_multiple_carbon_buckets(tmp_path):
+    (tmp_path / "setup_vasp_jobs.py").write_text(
+        (REPO_ROOT / "setup_vasp_jobs.py").read_text()
+    )
+    poscar_root = tmp_path / "poscar" / "best"
+    _write_minimal_poscar(poscar_root / "C1" / "Cu001_CO" / "POSCAR")
+    _write_minimal_poscar(poscar_root / "C3" / "Pt111_isopropanol" / "POSCAR")
+
+    subprocess.run(
+        [
+            sys.executable,
+            "setup_vasp_jobs.py",
+            "--poscar-dir",
+            "poscar/best",
+            "--functional",
+            "pbe",
+        ],
+        cwd=tmp_path,
+        check=True,
+    )
+
+    assert (poscar_root / "C1" / "Cu001_CO" / "PBE" / "INCAR").exists()
+    assert (poscar_root / "C3" / "Pt111_isopropanol" / "PBE" / "INCAR").exists()
+
+
+def test_setup_vasp_jobs_accepts_single_bucket_poscar_dir(tmp_path):
+    (tmp_path / "setup_vasp_jobs.py").write_text(
+        (REPO_ROOT / "setup_vasp_jobs.py").read_text()
+    )
+    bucket_dir = tmp_path / "poscar" / "best" / "C1"
+    _write_minimal_poscar(bucket_dir / "Cu001_CO" / "POSCAR")
+
+    subprocess.run(
+        [
+            sys.executable,
+            "setup_vasp_jobs.py",
+            "--poscar-dir",
+            "poscar/best/C1",
+            "--functional",
+            "pbe",
+            "--calc-type",
+            "single-point",
+        ],
+        cwd=tmp_path,
+        check=True,
+    )
+
+    assert (bucket_dir / "Cu001_CO" / "singlepoint" / "PBE" / "INCAR").exists()
 
 
 def test_find_missing_tasks_classifies_c1_finished_run_in_bucket(tmp_path):

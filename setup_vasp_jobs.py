@@ -13,18 +13,18 @@ with the remaining VASP input files needed for DFT verification:
 A functional-named subfolder is created inside each system directory so that
 multiple functionals can coexist side-by-side:
 
-    poscar/best/Cu001_CO2/PBE/          <- --functional pbe          (relax, default)
-    poscar/best/Cu001_CO2/PBE_D3/       <- --functional pbe-d3       (relax, default)
-    poscar/best/Cu001_CO2/r2scan/       <- --functional r2scan       (relax, default)
-    poscar/best/Cu001_CO2/beef_vdw/     <- --functional beef-vdw     (relax, default)
+    poscar/best/C1/Cu001_CO2/PBE/          <- --functional pbe          (relax, default)
+    poscar/best/C1/Cu001_CO2/PBE_D3/       <- --functional pbe-d3       (relax, default)
+    poscar/best/C1/Cu001_CO2/r2scan/       <- --functional r2scan       (relax, default)
+    poscar/best/C1/Cu001_CO2/beef_vdw/     <- --functional beef-vdw     (relax, default)
 
 With --calc-type single-point, an extra singlepoint/ level is inserted so
 relax and single-point jobs never collide:
 
-    poscar/best/Cu001_CO2/singlepoint/PBE/       <- --functional pbe      --calc-type single-point
-    poscar/best/Cu001_CO2/singlepoint/PBE_D3/    <- --functional pbe-d3   --calc-type single-point
-    poscar/best/Cu001_CO2/singlepoint/r2scan/    <- --functional r2scan   --calc-type single-point
-    poscar/best/Cu001_CO2/singlepoint/beef_vdw/  <- --functional beef-vdw --calc-type single-point
+    poscar/best/C1/Cu001_CO2/singlepoint/PBE/       <- --functional pbe      --calc-type single-point
+    poscar/best/C1/Cu001_CO2/singlepoint/PBE_D3/    <- --functional pbe-d3   --calc-type single-point
+    poscar/best/C1/Cu001_CO2/singlepoint/r2scan/    <- --functional r2scan   --calc-type single-point
+    poscar/best/C1/Cu001_CO2/singlepoint/beef_vdw/  <- --functional beef-vdw --calc-type single-point
 
 Usage
 -----
@@ -48,7 +48,7 @@ Usage
     done
 
     # Submit single-point jobs (note the singlepoint/ segment in the glob):
-    for d in /scratch/jcho5/.../poscar/best/*/singlepoint/{PBE,PBE_D3,r2scan,beef_vdw}/; do
+    for d in /scratch/jcho5/.../poscar/best/*/*/singlepoint/{PBE,PBE_D3,r2scan,beef_vdw}/; do
         (cd "$d" && sbatch slm.vasp.kestrel)
     done
 
@@ -295,8 +295,8 @@ def setup_job_dir(job_dir: Path, system_name: str,
                   system_dir: Path | None = None) -> dict:
     """Write INCAR, KPOINTS, POTCAR, slm.vasp.kestrel into job_dir.
 
-    job_dir is the functional subfolder, e.g. poscar/best/Cu001_CO2/PBE
-    or poscar/best/Cu001_CO2/singlepoint/PBE.  system_dir is the system
+    job_dir is the functional subfolder, e.g. poscar/best/C1/Cu001_CO2/PBE
+    or poscar/best/C1/Cu001_CO2/singlepoint/PBE.  system_dir is the system
     root that contains the source POSCAR; if omitted it defaults to
     job_dir.parent (backward-compatible for relax mode).
     """
@@ -373,15 +373,15 @@ def main():
             "Populate VASP job directories (from extract_poscar.py output) "
             "with INCAR, KPOINTS, POTCAR, and slm.vasp.kestrel.\n\n"
             "A functional-named subfolder is created inside each system directory:\n"
-            "  poscar/best/Cu001_CO2/PBE/          <- --functional pbe          (relax, default)\n"
-            "  poscar/best/Cu001_CO2/PBE_D3/       <- --functional pbe-d3       (relax, default)\n"
-            "  poscar/best/Cu001_CO2/r2scan/       <- --functional r2scan       (relax, default)\n"
-            "  poscar/best/Cu001_CO2/beef_vdw/     <- --functional beef-vdw     (relax, default)\n\n"
+            "  poscar/best/C1/Cu001_CO2/PBE/          <- --functional pbe          (relax, default)\n"
+            "  poscar/best/C1/Cu001_CO2/PBE_D3/       <- --functional pbe-d3       (relax, default)\n"
+            "  poscar/best/C1/Cu001_CO2/r2scan/       <- --functional r2scan       (relax, default)\n"
+            "  poscar/best/C1/Cu001_CO2/beef_vdw/     <- --functional beef-vdw     (relax, default)\n\n"
             "With --calc-type single-point, an extra singlepoint/ level is inserted:\n"
-            "  poscar/best/Cu001_CO2/singlepoint/PBE/       <- --functional pbe      --calc-type single-point\n"
-            "  poscar/best/Cu001_CO2/singlepoint/PBE_D3/    <- --functional pbe-d3   --calc-type single-point\n"
-            "  poscar/best/Cu001_CO2/singlepoint/r2scan/    <- --functional r2scan   --calc-type single-point\n"
-            "  poscar/best/Cu001_CO2/singlepoint/beef_vdw/  <- --functional beef-vdw --calc-type single-point"
+            "  poscar/best/C1/Cu001_CO2/singlepoint/PBE/       <- --functional pbe      --calc-type single-point\n"
+            "  poscar/best/C1/Cu001_CO2/singlepoint/PBE_D3/    <- --functional pbe-d3   --calc-type single-point\n"
+            "  poscar/best/C1/Cu001_CO2/singlepoint/r2scan/    <- --functional r2scan   --calc-type single-point\n"
+            "  poscar/best/C1/Cu001_CO2/singlepoint/beef_vdw/  <- --functional beef-vdw --calc-type single-point"
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
@@ -390,8 +390,10 @@ def main():
         required=True,
         metavar="DIR",
         help=(
-            "Directory whose immediate subdirectories each contain a POSCAR. "
-            "E.g.: poscar/best  poscar/best2  poscar/best3"
+            "Directory containing extract_poscar.py POSCAR outputs. Supports:\n"
+            "  (1) bucketed root: DIR/C<n>/<system>/POSCAR (e.g. poscar/best),\n"
+            "  (2) single bucket: DIR/<system>/POSCAR      (e.g. poscar/best/C1),\n"
+            "  (3) single system: DIR/POSCAR               (legacy/manual use)."
         ),
     )
     parser.add_argument(
@@ -477,16 +479,26 @@ def main():
                   else "default")
         print(f"Using POTCAR library ({source}): {pp_root}")
 
-    # ---- Collect system directories (immediate subdirs with a POSCAR) --------
-    system_dirs = [
-        d for d in sorted(poscar_dir.iterdir())
-        if d.is_dir() and (d / "POSCAR").exists()
-    ]
+    # ---- Collect system directories with a POSCAR ----------------------------
+    system_dirs = []
+    if (poscar_dir / "POSCAR").exists():
+        system_dirs.append(poscar_dir)
+    for first_level_dir in sorted(poscar_dir.iterdir()):
+        if not first_level_dir.is_dir():
+            continue
+        if (first_level_dir / "POSCAR").exists():
+            system_dirs.append(first_level_dir)
+            continue
+        for second_level_dir in sorted(first_level_dir.iterdir()):
+            if second_level_dir.is_dir() and (second_level_dir / "POSCAR").exists():
+                system_dirs.append(second_level_dir)
 
     if not system_dirs:
-        print(f"No subdirectories containing a POSCAR found under {poscar_dir}.")
-        print("Make sure --poscar-dir points at the folder with the POSCAR subdirs,")
-        print("e.g. poscar/best  or  poscar/best2")
+        print(f"No directories containing a POSCAR found under {poscar_dir}.")
+        print("Make sure --poscar-dir points at one of:")
+        print("  - a root containing C<n>/<system>/POSCAR (e.g. poscar/best)")
+        print("  - a single bucket containing <system>/POSCAR (e.g. poscar/best/C1)")
+        print("  - a single system directory containing POSCAR")
         raise SystemExit(0)
 
     print(f"Setting up {len(system_dirs)} system(s) with functional '{args.functional}':")
@@ -542,9 +554,9 @@ def main():
     print("2. Submit each job:")
     print()
     if args.calc_type == "single-point":
-        print(f"     for d in {poscar_dir}/*/singlepoint/{subfolder}/; do")
+        print(f"     for d in {poscar_dir}/*/*/singlepoint/{subfolder}/; do")
     else:
-        print(f"     for d in {poscar_dir}/*/{subfolder}/; do")
+        print(f"     for d in {poscar_dir}/*/*/{subfolder}/; do")
     print("       (cd \"$d\" && sbatch slm.vasp.kestrel)")
     print("     done")
     print()
