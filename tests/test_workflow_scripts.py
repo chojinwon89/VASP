@@ -1,5 +1,7 @@
 import csv
+import importlib.util
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -72,6 +74,48 @@ def _run_setup_vasp_jobs(tmp_path: Path, calc_type: str | None):
     if calc_type == "single-point":
         return poscar_root / "Cu001_CO" / "singlepoint" / "PBE" / "INCAR"
     return poscar_root / "Cu001_CO" / "PBE" / "INCAR"
+
+
+def _write_tasks_custom_csv(path: Path, rows: list[dict[str, str]]):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", newline="") as handle:
+        writer = csv.DictWriter(
+            handle,
+            fieldnames=["task_id", "surface", "adsorbate", "seed", "calculator"],
+        )
+        writer.writeheader()
+        writer.writerows(rows)
+
+
+def _write_run_status(run_dir: Path, state: str):
+    run_dir.mkdir(parents=True, exist_ok=True)
+    (run_dir / "status.json").write_text(json.dumps({"state": state}))
+
+
+def _run_find_missing_tasks(
+    tmp_path: Path,
+    rows: list[dict[str, str]],
+    runs_dir: Path,
+):
+    tasks_path = tmp_path / "workflow" / "tasks_custom.csv"
+    _write_tasks_custom_csv(tasks_path, rows)
+    out_path = tmp_path / "submit_missing.sh"
+    return subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "find_missing_tasks.py"),
+            "--tasks",
+            str(tasks_path),
+            "--runs-dir",
+            str(runs_dir),
+            "--out",
+            str(out_path),
+        ],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
 
 
 def test_make_tasks_generates_expected_task_matrix(tmp_path):
@@ -282,3 +326,111 @@ def test_setup_vasp_jobs_single_point_incar_and_subfolder(tmp_path):
     # single-point must be nested under singlepoint/<Functional>/
     assert incar_path.parent.name == "PBE"
     assert incar_path.parent.parent.name == "singlepoint"
+
+
+def test_find_missing_tasks_classifies_c1_finished_run_in_bucket(tmp_path):
+    row = {
+        "task_id": "0",
+        "surface": "Ir100",
+        "adsorbate": "formic_acid",
+        "seed": "0",
+        "calculator": "sevennet_omni",
+    }
+    run_name = "Ir100_formic_acid_seed0_sevennet_omni"
+    runs_dir = tmp_path / "runs"
+    _write_run_status(runs_dir / run_name, "failed")
+    _write_run_status(runs_dir / "C1" / run_name, "finished")
+
+    result = _run_find_missing_tasks(tmp_path, [row], runs_dir)
+
+    assert "Finished              :      1" in result.stdout
+    assert "Failed / not finished :      0" in result.stdout
+    assert "Missing (no dir)      :      0" in result.stdout
+
+
+def test_find_missing_tasks_looks_up_nonzero_carbon_bucket(tmp_path):
+    row = {
+        "task_id": "0",
+        "surface": "Cu111",
+        "adsorbate": "isopropanol",
+        "seed": "2",
+        "calculator": "sevennet_omni",
+    }
+    run_name = "Cu111_isopropanol_seed2_sevennet_omni"
+    runs_dir = tmp_path / "runs"
+    _write_run_status(runs_dir / "C3" / run_name, "finished")
+
+    result = _run_find_missing_tasks(tmp_path, [row], runs_dir)
+
+    assert "Finished              :      1" in result.stdout
+    assert "Missing (no dir)      :      0" in result.stdout
+
+
+def test_find_missing_tasks_keeps_missing_runs_missing_without_side_effects(tmp_path):
+    row = {
+        "task_id": "0",
+        "surface": "Pt111",
+        "adsorbate": "formic_acid",
+        "seed": "0",
+        "calculator": "5m",
+    }
+    runs_dir = tmp_path / "runs"
+
+    result = _run_find_missing_tasks(tmp_path, [row], runs_dir)
+
+    assert f"WARNING: runs directory not found: {runs_dir}" in result.stdout
+    assert "Finished              :      0" in result.stdout
+    assert "Missing (no dir)      :      1" in result.stdout
+    assert not runs_dir.exists()
+
+
+def test_carbon_count_imports_shared_and_batch_modules(tmp_path):
+    sandbox_run_dir = tmp_path / "sandbox-run"
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            (
+                "import sys; "
+                f"sys.path.insert(0, {str(REPO_ROOT)!r}); "
+                "from molecule_utils import carbon_count as shared_count; "
+                "from batch_isopropanol import carbon_count as batch_count; "
+                "print(shared_count('formic_acid')); "
+                "print(batch_count('formic_acid'))"
+            ),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+        env={**os.environ, "GOAD_RUN_DIR": str(sandbox_run_dir)},
+    )
+
+    assert result.stdout.strip().splitlines() == ["1", "1"]
+
+
+def test_find_missing_tasks_import_and_helper_do_not_create_runs_dir(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    module_path = REPO_ROOT / "find_missing_tasks.py"
+    spec = importlib.util.spec_from_file_location(
+        "find_missing_tasks_under_test",
+        module_path,
+    )
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+
+    run_dir = module.get_task_run_dir(
+        tmp_path / "runs",
+        {
+            "task_id": "0",
+            "surface": "Ir100",
+            "adsorbate": "formic_acid",
+            "seed": "0",
+            "calculator": "sevennet_omni",
+        },
+    )
+
+    assert run_dir == (
+        tmp_path / "runs" / "C1" / "Ir100_formic_acid_seed0_sevennet_omni"
+    )
+    assert not (tmp_path / "runs").exists()
