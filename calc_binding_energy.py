@@ -11,12 +11,29 @@ Flat layout (original):
     vasp_slab/<surface>/OUTCAR
     vasp_mol/<molecule>/OUTCAR
 
-Per-functional subdirectory layout (your actual layout):
+Per-functional subdirectory layout:
     poscar/best/<surface>_<molecule>/<functional>/OUTCAR
     vasp_slab/<surface>/<functional>/OUTCAR
     vasp_mol/<molecule>/<functional>/OUTCAR
 
-    Use --functional <name> to append the subdirectory automatically.
+Bucketed slab+molecule layout (supported for --best-dirs):
+    poscar/best/C<n>/<surface>_<molecule>/<functional>/OUTCAR
+
+Single-point slab+molecule layout (supported with --calc-type single-point):
+    poscar/best/C<n>/<surface>_<molecule>/singlepoint/<functional>/OUTCAR
+
+best_dir discovery for slab+molecule jobs mirrors setup_vasp_jobs.py:
+  (1) bucketed root: DIR/C<n>/<system>/...
+  (2) single bucket: DIR/<system>/...
+  (3) direct system: DIR is itself one <system> directory
+
+Reference assumptions confirmed from current setup_slab_jobs.py and
+setup_molecule_jobs.py:
+  - vasp_slab and vasp_mol are not carbon-bucketed.
+  - single-point mode in those scripts changes INCAR settings only; it does not
+    add a singlepoint/ subdirectory.
+  - Therefore this script applies --calc-type path switching only to slab+mol
+    jobs under --best-dirs.
 
 Formula
 -------
@@ -31,6 +48,11 @@ Usage
     # All four functionals at once → dft_binding_energies_all.csv
     python calc_binding_energy.py --all-functionals \\
         --functionals beef_vdw PBE PBE_D3 r2scan \\
+        --output dft_binding_energies_all.csv
+
+    # Single-point DFT extraction across all functionals
+    python calc_binding_energy.py --best-dirs poscar/best --calc-type single-point \\
+        --all-functionals --functionals PBE PBE_D3 r2scan beef_vdw \\
         --output dft_binding_energies_all.csv
 
     # Flat layout (original behaviour)
@@ -133,8 +155,30 @@ def parse_surface_molecule(dir_name: str):
 # Main calculation (one functional)
 # ---------------------------------------------------------------------------
 
+def discover_system_dirs(best_dir: Path):
+    """
+    Discover system directories from a best-dir root, mirroring setup_vasp_jobs.py:
+      (1) DIR itself is a system directory (contains POSCAR)
+      (2) DIR contains <system>/POSCAR
+      (3) DIR contains C<n>/<system>/POSCAR
+    """
+    system_dirs = []
+    if (best_dir / "POSCAR").exists():
+        system_dirs.append(best_dir)
+    for first_level_dir in sorted(best_dir.iterdir()):
+        if not first_level_dir.is_dir():
+            continue
+        if (first_level_dir / "POSCAR").exists():
+            system_dirs.append(first_level_dir)
+            continue
+        for second_level_dir in sorted(first_level_dir.iterdir()):
+            if second_level_dir.is_dir() and (second_level_dir / "POSCAR").exists():
+                system_dirs.append(second_level_dir)
+    return system_dirs
+
+
 def calc_binding_energies(best_dirs, slab_dir: Path, mol_dir: Path,
-                          functional: str = None):
+                          functional: str = None, calc_type: str = "relax"):
     """
     Walk one or more best directories, compute E_ads for each system.
 
@@ -151,13 +195,14 @@ def calc_binding_energies(best_dirs, slab_dir: Path, mol_dir: Path,
     func_key = normalise_func(functional) if functional else None
 
     for best_dir in best_dirs:
-        job_dirs = sorted(
-            d for d in best_dir.iterdir()
-            if d.is_dir()
-        )
+        job_dirs = discover_system_dirs(best_dir)
 
         if not job_dirs:
-            print(f"No subdirectories found under {best_dir}")
+            print(f"No system directories (with POSCAR) found under {best_dir}")
+            print("Expected one of:")
+            print("  - a root containing C<n>/<system>/POSCAR")
+            print("  - a single bucket containing <system>/POSCAR")
+            print("  - a single system directory containing POSCAR")
             continue
 
         for job_dir in job_dirs:
@@ -182,11 +227,17 @@ def calc_binding_energies(best_dirs, slab_dir: Path, mol_dir: Path,
 
             # Build OUTCAR paths — flat or with functional subdirectory
             if functional:
-                slab_mol_outcar = job_dir / functional / "OUTCAR"
+                if calc_type == "single-point":
+                    slab_mol_outcar = job_dir / "singlepoint" / functional / "OUTCAR"
+                else:
+                    slab_mol_outcar = job_dir / functional / "OUTCAR"
                 slab_outcar     = slab_dir / surface  / functional / "OUTCAR"
                 mol_outcar      = mol_dir  / molecule / functional / "OUTCAR"
             else:
-                slab_mol_outcar = job_dir / "OUTCAR"
+                if calc_type == "single-point":
+                    slab_mol_outcar = job_dir / "singlepoint" / "OUTCAR"
+                else:
+                    slab_mol_outcar = job_dir / "OUTCAR"
                 slab_outcar     = slab_dir / surface  / "OUTCAR"
                 mol_outcar      = mol_dir  / molecule / "OUTCAR"
 
@@ -307,6 +358,11 @@ Examples
       --functionals beef_vdw PBE PBE_D3 r2scan \\
       --output dft_binding_energies_all.csv
 
+  # Single-point DFT extraction across all functionals
+  python calc_binding_energy.py --best-dirs poscar/best --calc-type single-point \\
+      --all-functionals --functionals PBE PBE_D3 r2scan beef_vdw \\
+      --output dft_binding_energies_all.csv
+
   # Flat layout (no functional subdir)
   python calc_binding_energy.py --output dft_binding_energies.csv
 """
@@ -327,9 +383,22 @@ Examples
         "--functional", default=None,
         metavar="NAME",
         help=(
-            "Functional subdirectory name to append to all paths "
-            "(e.g. PBE_D3, r2scan, beef_vdw, PBE). "
+            "Functional subdirectory name to append (e.g. PBE_D3, r2scan, "
+            "beef_vdw, PBE). With --calc-type single-point, slab+mol jobs are "
+            "read from <system>/singlepoint/<functional>/OUTCAR. "
             "Omit for flat layout."
+        )
+    )
+    parser.add_argument(
+        "--calc-type",
+        choices=["relax", "single-point"],
+        default="relax",
+        help=(
+            "Where to read slab+mol OUTCARs from: relax -> <system>/<functional>/OUTCAR "
+            "(or <system>/OUTCAR in flat mode), single-point -> "
+            "<system>/singlepoint/<functional>/OUTCAR "
+            "(or <system>/singlepoint/OUTCAR in flat mode). "
+            "Reference slabs/molecules remain under --slab-dir/--mol-dir."
         )
     )
     parser.add_argument(
@@ -377,7 +446,8 @@ Examples
             print(f"Processing functional: {func}  →  {normalise_func(func)}")
             print(f"{'='*60}")
             results = calc_binding_energies(best_dirs, slab_dir, mol_dir,
-                                            functional=func)
+                                            functional=func,
+                                            calc_type=args.calc_type)
             print_table(results, functional=func)
             all_results.extend(results)
 
@@ -388,15 +458,20 @@ Examples
 
     # ── Single-functional or flat mode ─────────────────────────────────────
     for d in best_dirs:
-        print(f"slab+mol jobs : {d}"
-              + (f"/{args.functional}" if args.functional else ""))
+        if args.calc_type == "single-point":
+            suffix = (f"/singlepoint/{args.functional}" if args.functional
+                      else "/singlepoint")
+        else:
+            suffix = (f"/{args.functional}" if args.functional else "")
+        print(f"slab+mol jobs : {d}{suffix}")
     print(f"slab refs     : {slab_dir}"
           + (f"/<surface>/{args.functional}" if args.functional else ""))
     print(f"molecule refs : {mol_dir}"
           + (f"/<molecule>/{args.functional}" if args.functional else ""))
 
     results = calc_binding_energies(best_dirs, slab_dir, mol_dir,
-                                    functional=args.functional)
+                                    functional=args.functional,
+                                    calc_type=args.calc_type)
 
     if not results:
         print("No results computed.")
