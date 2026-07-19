@@ -32,6 +32,13 @@ Usage
     python setup_vasp_jobs.py --poscar-dir /scratch/jcho5/.../poscar/best \\
                                --functional beef-vdw
 
+    # Single-point DFT across all 4 functionals on best-seed MLIP geometries
+    for func in pbe pbe-d3 r2scan beef-vdw; do
+        python setup_vasp_jobs.py --poscar-dir /scratch/jcho5/.../poscar/best \\
+                                   --functional $func \\
+                                   --calc-type single-point
+    done
+
     # Dry-run: see what would be written without touching any files:
     python setup_vasp_jobs.py --poscar-dir /scratch/jcho5/.../poscar/best \\
                                --functional pbe --dry-run
@@ -103,8 +110,20 @@ AGGAC     = 0.0000
 }
 
 # ---------------------------------------------------------------------------
-# INCAR template  (xc_block is injected per-functional)
+# INCAR templates  (xc/ionic blocks are injected per-functional/calc-type)
 # ---------------------------------------------------------------------------
+IONIC_BLOCK_RELAX = """\
+! Ionic Relaxation
+NSW    = 1000
+IBRION = 2
+"""
+
+IONIC_BLOCK_SINGLE_POINT = """\
+! Ionic Relaxation (disabled — single-point energy evaluation)
+NSW    = 0
+IBRION = -1
+"""
+
 INCAR_BASE = """\
 SYSTEM = {system}
 
@@ -118,12 +137,8 @@ ENCUT  = 450
 NELM   = 150
 NELMIN = 4
 EDIFF  = 1E-05
-EDIFFG = -5E-02
-
-{xc_block}
-! Ionic Relaxation
-NSW    = 1000
-IBRON = 2
+{ediffg_line}{xc_block}
+{ionic_block}
 
 ! DOS
 ISMEAR = 1
@@ -262,6 +277,7 @@ def build_potcar(species: list, pp_root: Path, out_path: Path,
 
 def setup_job_dir(job_dir: Path, system_name: str,
                   pp_root: Path, xc_block: str,
+                  ionic_block: str, ediffg_line: str,
                   dry_run: bool = False) -> dict:
     """Write INCAR, KPOINTS, POTCAR, slm.vasp.kestrel into job_dir.
 
@@ -285,7 +301,12 @@ def setup_job_dir(job_dir: Path, system_name: str,
         job_dir.mkdir(parents=True, exist_ok=True)
         # Copy POSCAR into the functional subfolder
         (job_dir / "POSCAR").write_bytes(poscar.read_bytes())
-        incar_text = INCAR_BASE.format(system=system_name, xc_block=xc_block.rstrip())
+        incar_text = INCAR_BASE.format(
+            system=system_name,
+            xc_block=xc_block.rstrip(),
+            ionic_block=ionic_block.rstrip(),
+            ediffg_line=ediffg_line,
+        )
         (job_dir / "INCAR").write_text(incar_text)
         (job_dir / "KPOINTS").write_text(KPOINTS_TEMPLATE)
 
@@ -363,6 +384,16 @@ def main():
         ),
     )
     parser.add_argument(
+        "--calc-type", default="relax", choices=["relax", "single-point"],
+        help=(
+            "Type of VASP calculation to set up. "
+            "'relax' (default): full ionic relaxation (NSW=1000, IBRION=2, "
+            "EDIFFG=-5E-02). "
+            "'single-point': no ionic relaxation — evaluate energy/forces once "
+            "on the input geometry as-is (NSW=0, IBRION=-1, no EDIFFG)."
+        ),
+    )
+    parser.add_argument(
         "--pp-path", default=None,
         help=(
             "Path to VASP PBE PAW pseudopotential library root. "
@@ -385,9 +416,24 @@ def main():
     func_cfg  = FUNCTIONAL_CONFIGS[args.functional]
     subfolder = func_cfg["subfolder"]
     xc_block  = func_cfg["xc_block"]
+    calc_type_cfg = {
+        "relax": {
+            "ionic_block": IONIC_BLOCK_RELAX,
+            "ediffg_line": "EDIFFG = -5E-02\n\n",
+            "summary": "NSW=1000, IBRION=2, EDIFFG=-5E-02",
+        },
+        "single-point": {
+            "ionic_block": IONIC_BLOCK_SINGLE_POINT,
+            "ediffg_line": "",
+            "summary": "NSW=0, IBRION=-1, no EDIFFG",
+        },
+    }[args.calc_type]
+    ionic_block = calc_type_cfg["ionic_block"]
+    ediffg_line = calc_type_cfg["ediffg_line"]
 
     print(f"Processing POSCAR subdirectories in: {poscar_dir}")
     print(f"Functional : {args.functional}  ->  subfolder name: {subfolder}")
+    print(f"Calc type  : {args.calc_type}  ({calc_type_cfg['summary']})")
     print()
 
     # ---- Resolve POTCAR library path -----------------------------------------
@@ -435,6 +481,8 @@ def main():
             job_dir, system_name,
             pp_root=pp_root,
             xc_block=xc_block,
+            ionic_block=ionic_block,
+            ediffg_line=ediffg_line,
             dry_run=args.dry_run,
         )
 
@@ -463,7 +511,7 @@ def main():
         print(f"   Then re-run:")
         print()
         print(f"     python setup_vasp_jobs.py --poscar-dir {poscar_dir} "
-              f"--functional {args.functional}")
+              f"--functional {args.functional} --calc-type {args.calc_type}")
         print()
     print("2. Submit each job:")
     print()
@@ -474,6 +522,9 @@ def main():
     print("3. After VASP finishes, compute E_ads from OUTCAR:")
     print()
     print("     grep 'free  energy' OUTCAR | tail -1")
+    if args.calc_type == "single-point":
+        print("     (single-point mode: NSW=0, so no relaxed structure is produced;")
+        print("      this is the single-point energy at the input geometry.)")
     print()
 
 

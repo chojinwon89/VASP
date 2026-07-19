@@ -391,6 +391,9 @@ def main():
     print("Next steps:")
     print("  1. python setup_vasp_jobs.py --poscar-dir {} --functional r2scan".format(
           best_dir))
+    print("     # or single-point DFT energy only (no ionic relaxation):")
+    print("     python setup_vasp_jobs.py --poscar-dir {} --functional r2scan --calc-type single-point".format(
+          best_dir))
     print("  2. for d in {}/*/*/; do (cd \"$d\" && sbatch slm.vasp.kestrel); done".format(
           best_dir))
     print("  3. python calc_binding_energy.py --best-dir {} --output dft_eads.csv".format(

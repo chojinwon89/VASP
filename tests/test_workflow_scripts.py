@@ -35,6 +35,43 @@ NEW_BIO_OIL_MOLECULES = {
 }
 
 
+def _write_minimal_poscar(path: Path):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        "test\n"
+        "1.0\n"
+        "1 0 0\n"
+        "0 1 0\n"
+        "0 0 1\n"
+        "Cu H\n"
+        "1 1\n"
+        "Cartesian\n"
+        "0 0 0\n"
+        "0.5 0.5 0.5\n"
+    )
+
+
+def _run_setup_vasp_jobs(tmp_path: Path, calc_type: str | None):
+    tmp_path.mkdir(parents=True, exist_ok=True)
+    (tmp_path / "setup_vasp_jobs.py").write_text(
+        (REPO_ROOT / "setup_vasp_jobs.py").read_text()
+    )
+    poscar_root = tmp_path / "poscar" / "best"
+    _write_minimal_poscar(poscar_root / "Cu001_CO" / "POSCAR")
+    cmd = [
+        sys.executable,
+        "setup_vasp_jobs.py",
+        "--poscar-dir",
+        "poscar/best",
+        "--functional",
+        "pbe",
+    ]
+    if calc_type is not None:
+        cmd.extend(["--calc-type", calc_type])
+    subprocess.run(cmd, cwd=tmp_path, check=True)
+    return poscar_root / "Cu001_CO" / "PBE" / "INCAR"
+
+
 def test_make_tasks_generates_expected_task_matrix(tmp_path):
     workflow_dir = tmp_path / "workflow"
     workflow_dir.mkdir()
@@ -211,3 +248,30 @@ def test_new_bio_oil_names_are_never_surface_classified(tmp_path):
         assert name in molecules
         assert name not in surfaces
         assert _SURFACE_RE.match(name) is None
+
+
+def test_setup_vasp_jobs_relax_default_and_explicit(tmp_path):
+    incar_default = _run_setup_vasp_jobs(tmp_path / "default", calc_type=None)
+    incar_explicit = _run_setup_vasp_jobs(tmp_path / "explicit_relax", calc_type="relax")
+
+    default_text = incar_default.read_text()
+    explicit_text = incar_explicit.read_text()
+
+    assert "NSW    = 1000" in default_text
+    assert "IBRION = 2" in default_text
+    assert "EDIFFG = -5E-02" in default_text
+    assert "! Exchange-correlation" in default_text
+    assert "GGA = PE" in default_text
+    assert default_text == explicit_text
+
+
+def test_setup_vasp_jobs_single_point_incar_and_subfolder(tmp_path):
+    incar_path = _run_setup_vasp_jobs(tmp_path, calc_type="single-point")
+    incar_text = incar_path.read_text()
+
+    assert "NSW    = 0" in incar_text
+    assert "IBRION = -1" in incar_text
+    assert "EDIFFG" not in incar_text
+    assert "! Exchange-correlation" in incar_text
+    assert "GGA = PE" in incar_text
+    assert incar_path.parent.name == "PBE"
