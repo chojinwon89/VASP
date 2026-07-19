@@ -2,8 +2,8 @@
 """
 extract_poscar.py
 =================
-Convert the final relaxed geometries from GOAD runs into VASP POSCAR files
-ready for DFT single-point or full relaxation verification.
+Convert the final relaxed geometries from finished GOAD runs into VASP POSCAR
+files ready for DFT single-point or full relaxation verification.
 
 Directory layout written by batch_isopropanol.py:
 
@@ -34,6 +34,7 @@ Output with --best-only (best POSCARs written directly into --out-dir):
 Usage
 -----
     # Default: reads ./runs, writes per-seed + best/ into ./poscar
+    # (only runs with final geometry + status.json state == finished)
     python extract_poscar.py
 
     # Only use SevenNet-OMNI runs (skip 5m / other calculators)
@@ -53,6 +54,9 @@ Usage
         --runs-dir /scratch/jcho5/.../runs \\
         --out-dir  /scratch/jcho5/.../poscar/best2 \\
         --best-only
+
+    # Include partial / unfinished runs if they already wrote a geometry
+    python extract_poscar.py --include-unfinished
 
     # All seeds + best, everything under a custom root
     python extract_poscar.py \\
@@ -108,6 +112,21 @@ def load_final_geometry(run_dir: Path):
             pass
 
     return atoms, metadata
+
+
+def is_run_finished(run_dir: Path) -> bool:
+    """
+    Return True if run_dir/status.json exists and has state == "finished".
+    Missing status.json or any other state is treated as not finished.
+    """
+    status_file = run_dir / "status.json"
+    if not status_file.exists():
+        return False
+    try:
+        data = json.loads(status_file.read_text())
+        return data.get("state", "").strip() == "finished"
+    except (json.JSONDecodeError, OSError):
+        return False
 
 
 def sort_atoms_by_species(atoms: Atoms) -> Atoms:
@@ -175,10 +194,15 @@ def parse_calculator_from_dirname(name: str) -> str:
     return "_".join(calc_parts)        # e.g. 'sevennet_omni'
 
 
-def collect_runs(runs_dir: Path, calculator_filter: str = None) -> list:
+def collect_runs(
+    runs_dir: Path,
+    calculator_filter: str = None,
+    include_unfinished: bool = False,
+) -> tuple[list, int]:
     """
     Walk runs_dir and collect all task entries that have a final_adsorbed
-    geometry.
+    geometry. By default, only runs whose status.json reports state=finished
+    are included.
 
     Supports both:
       - runs/C<n>/<surface>_<adsorbate>_seed<N>_<calc>/... (current layout)
@@ -189,9 +213,13 @@ def collect_runs(runs_dir: Path, calculator_filter: str = None) -> list:
     calculator_filter : str or None
         If given (e.g. 'sevennet_omni' or '5m'), only runs whose directory
         name ends with that calculator string are included.
+    include_unfinished : bool
+        If True, include runs with discoverable geometry regardless of
+        status.json state.
     """
-    entries  = []
-    skipped  = 0
+    entries = []
+    skipped = 0
+    skipped_not_finished = 0
 
     for first_level_dir in sorted(runs_dir.iterdir()):
         if not first_level_dir.is_dir():
@@ -224,6 +252,10 @@ def collect_runs(runs_dir: Path, calculator_filter: str = None) -> list:
             if atoms is None:
                 continue   # no final geometry — task may still be running
 
+            if not include_unfinished and not is_run_finished(task_dir):
+                skipped_not_finished += 1
+                continue
+
             # Parse surface/adsorbate from result.json first (most reliable)
             surface   = meta.get("surface_cif",  "").replace("inputs/", "").replace(".cif", "")
             adsorbate = meta.get("molecule_cif", "").replace("inputs/", "").replace(".cif", "")
@@ -252,7 +284,7 @@ def collect_runs(runs_dir: Path, calculator_filter: str = None) -> list:
         print("Calculator filter : '{}' — skipped {} non-matching dirs, "
               "kept {} runs".format(calculator_filter, skipped, len(entries)))
 
-    return entries
+    return entries, skipped_not_finished
 
 
 def select_best_per_system(entries: list) -> dict:
@@ -279,7 +311,9 @@ def select_best_per_system(entries: list) -> dict:
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Extract final GOAD geometries as VASP POSCAR files."
+        description=(
+            "Extract final GOAD geometries from finished runs as VASP POSCAR files."
+        )
     )
     parser.add_argument(
         "--runs-dir", default="runs",
@@ -301,7 +335,15 @@ def main():
         help=(
             "Only extract runs from this calculator. "
             "Examples: sevennet_omni  5m  chgnet  mace "
-            "(default: use all calculators found in runs/)"
+            "(default: use all calculators found in runs/; finished-state "
+            "filter still applies unless --include-unfinished is used)"
+        ),
+    )
+    parser.add_argument(
+        "--include-unfinished", action="store_true",
+        help=(
+            "Include runs with final_adsorbed.cif/.traj even if status.json is "
+            "missing or state != finished."
         ),
     )
     parser.add_argument(
@@ -330,19 +372,29 @@ def main():
         print("ERROR: runs directory not found: {}".format(runs_dir))
         raise SystemExit(1)
 
-    entries = collect_runs(runs_dir, calculator_filter=args.calculator)
+    entries, skipped_not_finished = collect_runs(
+        runs_dir,
+        calculator_filter=args.calculator,
+        include_unfinished=args.include_unfinished,
+    )
 
     if not entries:
         msg = "No completed runs"
         if args.calculator:
             msg += " for calculator '{}'".format(args.calculator)
+        if not args.include_unfinished:
+            msg += " (status.json state=finished required)"
         print(msg + " with final_adsorbed.cif/.traj found in {}".format(runs_dir))
+        if skipped_not_finished and not args.include_unfinished:
+            print("Skipped (not finished per status.json): {}".format(skipped_not_finished))
         raise SystemExit(0)
 
     print("Found {} completed run(s) in {}{}".format(
         len(entries), runs_dir,
         " [calculator={}]".format(args.calculator) if args.calculator else ""
     ))
+    if skipped_not_finished and not args.include_unfinished:
+        print("Skipped (not finished per status.json): {}".format(skipped_not_finished))
 
     # Show breakdown of what was found
     from collections import Counter
