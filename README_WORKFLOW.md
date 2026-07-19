@@ -310,6 +310,26 @@ export VASP_PP_PATH=/home/jcho5/project/paw64/potpaw_PBE_64
 python setup_vasp_jobs.py --all-seeds
 ```
 
+`setup_vasp_jobs.py` supports:
+- `--calc-type relax` (default): full ionic relaxation (`NSW=1000`, `IBRION=2`, `EDIFFG=-5E-02`)
+- `--calc-type single-point`: single-point energy/forces on the input geometry (`NSW=0`, `IBRION=-1`, no `EDIFFG`)
+
+Single-point DFT across all 4 supported functionals on best-seed GOAD+MLIP geometries:
+
+```bash
+python extract_poscar.py --best-only --out-dir poscar/best
+
+for func in pbe pbe-d3 r2scan beef-vdw; do
+    python setup_vasp_jobs.py --poscar-dir poscar/best \
+                               --functional $func \
+                               --calc-type single-point
+done
+
+for d in poscar/best/*/{PBE,PBE_D3,r2scan,beef_vdw}/; do
+    (cd "$d" && sbatch slm.vasp.kestrel)
+done
+```
+
 ### Step 9 — Set up DFT bare-slab reference jobs
 ```bash
 python setup_slab_jobs.py
