@@ -254,6 +254,14 @@ DEFAULT_AXIS_MAX =  0.3
 DEFAULT_MAX_DIFF =  5.0   # eV  — pairs with |DFT - ML| > this are excluded
 BAND_WIDTH       =  0.2
 
+PANEL_TITLE_FONTSIZE = 15
+AXIS_LABEL_FONTSIZE = 12
+TICK_LABEL_FONTSIZE = 11
+LEGEND_FONTSIZE = 11
+LEGEND_TITLE_FONTSIZE = 12
+SUPTITLE_FONTSIZE = 17
+LEGEND_MARKERSIZE = 11
+
 
 # ---------------------------------------------------------------------------
 # Molecule style helpers
@@ -450,10 +458,11 @@ def _plot_panel(ax, func, func_label, calc_pairs, dft_vals, ml_data,
             n_plotted += 1
 
     if n_plotted == 0:
-        ax.set_title(f"DFT: {func_label}  (no data)", fontsize=11)
+        ax.set_title(f"DFT: {func_label}  (no data)", fontsize=PANEL_TITLE_FONTSIZE)
         ax.set_xlim(axis_min, axis_max)
         ax.set_ylim(axis_min, axis_max)
         ax.set_aspect("equal")
+        ax.tick_params(axis="both", labelsize=TICK_LABEL_FONTSIZE)
         return
 
     ax.plot([axis_min, axis_max], [axis_min, axis_max], "k--", lw=1.2, zorder=2)
@@ -483,15 +492,16 @@ def _plot_panel(ax, func, func_label, calc_pairs, dft_vals, ml_data,
 
     ax.text(0.97, 0.03, "\n".join(stat_lines),
             transform=ax.transAxes, va="bottom", ha="right",
-            fontsize=6.5, family="monospace",
+            fontsize=7.5, family="monospace",
             bbox=dict(boxstyle="round,pad=0.3", fc="white", alpha=0.85))
 
     ax.set_xlim(axis_min, axis_max)
     ax.set_ylim(axis_min, axis_max)
     ax.set_aspect("equal")
     ax.grid(True, alpha=0.25)
-    ax.set_title(f"DFT: {func_label}", fontsize=11, fontweight="bold")
-    ax.set_xlabel(f"DFT ({func_label})  $E_{{ads}}$ (eV)", fontsize=9)
+    ax.set_title(f"DFT: {func_label}", fontsize=PANEL_TITLE_FONTSIZE, fontweight="bold")
+    ax.set_xlabel(f"DFT ({func_label})  $E_{{ads}}$ (eV)", fontsize=AXIS_LABEL_FONTSIZE)
+    ax.tick_params(axis="both", labelsize=TICK_LABEL_FONTSIZE)
 
 
 # ---------------------------------------------------------------------------
@@ -507,7 +517,7 @@ def make_figure(functionals, calc_pairs_per_func, dft_data, ml_data,
     nrows = math.ceil(n / ncols)
 
     fig, axes = plt.subplots(nrows, ncols,
-                             figsize=(7.5 * ncols, 7 * nrows),
+                             figsize=(8.0 * ncols, 7.2 * nrows),
                              squeeze=False)
 
     ml_label = " / ".join(CALC_LABELS.get(c, c) for c in calculators)
@@ -519,7 +529,7 @@ def make_figure(functionals, calc_pairs_per_func, dft_data, ml_data,
         _plot_panel(ax, func, func_label,
                     calc_pairs_per_func.get(func, {}),
                     dft_data, ml_data, axis_min, axis_max)
-        ax.set_ylabel(f"{ml_label}  $E_{{ads}}$ (eV)", fontsize=9)
+        ax.set_ylabel(f"{ml_label}  $E_{{ads}}$ (eV)", fontsize=AXIS_LABEL_FONTSIZE)
 
     for idx in range(n, nrows * ncols):
         row, col = divmod(idx, ncols)
@@ -527,6 +537,8 @@ def make_figure(functionals, calc_pairs_per_func, dft_data, ml_data,
 
     all_pairs = [p for fp in calc_pairs_per_func.values()
                  for pairs in fp.values() for p in pairs]
+
+    fig.tight_layout(rect=[0.03, 0.14, 0.97, 0.80])
 
     # Calculator legend (upper left)
     calc_handles = []
@@ -537,30 +549,32 @@ def make_figure(functionals, calc_pairs_per_func, dft_data, ml_data,
             h = plt.Line2D([0], [0], marker="o", color="w",
                            markerfacecolor="none",
                            markeredgecolor="#555555",
-                           markeredgewidth=1.4, markersize=9, label=label)
+                           markeredgewidth=1.4, markersize=LEGEND_MARKERSIZE, label=label)
         else:
             h = plt.Line2D([0], [0], marker="o", color="w",
                            markerfacecolor="#888888",
                            markeredgecolor="k",
-                           markersize=9, label=label)
+                           markersize=LEGEND_MARKERSIZE, label=label)
         calc_handles.append(h)
 
     fig.legend(handles=calc_handles, title="Calculator",
-               loc="upper left", bbox_to_anchor=(0.01, 1.02),
-               ncol=len(calc_handles), fontsize=9, title_fontsize=9,
+               loc="upper left", bbox_to_anchor=(0.01, 0.94),
+               ncol=len(calc_handles), fontsize=LEGEND_FONTSIZE,
+               title_fontsize=LEGEND_TITLE_FONTSIZE,
                frameon=True)
 
     # Metal legend (upper right)
     metal_handles = [
         plt.Line2D([0], [0], marker="o", color="w",
                    markerfacecolor=c, markeredgecolor="k",
-                   markersize=9, label=m)
+                   markersize=LEGEND_MARKERSIZE, label=m)
         for m, c in METAL_COLORS.items()
         if any(k[0].startswith(m) for k in all_pairs)
     ]
     fig.legend(handles=metal_handles, title="Metal",
-               loc="upper right", bbox_to_anchor=(0.99, 1.02),
-               ncol=len(metal_handles), fontsize=9, title_fontsize=9,
+               loc="upper right", bbox_to_anchor=(0.99, 0.94),
+               ncol=len(metal_handles), fontsize=LEGEND_FONTSIZE,
+               title_fontsize=LEGEND_TITLE_FONTSIZE,
                frameon=True)
 
     # Molecule-class legend (bottom centre)
@@ -576,27 +590,27 @@ def make_figure(functionals, calc_pairs_per_func, dft_data, ml_data,
         marker = CLASS_MARKERS[cls]
         if marker in LINE_MARKERS:
             handle = plt.Line2D([0], [0], marker=marker, color="grey",
-                                linestyle="None", markersize=9, label=cls)
+                                linestyle="None", markersize=LEGEND_MARKERSIZE, label=cls)
         else:
             handle = plt.Line2D([0], [0], marker=marker, color="w",
                                 markerfacecolor="grey", markeredgecolor="k",
-                                linestyle="None", markersize=9, label=cls)
+                                linestyle="None", markersize=LEGEND_MARKERSIZE, label=cls)
         class_handles.append(handle)
     if class_handles:
         fig.legend(handles=class_handles, title="Molecule class",
-                   loc="lower center", bbox_to_anchor=(0.5, -0.04),
+                   loc="lower center", bbox_to_anchor=(0.5, 0.02),
                    ncol=min(len(class_handles), 6),
-                   fontsize=8, title_fontsize=8, frameon=True)
+                   fontsize=LEGEND_FONTSIZE,
+                   title_fontsize=LEGEND_TITLE_FONTSIZE,
+                   frameon=True)
 
     diff_str = f"|diff| ≤ {max_diff} eV" if max_diff else "no diff filter"
     window_str = f"axis window: [{axis_min:.1f}, {axis_max:.1f}] eV"
     fig.suptitle(
         f"DFT vs {ml_label}  —  Adsorption Energies (all functionals)\n"
         f"{window_str}   |   {diff_str}",
-        fontsize=12, fontweight="bold", y=1.04
+        fontsize=SUPTITLE_FONTSIZE, fontweight="bold", y=0.995
     )
-
-    fig.tight_layout()
     output_path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(output_path, dpi=150, bbox_inches="tight")
     print(f"Figure saved: {output_path}")
