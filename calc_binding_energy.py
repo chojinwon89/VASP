@@ -61,6 +61,7 @@ Usage
 
 import argparse
 import csv
+import re
 import sys
 from pathlib import Path
 
@@ -159,15 +160,42 @@ def discover_system_dirs(best_dir: Path):
     """
     Discover system directories from a best-dir root, mirroring setup_vasp_jobs.py:
       (1) DIR itself is a system directory (contains POSCAR)
-      (2) DIR contains <system>/POSCAR
-      (3) DIR contains C<n>/<system>/POSCAR
+      (2) DIR contains C<n>/<system>/POSCAR
+      (3) fallback (no C<n> buckets): DIR contains <system>/POSCAR
     """
+    def is_bucket_dir(path: Path) -> bool:
+        return path.is_dir() and re.fullmatch(r"C\d+", path.name) is not None
+
     system_dirs = []
     if (best_dir / "POSCAR").exists():
         system_dirs.append(best_dir)
-    for first_level_dir in sorted(best_dir.iterdir()):
-        if not first_level_dir.is_dir():
-            continue
+        return system_dirs
+
+    first_level_dirs = [d for d in sorted(best_dir.iterdir()) if d.is_dir()]
+    bucket_dirs = [d for d in first_level_dirs if is_bucket_dir(d)]
+
+    if bucket_dirs:
+        for stale_dir in first_level_dirs:
+            if is_bucket_dir(stale_dir):
+                continue
+            if (stale_dir / "POSCAR").exists():
+                print(
+                    "WARNING: found stale non-bucketed system directory "
+                    f"'{stale_dir}' alongside bucketed C<n>/ directories. "
+                    "This directory will be IGNORED. If this is a leftover "
+                    "from before carbon-count bucketing was introduced, verify "
+                    "the correct bucketed copy exists "
+                    f"(e.g. {best_dir}/C2/{stale_dir.name}/) and consider deleting "
+                    "the stale directory to avoid confusion."
+                )
+
+        for bucket_dir in bucket_dirs:
+            for second_level_dir in sorted(bucket_dir.iterdir()):
+                if second_level_dir.is_dir() and (second_level_dir / "POSCAR").exists():
+                    system_dirs.append(second_level_dir)
+        return system_dirs
+
+    for first_level_dir in first_level_dirs:
         if (first_level_dir / "POSCAR").exists():
             system_dirs.append(first_level_dir)
             continue
