@@ -34,6 +34,20 @@ def _run_calc(tmp_path: Path, *args: str) -> list[dict[str, str]]:
         return list(csv.DictReader(handle))
 
 
+def _run_calc_with_stdout(tmp_path: Path, *args: str) -> tuple[list[dict[str, str]], str]:
+    output = tmp_path / "out.csv"
+    cmd = [
+        sys.executable,
+        str(REPO_ROOT / "calc_binding_energy.py"),
+        *args,
+        "--output",
+        str(output),
+    ]
+    result = subprocess.run(cmd, cwd=tmp_path, check=True, capture_output=True, text=True)
+    with output.open() as handle:
+        return list(csv.DictReader(handle)), result.stdout
+
+
 def test_calc_binding_energy_discovers_bucketed_relax_layout(tmp_path):
     best_dir = tmp_path / "poscar" / "best"
     system_dir = best_dir / "C1" / "Cu001_CO"
@@ -117,6 +131,67 @@ def test_calc_binding_energy_discovers_multiple_buckets(tmp_path):
 
     assert sorted(r["system"] for r in rows) == ["Cu001_CO", "Pt111_CO2"]
     assert all(r["status"] == "ok" for r in rows)
+
+
+def test_calc_binding_energy_bucketed_root_ignores_stale_flat_leftover(tmp_path):
+    best_dir = tmp_path / "poscar" / "best"
+    bucketed_system_dir = best_dir / "C2" / "Au100_DMSO"
+    stale_flat_dir = best_dir / "Au100_DMSO"
+
+    _write_poscar(bucketed_system_dir / "POSCAR")
+    _write_outcar(bucketed_system_dir / "singlepoint" / "PBE" / "OUTCAR", -25.0)
+
+    _write_poscar(stale_flat_dir / "POSCAR")
+
+    _write_outcar(tmp_path / "vasp_slab" / "Au100" / "PBE" / "OUTCAR", -20.0)
+    _write_outcar(tmp_path / "vasp_mol" / "DMSO" / "PBE" / "OUTCAR", -3.0)
+
+    rows, stdout = _run_calc_with_stdout(
+        tmp_path,
+        "--best-dirs",
+        str(best_dir),
+        "--slab-dir",
+        str(tmp_path / "vasp_slab"),
+        "--mol-dir",
+        str(tmp_path / "vasp_mol"),
+        "--functional",
+        "PBE",
+        "--calc-type",
+        "single-point",
+    )
+
+    assert len(rows) == 1
+    assert rows[0]["system"] == "Au100_DMSO"
+    assert rows[0]["status"] == "ok"
+    assert "WARNING: found stale non-bucketed system directory" in stdout
+    assert "Au100_DMSO" in stdout
+    assert "IGNORED" in stdout
+
+
+def test_calc_binding_energy_flat_layout_fallback_without_bucket_warning(tmp_path):
+    best_dir = tmp_path / "poscar" / "best"
+    system_dir = best_dir / "Au100_DMSO"
+    _write_poscar(system_dir / "POSCAR")
+    _write_outcar(system_dir / "PBE" / "OUTCAR", -25.0)
+
+    _write_outcar(tmp_path / "vasp_slab" / "Au100" / "PBE" / "OUTCAR", -20.0)
+    _write_outcar(tmp_path / "vasp_mol" / "DMSO" / "PBE" / "OUTCAR", -3.0)
+
+    rows, stdout = _run_calc_with_stdout(
+        tmp_path,
+        "--best-dirs",
+        str(best_dir),
+        "--slab-dir",
+        str(tmp_path / "vasp_slab"),
+        "--mol-dir",
+        str(tmp_path / "vasp_mol"),
+        "--functional",
+        "PBE",
+    )
+
+    assert len(rows) == 1
+    assert rows[0]["status"] == "ok"
+    assert "WARNING: found stale non-bucketed system directory" not in stdout
 
 
 def test_calc_binding_energy_accepts_single_bucket_or_direct_system_best_dir(tmp_path):
