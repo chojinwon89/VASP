@@ -332,16 +332,43 @@ done
 
 ### Step 9 — Set up DFT bare-slab reference jobs
 ```bash
-python setup_slab_jobs.py
+for func in pbe pbe-d3 r2scan beef-vdw; do
+    python setup_slab_jobs.py --functional "$func"
+done
 ```
-Creates `vasp_slab/<SurfaceName>/` with POSCAR (Selective Dynamics), INCAR, KPOINTS, POTCAR, Slurm script.
+Creates `vasp_slab/<surface>/<functional_subfolder>/` with POSCAR (Selective Dynamics), INCAR, KPOINTS, POTCAR, Slurm script.
+Supported functionals: `pbe`, `pbe-d3`, `r2scan`, `beef-vdw`.
+
+If a target directory already contains `OUTCAR`, setup is skipped by default.
+Use `--force` to regenerate:
+
+```bash
+python setup_slab_jobs.py --functional beef-vdw --force
+```
+
+For `beef-vdw`, `vdw_kernel.bindat` is copied from:
+`/projects/2dmgcat/vdw_kernel.bindat`
+
 Supports all metals listed in the Supported surfaces table above (FCC, BCC, HCP).
 
 ### Step 10 — Set up DFT gas-phase molecule jobs
 ```bash
-python setup_molecule_jobs.py
+for func in pbe pbe-d3 r2scan beef-vdw; do
+    python setup_molecule_jobs.py --functional "$func"
+done
 ```
-Creates `vasp_mol/<MoleculeName>/` with POSCAR (20×20×20 Å box), INCAR (ISMEAR=0, Gamma-point), KPOINTS (1×1×1), POTCAR, Slurm script.
+Creates `vasp_mol/<molecule>/<functional_subfolder>/` with POSCAR (20×20×20 Å box), INCAR (ISMEAR=0, Gamma-point), KPOINTS (1×1×1), POTCAR, Slurm script.
+Supported functionals: `pbe`, `pbe-d3`, `r2scan`, `beef-vdw`.
+
+If a target directory already contains `OUTCAR`, setup is skipped by default.
+Use `--force` to regenerate:
+
+```bash
+python setup_molecule_jobs.py --functional beef-vdw --force
+```
+
+For `beef-vdw`, `vdw_kernel.bindat` is copied from:
+`/projects/2dmgcat/vdw_kernel.bindat`
 
 ## Adsorption energy formula
 
@@ -355,9 +382,13 @@ E_ads = E_total(slab+mol) - E_surf(slab) - E_mol(gas)
 # Adsorbed systems
 for d in poscar/*/; do (cd "$d" && sbatch slm.vasp.kestrel); done
 
-# Bare slabs
-for d in vasp_slab/*/; do (cd "$d" && sbatch slm.vasp.kestrel); done
+# Bare slabs: submit only unfinished jobs (no OUTCAR yet)
+for d in vasp_slab/*/*/; do
+    [ -f "${d}/OUTCAR" ] || (cd "$d" && sbatch slm.vasp.kestrel)
+done
 
-# Gas molecules
-for d in vasp_mol/*/; do (cd "$d" && sbatch slm.vasp.kestrel); done
+# Gas molecules: submit only unfinished jobs (no OUTCAR yet)
+for d in vasp_mol/*/*/; do
+    [ -f "${d}/OUTCAR" ] || (cd "$d" && sbatch slm.vasp.kestrel)
+done
 ```
