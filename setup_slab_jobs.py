@@ -41,19 +41,26 @@ Usage
     python setup_slab_jobs.py --functional pbe --surfaces Cu111 Cu110 Cu001
     python setup_slab_jobs.py --functional r2scan --out-dir /scratch/jcho5/slab_jobs
     python setup_slab_jobs.py --functional pbe --dry-run
+    python setup_slab_jobs.py --functional pbe --force
 
 Prerequisites
 -------------
     conda activate goad
     export VASP_PP_PATH=/home/jcho5/project/paw64/potpaw_PBE_64
+
+For beef-vdw jobs, this script also tries to copy:
+    /projects/2dmgcat/vdw_kernel.bindat
 """
 
 import argparse
 import os
+import shutil
 from pathlib import Path
 
 from ase.build import fcc111, fcc100, fcc110, bcc110, bcc100, bcc111, hcp0001
 from ase import Atoms
+
+DEFAULT_VDW_KERNEL_PATH = "/projects/2dmgcat/vdw_kernel.bindat"
 
 
 # ---------------------------------------------------------------------------
@@ -354,7 +361,7 @@ def build_potcar(species, pp_root, out_path, dry_run=False):
 # Per-surface setup
 # ---------------------------------------------------------------------------
 
-def setup_slab_dir(surface_name, out_dir, pp_root, n_fixed, functional, dry_run=False):
+def setup_slab_dir(surface_name, out_dir, pp_root, n_fixed, functional, dry_run=False, force=False):
     """Build slab and write all VASP input files into out_dir/surface_name/subfolder/."""
 
     func_cfg = FUNCTIONAL_CONFIGS[functional]
@@ -362,6 +369,15 @@ def setup_slab_dir(surface_name, out_dir, pp_root, n_fixed, functional, dry_run=
     xc_block = func_cfg["xc_block"]
 
     job_dir = out_dir / surface_name / subfolder
+    outcar_path = job_dir / "OUTCAR"
+    if outcar_path.exists() and not force:
+        return {
+            "surface": surface_name,
+            "status": "skipped",
+            "reason": f"OUTCAR already exists in {job_dir}; skipping finished job (use --force to regenerate).",
+            "warnings": [],
+        }
+
     if not dry_run:
         job_dir.mkdir(parents=True, exist_ok=True)
 
@@ -433,6 +449,20 @@ def setup_slab_dir(surface_name, out_dir, pp_root, n_fixed, functional, dry_run=
         slurm_path.write_text(SLURM_TEMPLATE.format(job_name=surface_name[:40]))
         slurm_path.chmod(0o755)
 
+    # vdw_kernel.bindat for beef-vdw
+    if functional == "beef-vdw":
+        kernel_path = Path(DEFAULT_VDW_KERNEL_PATH)
+        if kernel_path.exists():
+            if not dry_run:
+                shutil.copy2(kernel_path, job_dir / "vdw_kernel.bindat")
+            status["vdw_kernel_written"] = True
+        else:
+            status["warnings"].append(
+                f"vdw_kernel.bindat not found at: {kernel_path}. "
+                "beef-vdw jobs will be missing this file; copy it manually."
+            )
+            status["status"] = "partial"
+
     return status
 
 
@@ -493,6 +523,10 @@ def main():
         "--dry-run", action="store_true",
         help="Print what would be done without writing any files"
     )
+    parser.add_argument(
+        "--force", action="store_true",
+        help="Regenerate job files even when OUTCAR already exists (default: skip finished jobs)."
+    )
     args = parser.parse_args()
 
     functional = args.functional
@@ -519,6 +553,7 @@ def main():
     print(f"Surfaces:          {args.surfaces}")
     print(f"Output directory:  {out_dir}/")
     print(f"Fixed bottom layers: {n_fixed}")
+    print(f"Force overwrite:   {args.force}")
     print()
 
     all_ok = True
@@ -532,7 +567,13 @@ def main():
             n_fixed=n_fixed,
             functional=functional,
             dry_run=args.dry_run,
+            force=args.force,
         )
+
+        if result["status"] == "skipped":
+            print(f"    SKIPPED: {result['reason']}")
+            print()
+            continue
 
         if result["status"] == "error":
             print(f"    ERROR: {result['reason']}")
@@ -547,6 +588,8 @@ def main():
             files = ["POSCAR (SD)", "INCAR", "KPOINTS", "slm.vasp.kestrel"]
             if result["status"] == "ok":
                 files.insert(3, "POTCAR")
+            if result.get("vdw_kernel_written"):
+                files.append("vdw_kernel.bindat")
             print(f"    written:  {', '.join(files)}")
 
         for w in result.get("warnings", []):
@@ -559,6 +602,9 @@ def main():
     print("=" * 65)
     print("NEXT STEPS")
     print("=" * 65)
+    print()
+    print("Finished job directories containing OUTCAR are skipped by default.")
+    print("Use --force to regenerate those directories when needed.")
     print()
     if not pp_root:
         print("1. Build POTCARs:")
