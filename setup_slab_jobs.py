@@ -21,22 +21,26 @@ Output layout
 -------------
     vasp_slab/
         Cu111/
-            POSCAR  INCAR  KPOINTS  POTCAR  slm.vasp.kestrel
+            PBE/
+                POSCAR  INCAR  KPOINTS  POTCAR  slm.vasp.kestrel
+            PBE_D3/
+                ...
+            r2scan/
+                ...
+            beef_vdw/
+                ...
         Cu110/
-            ...
-        Ir111/
-            ...
-        Fe110/
-            ...
-        Ru0001/
             ...
 
 Usage
 -----
-    python setup_slab_jobs.py
-    python setup_slab_jobs.py --surfaces Cu111 Cu110 Cu001 Ir111 Fe110 Ru0001
-    python setup_slab_jobs.py --out-dir /scratch/jcho5/slab_jobs
-    python setup_slab_jobs.py --dry-run
+    python setup_slab_jobs.py --functional pbe
+    python setup_slab_jobs.py --functional pbe-d3
+    python setup_slab_jobs.py --functional r2scan
+    python setup_slab_jobs.py --functional beef-vdw
+    python setup_slab_jobs.py --functional pbe --surfaces Cu111 Cu110 Cu001
+    python setup_slab_jobs.py --functional r2scan --out-dir /scratch/jcho5/slab_jobs
+    python setup_slab_jobs.py --functional pbe --dry-run
 
 Prerequisites
 -------------
@@ -51,6 +55,47 @@ from pathlib import Path
 from ase.build import fcc111, fcc100, fcc110, bcc110, bcc100, bcc111, hcp0001
 from ase import Atoms
 
+
+# ---------------------------------------------------------------------------
+# Supported functionals  ->  (subfolder_name, INCAR_xc_block)
+# (Matches setup_vasp_jobs.py conventions)
+# ---------------------------------------------------------------------------
+FUNCTIONAL_CONFIGS = {
+    "pbe": {
+        "subfolder": "PBE",
+        "xc_block": """\
+! Exchange-correlation
+GGA = PE
+""",
+    },
+    "pbe-d3": {
+        "subfolder": "PBE_D3",
+        "xc_block": """\
+! Exchange-correlation
+GGA    = PE
+IVDW   = 11
+VDW_S6 = 1.0
+VDW_SR = 1.217
+""",
+    },
+    "r2scan": {
+        "subfolder": "r2scan",
+        "xc_block": """\
+! Exchange-correlation
+METAGGA = R2SCAN
+LASPH   = .TRUE.
+""",
+    },
+    "beef-vdw": {
+        "subfolder": "beef_vdw",
+        "xc_block": """\
+! Exchange-correlation
+GGA  = BF
+LUSE_VDW  = .TRUE.
+AGGAC     = 0.0000
+""",
+    },
+}
 
 # ---------------------------------------------------------------------------
 # INCAR — same settings as the adsorbed-system jobs
@@ -70,9 +115,7 @@ NELMIN = 4
 EDIFF  = 1E-05
 EDIFFG = -5E-02
 
-! Exchange-correlation
-GGA = RP
-
+{xc_block}
 ! Ionic Relaxation
 NSW    = 1000
 IBRION = 2
@@ -311,10 +354,14 @@ def build_potcar(species, pp_root, out_path, dry_run=False):
 # Per-surface setup
 # ---------------------------------------------------------------------------
 
-def setup_slab_dir(surface_name, out_dir, pp_root, n_fixed, dry_run=False):
-    """Build slab and write all VASP input files into out_dir/surface_name/."""
+def setup_slab_dir(surface_name, out_dir, pp_root, n_fixed, functional, dry_run=False):
+    """Build slab and write all VASP input files into out_dir/surface_name/subfolder/."""
 
-    job_dir = out_dir / surface_name
+    func_cfg = FUNCTIONAL_CONFIGS[functional]
+    subfolder = func_cfg["subfolder"]
+    xc_block = func_cfg["xc_block"]
+
+    job_dir = out_dir / surface_name / subfolder
     if not dry_run:
         job_dir.mkdir(parents=True, exist_ok=True)
 
@@ -348,7 +395,9 @@ def setup_slab_dir(surface_name, out_dir, pp_root, n_fixed, dry_run=False):
 
     # INCAR
     if not dry_run:
-        (job_dir / "INCAR").write_text(INCAR_TEMPLATE.format(system=surface_name))
+        (job_dir / "INCAR").write_text(
+            INCAR_TEMPLATE.format(system=surface_name, xc_block=xc_block)
+        )
 
     # KPOINTS
     if not dry_run:
@@ -396,6 +445,18 @@ def main():
         description="Generate VASP inputs for bare-slab reference energy calculations."
     )
     parser.add_argument(
+        "--functional",
+        required=True,
+        choices=list(FUNCTIONAL_CONFIGS.keys()),
+        metavar="FUNC",
+        help=(
+            "Exchange-correlation functional to use. "
+            "Supported: pbe, pbe-d3, r2scan, beef-vdw. "
+            "Creates a functional-specific subfolder under each surface, e.g. "
+            "vasp_slab/Cu111/PBE/, vasp_slab/Cu111/PBE_D3/, etc."
+        ),
+    )
+    parser.add_argument(
         "--surfaces", nargs="+",
         default=[
             # FCC
@@ -434,6 +495,10 @@ def main():
     )
     args = parser.parse_args()
 
+    functional = args.functional
+    func_cfg = FUNCTIONAL_CONFIGS[functional]
+    subfolder = func_cfg["subfolder"]
+
     # Resolve n_fixed as a plain local variable — no global needed
     n_fixed = args.n_fixed
     out_dir = Path(args.out_dir)
@@ -450,6 +515,7 @@ def main():
         print(f"Using POTCAR library: {pp_root}")
         print()
 
+    print(f"Functional:        {functional} -> subfolder '{subfolder}'")
     print(f"Surfaces:          {args.surfaces}")
     print(f"Output directory:  {out_dir}/")
     print(f"Fixed bottom layers: {n_fixed}")
@@ -458,12 +524,13 @@ def main():
     all_ok = True
     for surface in args.surfaces:
         action = "[DRY-RUN]" if args.dry_run else "writing"
-        print(f"  {action}: {out_dir / surface}/")
+        print(f"  {action}: {out_dir / surface / subfolder}/")
 
         result = setup_slab_dir(
             surface, out_dir,
             pp_root=pp_root,
             n_fixed=n_fixed,
+            functional=functional,
             dry_run=args.dry_run,
         )
 
@@ -497,7 +564,7 @@ def main():
         print("1. Build POTCARs:")
         print()
         print("     export VASP_PP_PATH=/home/jcho5/project/paw64/potpaw_PBE_64")
-        print("     python setup_slab_jobs.py    # re-run to build POTCARs")
+        print(f"     python setup_slab_jobs.py --functional {functional}    # re-run to build POTCARs")
         print()
         step = 2
     else:
@@ -506,13 +573,13 @@ def main():
     print(f"{step}. Submit slab jobs:")
     print()
     for s in args.surfaces:
-        print(f"     cd {out_dir}/{s} && sbatch slm.vasp.kestrel && cd -")
+        print(f"     cd {out_dir}/{s}/{subfolder} && sbatch slm.vasp.kestrel && cd -")
     print()
     step += 1
     print(f"{step}. After jobs finish, extract E_surf from OUTCAR:")
     print()
     for s in args.surfaces:
-        print(f"     grep 'free  energy' {out_dir}/{s}/OUTCAR | tail -1")
+        print(f"     grep 'free  energy' {out_dir}/{s}/{subfolder}/OUTCAR | tail -1")
     print()
     step += 1
     print(f"{step}. Compute DFT adsorption energy:")

@@ -16,18 +16,27 @@ Output layout
 -------------
     vasp_mol/
         isopropanol/
-            POSCAR  INCAR  KPOINTS  POTCAR  slm.vasp.kestrel
+            PBE/
+                POSCAR  INCAR  KPOINTS  POTCAR  slm.vasp.kestrel
+            PBE_D3/
+                ...
+            r2scan/
+                ...
+            beef_vdw/
+                ...
         CO2/
             ...
-        ...
 
 Usage
 -----
-    python setup_molecule_jobs.py
-    python setup_molecule_jobs.py --molecules isopropanol CO2 ethanol
-    python setup_molecule_jobs.py --out-dir /scratch/jcho5/mol_jobs
-    python setup_molecule_jobs.py --single-point   # NSW=0, no relaxation
-    python setup_molecule_jobs.py --dry-run
+    python setup_molecule_jobs.py --functional pbe
+    python setup_molecule_jobs.py --functional pbe-d3
+    python setup_molecule_jobs.py --functional r2scan
+    python setup_molecule_jobs.py --functional beef-vdw
+    python setup_molecule_jobs.py --functional pbe --molecules isopropanol CO2 ethanol
+    python setup_molecule_jobs.py --functional r2scan --out-dir /scratch/jcho5/mol_jobs
+    python setup_molecule_jobs.py --functional pbe --single-point
+    python setup_molecule_jobs.py --functional pbe --dry-run
 
 Prerequisites
 -------------
@@ -42,6 +51,47 @@ from pathlib import Path
 from ase.io import read
 from ase import Atoms
 
+
+# ---------------------------------------------------------------------------
+# Supported functionals  ->  (subfolder_name, INCAR_xc_block)
+# (Matches setup_vasp_jobs.py conventions)
+# ---------------------------------------------------------------------------
+FUNCTIONAL_CONFIGS = {
+    "pbe": {
+        "subfolder": "PBE",
+        "xc_block": """\
+! Exchange-correlation
+GGA = PE
+""",
+    },
+    "pbe-d3": {
+        "subfolder": "PBE_D3",
+        "xc_block": """\
+! Exchange-correlation
+GGA    = PE
+IVDW   = 11
+VDW_S6 = 1.0
+VDW_SR = 1.217
+""",
+    },
+    "r2scan": {
+        "subfolder": "r2scan",
+        "xc_block": """\
+! Exchange-correlation
+METAGGA = R2SCAN
+LASPH   = .TRUE.
+""",
+    },
+    "beef-vdw": {
+        "subfolder": "beef_vdw",
+        "xc_block": """\
+! Exchange-correlation
+GGA  = BF
+LUSE_VDW  = .TRUE.
+AGGAC     = 0.0000
+""",
+    },
+}
 
 # ---------------------------------------------------------------------------
 # INCAR — molecule-specific settings
@@ -61,9 +111,7 @@ NELMIN = 4
 EDIFF  = 1E-05
 EDIFFG = -5E-02
 
-! Exchange-correlation
-GGA = RP
-
+{xc_block}
 ! Ionic Relaxation
 NSW    = {nsw}
 IBRION = {ibrion}
@@ -363,10 +411,14 @@ def build_potcar(species, pp_root, out_path, dry_run=False):
 # ---------------------------------------------------------------------------
 
 def setup_mol_dir(mol_name, cif_path, out_dir, pp_root,
-                  single_point=False, dry_run=False):
-    """Load molecule CIF and write all VASP input files into out_dir/mol_name/."""
+                  functional, single_point=False, dry_run=False):
+    """Load molecule CIF and write all VASP input files into out_dir/mol_name/subfolder/."""
 
-    job_dir = out_dir / mol_name
+    func_cfg = FUNCTIONAL_CONFIGS[functional]
+    subfolder = func_cfg["subfolder"]
+    xc_block = func_cfg["xc_block"]
+
+    job_dir = out_dir / mol_name / subfolder
     if not dry_run:
         job_dir.mkdir(parents=True, exist_ok=True)
 
@@ -403,7 +455,7 @@ def setup_mol_dir(mol_name, cif_path, out_dir, pp_root,
     # INCAR
     if not dry_run:
         (job_dir / "INCAR").write_text(
-            INCAR_TEMPLATE.format(system=mol_name, nsw=nsw, ibrion=ibrion)
+            INCAR_TEMPLATE.format(system=mol_name, nsw=nsw, ibrion=ibrion, xc_block=xc_block)
         )
 
     # KPOINTS
@@ -454,6 +506,18 @@ def main():
         description="Generate VASP inputs for gas-phase molecule reference energy calculations."
     )
     parser.add_argument(
+        "--functional",
+        required=True,
+        choices=list(FUNCTIONAL_CONFIGS.keys()),
+        metavar="FUNC",
+        help=(
+            "Exchange-correlation functional to use. "
+            "Supported: pbe, pbe-d3, r2scan, beef-vdw. "
+            "Creates a functional-specific subfolder under each molecule, e.g. "
+            "vasp_mol/CO2/PBE/, vasp_mol/CO2/PBE_D3/, etc."
+        ),
+    )
+    parser.add_argument(
         "--molecules", nargs="+",
         default=all_mol_names,
         help=f"Molecule names to set up (default: all {len(all_mol_names)} molecules)"
@@ -476,6 +540,10 @@ def main():
     )
     args = parser.parse_args()
 
+    functional = args.functional
+    func_cfg = FUNCTIONAL_CONFIGS[functional]
+    subfolder = func_cfg["subfolder"]
+
     out_dir = Path(args.out_dir)
 
     # Resolve POTCAR library
@@ -491,6 +559,7 @@ def main():
         print()
 
     mode = "single-point" if args.single_point else "full relaxation"
+    print(f"Functional:        {functional} -> subfolder '{subfolder}'")
     print(f"Molecules:         {args.molecules}")
     print(f"Output directory:  {out_dir}/")
     print(f"Calculation mode:  {mode}")
@@ -505,11 +574,12 @@ def main():
 
         cif_path = MOLECULE_REGISTRY[mol_name]
         action = "[DRY-RUN]" if args.dry_run else "writing"
-        print(f"  {action}: {out_dir / mol_name}/")
+        print(f"  {action}: {out_dir / mol_name / subfolder}/")
 
         result = setup_mol_dir(
             mol_name, cif_path, out_dir,
             pp_root=pp_root,
+            functional=functional,
             single_point=args.single_point,
             dry_run=args.dry_run,
         )
@@ -543,7 +613,7 @@ def main():
         print("1. Build POTCARs:")
         print()
         print("     export VASP_PP_PATH=/home/jcho5/project/paw64/potpaw_PBE_64")
-        print("     python setup_molecule_jobs.py    # re-run to build POTCARs")
+        print(f"     python setup_molecule_jobs.py --functional {functional}    # re-run to build POTCARs")
         print()
         step = 2
     else:
@@ -552,13 +622,13 @@ def main():
     print(f"{step}. Submit molecule jobs:")
     print()
     for mol in args.molecules:
-        print(f"     cd {out_dir}/{mol} && sbatch slm.vasp.kestrel && cd -")
+        print(f"     cd {out_dir}/{mol}/{subfolder} && sbatch slm.vasp.kestrel && cd -")
     print()
     step += 1
     print(f"{step}. After jobs finish, extract E_mol from OUTCAR:")
     print()
     for mol in args.molecules:
-        print(f"     grep 'free  energy' {out_dir}/{mol}/OUTCAR | tail -1")
+        print(f"     grep 'free  energy' {out_dir}/{mol}/{subfolder}/OUTCAR | tail -1")
     print()
     step += 1
     print(f"{step}. Compute DFT adsorption energy:")
