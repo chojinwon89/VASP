@@ -56,8 +56,8 @@ def _write_minimal_poscar(path: Path):
     )
 
 
-def _write_fake_potcar_library(path: Path):
-    for element in ("Cu", "H"):
+def _write_fake_potcar_library(path: Path, elements: tuple[str, ...] = ("Cu", "H")):
+    for element in elements:
         potcar = path / element / "POTCAR"
         potcar.parent.mkdir(parents=True, exist_ok=True)
         potcar.write_text(f"{element} POTCAR\n")
@@ -113,6 +113,93 @@ def _run_setup_vasp_jobs(
         job_dir = poscar_root / "C1" / "Cu001_CO" / "singlepoint" / subfolder
     else:
         job_dir = poscar_root / "C1" / "Cu001_CO" / subfolder
+    return result, job_dir
+
+
+def _run_setup_slab_jobs(
+    tmp_path: Path,
+    *,
+    functional: str = "pbe",
+    force: bool = False,
+    capture_output: bool = False,
+):
+    tmp_path.mkdir(parents=True, exist_ok=True)
+    (tmp_path / "setup_slab_jobs.py").write_text(
+        (REPO_ROOT / "setup_slab_jobs.py").read_text()
+    )
+    pp_root = tmp_path / "fake_pp"
+    _write_fake_potcar_library(pp_root, elements=("Cu",))
+    cmd = [
+        sys.executable,
+        "setup_slab_jobs.py",
+        "--functional",
+        functional,
+        "--surfaces",
+        "Cu001",
+        "--pp-path",
+        str(pp_root),
+    ]
+    if force:
+        cmd.append("--force")
+    result = subprocess.run(
+        cmd,
+        cwd=tmp_path,
+        check=True,
+        capture_output=capture_output,
+        text=capture_output,
+    )
+    subfolder = {
+        "pbe": "PBE",
+        "pbe-d3": "PBE_D3",
+        "r2scan": "r2scan",
+        "beef-vdw": "beef_vdw",
+    }[functional]
+    job_dir = tmp_path / "vasp_slab" / "Cu001" / subfolder
+    return result, job_dir
+
+
+def _run_setup_molecule_jobs(
+    tmp_path: Path,
+    *,
+    functional: str = "pbe",
+    force: bool = False,
+    capture_output: bool = False,
+):
+    tmp_path.mkdir(parents=True, exist_ok=True)
+    (tmp_path / "setup_molecule_jobs.py").write_text(
+        (REPO_ROOT / "setup_molecule_jobs.py").read_text()
+    )
+    inputs_dir = tmp_path / "inputs"
+    inputs_dir.mkdir(parents=True, exist_ok=True)
+    (inputs_dir / "CO2.cif").write_bytes((REPO_ROOT / "inputs" / "CO2.cif").read_bytes())
+    pp_root = tmp_path / "fake_pp"
+    _write_fake_potcar_library(pp_root, elements=("C", "O"))
+    cmd = [
+        sys.executable,
+        "setup_molecule_jobs.py",
+        "--functional",
+        functional,
+        "--molecules",
+        "CO2",
+        "--pp-path",
+        str(pp_root),
+    ]
+    if force:
+        cmd.append("--force")
+    result = subprocess.run(
+        cmd,
+        cwd=tmp_path,
+        check=True,
+        capture_output=capture_output,
+        text=capture_output,
+    )
+    subfolder = {
+        "pbe": "PBE",
+        "pbe-d3": "PBE_D3",
+        "r2scan": "r2scan",
+        "beef-vdw": "beef_vdw",
+    }[functional]
+    job_dir = tmp_path / "vasp_mol" / "CO2" / subfolder
     return result, job_dir
 
 
@@ -200,6 +287,14 @@ def _run_extract_poscar(runs_dir: Path, out_dir: Path, *extra_args: str):
         capture_output=True,
         text=True,
     )
+
+
+def _load_repo_module(filename: str, module_name: str):
+    spec = importlib.util.spec_from_file_location(module_name, REPO_ROOT / filename)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 def test_make_tasks_generates_expected_task_matrix(tmp_path):
@@ -497,6 +592,124 @@ def test_setup_vasp_jobs_dry_run_does_not_copy_vdw_kernel(tmp_path):
     )
 
     assert not job_dir.exists()
+
+
+def test_setup_slab_jobs_beef_vdw_copies_vdw_kernel(tmp_path):
+    module = _load_repo_module("setup_slab_jobs.py", "setup_slab_jobs_test_module")
+    kernel_source = tmp_path / "vdw_kernel.bindat"
+    kernel_source.write_bytes(b"slab-kernel\n")
+    module.DEFAULT_VDW_KERNEL_PATH = str(kernel_source)
+
+    pp_root = tmp_path / "fake_pp"
+    _write_fake_potcar_library(pp_root, elements=("Cu",))
+    result = module.setup_slab_dir(
+        "Cu001",
+        tmp_path / "vasp_slab",
+        pp_root=pp_root,
+        n_fixed=2,
+        functional="beef-vdw",
+    )
+
+    copied = tmp_path / "vasp_slab" / "Cu001" / "beef_vdw" / "vdw_kernel.bindat"
+    assert result["status"] == "ok"
+    assert copied.exists()
+    assert copied.read_bytes() == kernel_source.read_bytes()
+
+
+def test_setup_slab_jobs_missing_vdw_kernel_warns(tmp_path):
+    module = _load_repo_module("setup_slab_jobs.py", "setup_slab_jobs_missing_kernel")
+    module.DEFAULT_VDW_KERNEL_PATH = str(tmp_path / "missing" / "vdw_kernel.bindat")
+
+    pp_root = tmp_path / "fake_pp"
+    _write_fake_potcar_library(pp_root, elements=("Cu",))
+    result = module.setup_slab_dir(
+        "Cu001",
+        tmp_path / "vasp_slab",
+        pp_root=pp_root,
+        n_fixed=2,
+        functional="beef-vdw",
+    )
+
+    assert result["status"] == "partial"
+    assert any("vdw_kernel.bindat not found at:" in warning for warning in result["warnings"])
+
+
+def test_setup_molecule_jobs_beef_vdw_copies_vdw_kernel(tmp_path):
+    module = _load_repo_module("setup_molecule_jobs.py", "setup_molecule_jobs_test_module")
+    kernel_source = tmp_path / "vdw_kernel.bindat"
+    kernel_source.write_bytes(b"mol-kernel\n")
+    module.DEFAULT_VDW_KERNEL_PATH = str(kernel_source)
+
+    pp_root = tmp_path / "fake_pp"
+    _write_fake_potcar_library(pp_root, elements=("C", "O"))
+    result = module.setup_mol_dir(
+        "CO2",
+        str(REPO_ROOT / "inputs" / "CO2.cif"),
+        tmp_path / "vasp_mol",
+        pp_root=pp_root,
+        functional="beef-vdw",
+    )
+
+    copied = tmp_path / "vasp_mol" / "CO2" / "beef_vdw" / "vdw_kernel.bindat"
+    assert result["status"] == "ok"
+    assert copied.exists()
+    assert copied.read_bytes() == kernel_source.read_bytes()
+
+
+def test_setup_molecule_jobs_missing_vdw_kernel_warns(tmp_path):
+    module = _load_repo_module("setup_molecule_jobs.py", "setup_molecule_jobs_missing_kernel")
+    module.DEFAULT_VDW_KERNEL_PATH = str(tmp_path / "missing" / "vdw_kernel.bindat")
+
+    pp_root = tmp_path / "fake_pp"
+    _write_fake_potcar_library(pp_root, elements=("C", "O"))
+    result = module.setup_mol_dir(
+        "CO2",
+        str(REPO_ROOT / "inputs" / "CO2.cif"),
+        tmp_path / "vasp_mol",
+        pp_root=pp_root,
+        functional="beef-vdw",
+    )
+
+    assert result["status"] == "partial"
+    assert any("vdw_kernel.bindat not found at:" in warning for warning in result["warnings"])
+
+
+def test_setup_slab_jobs_skip_finished_job_unless_force(tmp_path):
+    _, job_dir = _run_setup_slab_jobs(tmp_path / "slab_skip_force", functional="pbe")
+    outcar = job_dir / "OUTCAR"
+    outcar.write_text("finished\n")
+    poscar = job_dir / "POSCAR"
+    poscar.write_text("sentinel-poscar\n")
+
+    skip_result, _ = _run_setup_slab_jobs(
+        tmp_path / "slab_skip_force",
+        functional="pbe",
+        capture_output=True,
+    )
+    assert "SKIPPED: OUTCAR already exists" in skip_result.stdout
+    assert poscar.read_text() == "sentinel-poscar\n"
+
+    _run_setup_slab_jobs(tmp_path / "slab_skip_force", functional="pbe", force=True)
+    assert "sentinel-poscar" not in poscar.read_text()
+
+
+def test_setup_molecule_jobs_skip_finished_job_unless_force(tmp_path):
+    _, job_dir = _run_setup_molecule_jobs(tmp_path / "mol_skip_force", functional="pbe")
+    outcar = job_dir / "OUTCAR"
+    outcar.write_text("finished\n")
+    poscar = job_dir / "POSCAR"
+    poscar.write_text("sentinel-poscar\n")
+
+    skip_result, _ = _run_setup_molecule_jobs(
+        tmp_path / "mol_skip_force",
+        functional="pbe",
+        capture_output=True,
+    )
+    assert "SKIPPED: OUTCAR already exists" in skip_result.stdout
+    assert poscar.read_text() == "sentinel-poscar\n"
+
+    _run_setup_molecule_jobs(tmp_path / "mol_skip_force", functional="pbe", force=True)
+    assert "sentinel-poscar" not in poscar.read_text()
 
 
 def test_setup_vasp_jobs_processes_multiple_carbon_buckets(tmp_path):
