@@ -400,6 +400,8 @@ def main():
         "# Poll interval : {}s".format(args.poll_interval),
         "# Tasks CSV   : {}".format(tasks_path),
         "# Slurm script: {}".format(args.slurm_script),
+        "# NOTE: --array= uses 0-based indices (not raw task_ids) to stay under",
+        "#       Slurm MaxArraySize. Real task_ids are passed via GOAD_TASK_ID_LIST.",
         "",
         "set -euo pipefail",
         "",
@@ -424,14 +426,18 @@ def main():
         ])
 
     for i, chunk in enumerate(chunks):
-        ids_str = ",".join(chunk)
+        chunk_len = len(chunk)
+        var_name  = "TASK_IDS_{}".format(i + 1)
+        ids_str   = " ".join(chunk)
         lines.append("# Chunk {}/{}  ({} tasks)".format(
-            i + 1, n_chunks, len(chunk)))
+            i + 1, n_chunks, chunk_len))
+        lines.append("{}=({})".format(var_name, ids_str))
         if args.max_in_flight > 0:
             lines.append("wait_for_headroom")
         lines.append(
-            "sbatch --array={}%{} {} {}".format(
-                ids_str, args.throttle, args.slurm_script, tasks_path)
+            'sbatch --array=0-{}%{} --export=ALL,GOAD_TASK_ID_LIST="${{{var}[*]}}" {} {}'.format(
+                chunk_len - 1, args.throttle, args.slurm_script, tasks_path,
+                var=var_name)
         )
         lines.append("")
 
