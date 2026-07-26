@@ -1072,3 +1072,255 @@ def test_extract_poscar_empty_bucketed_layout_exits_cleanly_with_no_completed_ru
 
     assert result.returncode == 0
     assert "No completed runs" in result.stdout
+
+
+# ---------------------------------------------------------------------------
+# Tests for make_tasks_custom.py: three-tier seeds, SevenNet-first ordering,
+# selective 5M, and reversible --max-carbon cap
+# ---------------------------------------------------------------------------
+
+def _make_inputs_dir(tmp_path, surfaces=("Cu111",), molecules=("CO", "propanol", "hexane")):
+    """Create a minimal fake inputs/ directory with surface and molecule CIFs."""
+    inputs_dir = tmp_path / "inputs"
+    inputs_dir.mkdir(exist_ok=True)
+    for s in surfaces:
+        (inputs_dir / f"{s}.cif").write_text("# fake surface CIF\n")
+    for m in molecules:
+        (inputs_dir / f"{m}.cif").write_text("# fake molecule CIF\n")
+    return inputs_dir
+
+
+def _run_make_tasks(tmp_path, extra_args=(), molecules=("CO", "propanol", "hexane")):
+    """Run make_tasks_custom.py in a temporary directory; return (result, out_csv_path)."""
+    inputs_dir = _make_inputs_dir(tmp_path, molecules=molecules)
+    out_csv = tmp_path / "tasks.csv"
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "workflow" / "make_tasks_custom.py"),
+            "--out", str(out_csv),
+        ] + list(extra_args),
+        capture_output=True,
+        text=True,
+        cwd=str(tmp_path),
+    )
+    return result, out_csv
+
+
+def _read_csv(path):
+    with open(path, newline="") as f:
+        return list(csv.DictReader(f))
+
+
+def test_make_tasks_three_tier_seed_counts(tmp_path):
+    """
+    C0-C2 molecules get 2 seeds, C3-C4 get 3 seeds, C5+ get 5 seeds (defaults).
+    CO is C1 (0 carbon? no - CO is C1), propanol is C3, hexane is C6.
+    """
+    import sys
+    sys.path.insert(0, str(REPO_ROOT))
+    from molecule_utils import carbon_count
+    from workflow.make_tasks_custom import make_entries
+
+    surfaces = ["Cu111"]
+    molecules = {"CO": 200, "propanol": 200, "hexane": 200}
+
+    entries = make_entries(surfaces, molecules, ["sevennet_omni"])
+
+    seeds_by_mol = {}
+    for surf, mol, overrides in entries:
+        seeds_by_mol[mol] = overrides["seeds"]
+
+    # CO is C1 -> C0-C2 tier -> 2 seeds (default)
+    assert carbon_count("CO") == 1
+    assert seeds_by_mol["CO"] == [1, 2], f"Expected [1,2] for CO, got {seeds_by_mol['CO']}"
+
+    # propanol is C3 -> C3-C4 tier -> 3 seeds (default)
+    assert carbon_count("propanol") == 3
+    assert seeds_by_mol["propanol"] == [1, 2, 3], (
+        f"Expected [1,2,3] for propanol, got {seeds_by_mol['propanol']}"
+    )
+
+    # hexane is C6 -> C5+ tier -> 5 seeds (default)
+    assert carbon_count("hexane") == 6
+    assert seeds_by_mol["hexane"] == [1, 2, 3, 4, 5], (
+        f"Expected [1,2,3,4,5] for hexane, got {seeds_by_mol['hexane']}"
+    )
+
+
+def test_make_tasks_three_tier_boundary_c4(tmp_path):
+    """C4 molecules (boundary) should use the C3-C4 tier (3 seeds default)."""
+    import sys
+    sys.path.insert(0, str(REPO_ROOT))
+    from molecule_utils import carbon_count
+    from workflow.make_tasks_custom import make_entries
+
+    # butane is C4
+    assert carbon_count("butane") == 4
+    entries = make_entries(["Cu111"], {"butane": 200}, ["sevennet_omni"])
+    assert len(entries) == 1
+    assert entries[0][2]["seeds"] == [1, 2, 3]
+
+
+def test_make_tasks_three_tier_boundary_c5(tmp_path):
+    """C5 molecules (boundary) should use the C5+ tier (5 seeds default)."""
+    import sys
+    sys.path.insert(0, str(REPO_ROOT))
+    from molecule_utils import carbon_count
+    from workflow.make_tasks_custom import make_entries
+
+    # pentane is C5
+    assert carbon_count("pentane") == 5
+    entries = make_entries(["Cu111"], {"pentane": 200}, ["sevennet_omni"])
+    assert len(entries) == 1
+    assert entries[0][2]["seeds"] == [1, 2, 3, 4, 5]
+
+
+def test_make_tasks_sevennet_first_ordering(tmp_path):
+    """
+    All sevennet_omni rows must have smaller task_id than any 5m rows.
+    """
+    result, out_csv = _run_make_tasks(tmp_path, molecules=("CO", "propanol", "hexane"))
+    assert result.returncode == 0, f"Script failed:\n{result.stderr}"
+
+    rows = _read_csv(out_csv)
+    assert rows, "CSV is empty"
+
+    sevennet_ids = [int(r["task_id"]) for r in rows if r["calculator"] == "sevennet_omni"]
+    fivem_ids    = [int(r["task_id"]) for r in rows if r["calculator"] == "5m"]
+
+    assert sevennet_ids, "No sevennet_omni rows found"
+    assert fivem_ids,    "No 5m rows found"
+
+    max_sevennet = max(sevennet_ids)
+    min_fivem    = min(fivem_ids)
+
+    assert max_sevennet < min_fivem, (
+        f"SevenNet-first violated: last sevennet_omni task_id={max_sevennet} "
+        f">= first 5m task_id={min_fivem}"
+    )
+
+
+def test_make_tasks_fivem_min_carbon_excludes_low_c(tmp_path):
+    """
+    --fivem-min-carbon 5 should generate 5m tasks only for C5+ molecules,
+    while sevennet_omni still runs on all molecules.
+    """
+    import sys
+    sys.path.insert(0, str(REPO_ROOT))
+    from molecule_utils import carbon_count
+
+    result, out_csv = _run_make_tasks(
+        tmp_path,
+        extra_args=["--fivem-min-carbon", "5"],
+        molecules=("CO", "propanol", "hexane"),
+    )
+    assert result.returncode == 0, f"Script failed:\n{result.stderr}"
+
+    rows = _read_csv(out_csv)
+    assert rows, "CSV is empty"
+
+    # sevennet_omni must appear for all molecules (including CO and propanol)
+    sevennet_mols = {r["adsorbate"] for r in rows if r["calculator"] == "sevennet_omni"}
+    assert "CO" in sevennet_mols
+    assert "propanol" in sevennet_mols
+    assert "hexane" in sevennet_mols
+
+    # 5m must NOT appear for CO (C1) or propanol (C3)
+    fivem_mols = {r["adsorbate"] for r in rows if r["calculator"] == "5m"}
+    assert "CO" not in fivem_mols, "5m should be excluded for CO (C1 < 5)"
+    assert "propanol" not in fivem_mols, "5m should be excluded for propanol (C3 < 5)"
+    # 5m MUST appear for hexane (C6 >= 5)
+    assert "hexane" in fivem_mols, "5m should run for hexane (C6 >= 5)"
+
+
+def test_make_tasks_max_carbon_excludes_high_c(tmp_path):
+    """
+    --max-carbon 3 should exclude hexane (C6) entirely;
+    CO (C1) and propanol (C3) should still be included.
+    """
+    result, out_csv = _run_make_tasks(
+        tmp_path,
+        extra_args=["--max-carbon", "3"],
+        molecules=("CO", "propanol", "hexane"),
+    )
+    assert result.returncode == 0, f"Script failed:\n{result.stderr}"
+
+    rows = _read_csv(out_csv)
+    assert rows, "CSV is empty"
+
+    adsorbates = {r["adsorbate"] for r in rows}
+    assert "CO" in adsorbates,      "CO (C1) should not be excluded by --max-carbon 3"
+    assert "propanol" in adsorbates, "propanol (C3) should not be excluded by --max-carbon 3"
+    assert "hexane" not in adsorbates, "hexane (C6) should be excluded by --max-carbon 3"
+
+
+def test_make_tasks_max_carbon_zero_means_no_cap(tmp_path):
+    """
+    Default --max-carbon 0 (no cap) must include all molecules.
+    """
+    result, out_csv = _run_make_tasks(tmp_path, molecules=("CO", "propanol", "hexane"))
+    assert result.returncode == 0, f"Script failed:\n{result.stderr}"
+
+    rows = _read_csv(out_csv)
+    adsorbates = {r["adsorbate"] for r in rows}
+    assert "CO" in adsorbates
+    assert "propanol" in adsorbates
+    assert "hexane" in adsorbates
+
+
+def test_make_tasks_max_carbon_reports_excluded(tmp_path):
+    """
+    When --max-carbon excludes molecules, the script should print a NOTE listing them.
+    """
+    result, out_csv = _run_make_tasks(
+        tmp_path,
+        extra_args=["--max-carbon", "3"],
+        molecules=("CO", "propanol", "hexane"),
+    )
+    assert result.returncode == 0, f"Script failed:\n{result.stderr}"
+    assert "deferred" in result.stdout, (
+        "Expected '[deferred]' in output when molecules are excluded by --max-carbon"
+    )
+    assert "hexane" in result.stdout
+
+
+def test_make_tasks_csv_schema_unchanged(tmp_path):
+    """CSV must have the expected columns."""
+    result, out_csv = _run_make_tasks(tmp_path, molecules=("CO", "propanol"))
+    assert result.returncode == 0, f"Script failed:\n{result.stderr}"
+
+    rows = _read_csv(out_csv)
+    assert rows, "CSV is empty"
+    expected_cols = {
+        "task_id", "surface", "adsorbate", "seed",
+        "calculator", "population_size", "generations", "n_carbon",
+    }
+    assert set(rows[0].keys()) == expected_cols
+
+
+def test_make_tasks_submit_hint_in_output(tmp_path):
+    """The 'Submit with: sbatch ...' hint must appear in the output."""
+    result, out_csv = _run_make_tasks(tmp_path, molecules=("CO",))
+    assert result.returncode == 0, f"Script failed:\n{result.stderr}"
+    assert "sbatch" in result.stdout
+
+
+def test_make_tasks_custom_seed_counts_via_flags(tmp_path):
+    """--seeds-c0-c2, --seeds-c3-c4, --seeds-c5plus flags override defaults."""
+    import sys
+    sys.path.insert(0, str(REPO_ROOT))
+    from workflow.make_tasks_custom import make_entries
+
+    entries = make_entries(
+        ["Cu111"],
+        {"CO": 200, "propanol": 200, "hexane": 200},
+        ["sevennet_omni"],
+        n_seeds_c0c2=1,
+        n_seeds_c3c4=2,
+        n_seeds_c5plus=4,
+    )
+    seeds_by_mol = {mol: ov["seeds"] for _, mol, ov in entries}
+    assert seeds_by_mol["CO"]      == [1],          f"Got {seeds_by_mol['CO']}"
+    assert seeds_by_mol["propanol"] == [1, 2],       f"Got {seeds_by_mol['propanol']}"
+    assert seeds_by_mol["hexane"]   == [1, 2, 3, 4], f"Got {seeds_by_mol['hexane']}"
