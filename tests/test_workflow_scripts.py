@@ -1241,6 +1241,104 @@ def test_extract_structures_creates_output_dir(tmp_path):
     assert len(list(out_dir.glob("*.cif"))) == 1
 
 
+def test_extract_structures_png_fallback_plain_write(tmp_path, monkeypatch, capsys):
+    """If styled PNG render fails, plain fallback is retried and can still succeed."""
+    module = _load_repo_module(
+        "extract_structures.py",
+        "extract_structures_png_fallback_module",
+    )
+    runs_dir = tmp_path / "runs"
+    out_dir = tmp_path / "out"
+    _write_extract_poscar_run(
+        runs_dir / "C1" / "Cu111_CO_seed0_sevennet_omni",
+        "Cu111", "CO", e_ads=-1.0,
+    )
+
+    real_write = module.write
+    call_counts = {"styled_png": 0, "plain_png": 0}
+
+    def flaky_write(path, atoms, *args, **kwargs):
+        path = str(path)
+        if path.endswith(".png"):
+            if kwargs.get("rotation") == "-70x,20y,10z" and kwargs.get("show_unit_cell") == 2:
+                call_counts["styled_png"] += 1
+                raise RuntimeError("styled render failed")
+            call_counts["plain_png"] += 1
+        return real_write(path, atoms, *args, **kwargs)
+
+    monkeypatch.setattr(module, "write", flaky_write)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "extract_structures.py",
+            "--runs-dir",
+            str(runs_dir),
+            "--out-dir",
+            str(out_dir),
+        ],
+    )
+
+    module.main()
+    stdout = capsys.readouterr().out
+
+    assert call_counts["styled_png"] == 1
+    assert call_counts["plain_png"] == 1
+    assert len(list(out_dir.glob("*.cif"))) == 1
+    pngs = list(out_dir.glob("*.png"))
+    assert len(pngs) == 1
+    assert pngs[0].stat().st_size > 0
+    assert "PNG written    : 1" in stdout
+    assert "PNG failed     : 0" in stdout
+    assert "Failed         : 0" in stdout
+
+
+def test_extract_structures_png_failure_still_counts_cif_success(tmp_path, monkeypatch, capsys):
+    """If both PNG renders fail, CIF is still kept and run is not counted as failed."""
+    module = _load_repo_module(
+        "extract_structures.py",
+        "extract_structures_png_failure_module",
+    )
+    runs_dir = tmp_path / "runs"
+    out_dir = tmp_path / "out"
+    _write_extract_poscar_run(
+        runs_dir / "C1" / "Cu111_CO_seed0_sevennet_omni",
+        "Cu111", "CO", e_ads=-1.0,
+    )
+
+    real_write = module.write
+
+    def png_fails_write(path, atoms, *args, **kwargs):
+        path = str(path)
+        if path.endswith(".png"):
+            raise KeyError("0")
+        return real_write(path, atoms, *args, **kwargs)
+
+    monkeypatch.setattr(module, "write", png_fails_write)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "extract_structures.py",
+            "--runs-dir",
+            str(runs_dir),
+            "--out-dir",
+            str(out_dir),
+        ],
+    )
+
+    module.main()
+    stdout = capsys.readouterr().out
+
+    assert len(list(out_dir.glob("*.cif"))) == 1
+    assert "[OK-cif/ERR-png] Cu111_CO" in stdout
+    assert "KeyError: KeyError('0')" in stdout
+    assert "CIF written    : 1" in stdout
+    assert "PNG written    : 0" in stdout
+    assert "PNG failed     : 1" in stdout
+    assert "Failed         : 0" in stdout
+
+
 # ---------------------------------------------------------------------------
 # Tests for make_tasks_custom.py: three-tier seeds, SevenNet-first ordering,
 # selective 5M, and reversible --max-carbon cap

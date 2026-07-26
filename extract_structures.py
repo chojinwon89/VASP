@@ -52,6 +52,7 @@ import argparse
 import sys
 from pathlib import Path
 
+from ase import Atoms
 from ase.io import write
 
 REPO_ROOT = Path(__file__).resolve().parent
@@ -86,6 +87,36 @@ def _build_stem(entry: dict, multi_calc: bool, all_seeds: bool) -> str:
     if multi_calc:
         return f"{surface}_{adsorbate}_{calc}"
     return f"{surface}_{adsorbate}"
+
+
+def _build_render_atoms(atoms):
+    """Return a metadata-light copy for PNG rendering (avoids ASE tag/occ issues)."""
+    return Atoms(
+        symbols=atoms.get_chemical_symbols(),
+        positions=atoms.get_positions(),
+        cell=atoms.get_cell(),
+        pbc=atoms.get_pbc(),
+    )
+
+
+def _write_png_with_fallback(png_path: Path, render_atoms):
+    """
+    Try styled PNG render first, then plain PNG render fallback.
+
+    Returns (styled_exception, plain_exception):
+      - (None, None) on styled success
+      - (styled_exc, None) if styled fails but plain succeeds
+      - (styled_exc, plain_exc) if both fail
+    """
+    try:
+        write(str(png_path), render_atoms, rotation="-70x,20y,10z", show_unit_cell=2)
+        return None, None
+    except Exception as styled_exc:
+        try:
+            write(str(png_path), render_atoms)
+            return styled_exc, None
+        except Exception as plain_exc:
+            return styled_exc, plain_exc
 
 
 # ---------------------------------------------------------------------------
@@ -178,7 +209,8 @@ def main():
     # Create output directory
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    n_ok   = 0
+    n_ok = 0
+    n_png_fail = 0
     n_fail = 0
 
     for entry in sorted(to_export, key=lambda e: (e["surface"], e["adsorbate"])):
@@ -191,20 +223,36 @@ def main():
 
         try:
             write(str(cif_path), atoms)
-            write(str(png_path), atoms, rotation="-70x,20y,10z", show_unit_cell=2)
+        except Exception as exc:
+            print(f"[ERR-cif] {stem}: {type(exc).__name__}: {repr(exc)}")
+            n_fail += 1
+            continue
+
+        render_atoms = _build_render_atoms(atoms)
+        styled_exc, plain_exc = _write_png_with_fallback(png_path, render_atoms)
+
+        if plain_exc is None:
             print(f"[OK] {stem} | E={e_str} eV")
             if args.verbose:
                 print(f"     cif: {cif_path}")
                 print(f"     png: {png_path}")
             n_ok += 1
-        except Exception as exc:
-            print(f"[ERR] {stem}: {exc}")
-            n_fail += 1
+        else:
+            print(
+                f"[OK-cif/ERR-png] {stem}: "
+                f"{type(plain_exc).__name__}: {repr(plain_exc)} "
+                f"(styled: {type(styled_exc).__name__}: {repr(styled_exc)})"
+            )
+            if args.verbose:
+                print(f"     cif: {cif_path}")
+            n_png_fail += 1
 
     print()
     print(f"Done.")
-    print(f"  Succeeded : {n_ok}")
-    print(f"  Failed    : {n_fail}")
+    print(f"  CIF written    : {n_ok + n_png_fail}")
+    print(f"  PNG written    : {n_ok}")
+    print(f"  PNG failed     : {n_png_fail}")
+    print(f"  Failed         : {n_fail}")
     print(f"  Output    : {out_dir.resolve()}")
 
 
