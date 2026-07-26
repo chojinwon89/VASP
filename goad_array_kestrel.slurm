@@ -65,10 +65,21 @@ TASKS_CSV="${1:-workflow/tasks.csv}"
 
 echo "Tasks CSV: ${TASKS_CSV}"
 
+# Resolve real task id from 0-based array index mapping (set by find_missing_tasks.py).
+# Falls back to raw SLURM_ARRAY_TASK_ID for manual sbatch where array index == task id.
+if [ -n "${GOAD_TASK_ID_LIST:-}" ]; then
+    read -r -a _ids <<< "${GOAD_TASK_ID_LIST}"
+    REAL_TASK_ID="${_ids[${SLURM_ARRAY_TASK_ID}]}"
+elif [ -n "${GOAD_TASK_ID_FILE:-}" ]; then
+    REAL_TASK_ID=$(sed -n "$((SLURM_ARRAY_TASK_ID + 1))p" "${GOAD_TASK_ID_FILE}")
+else
+    REAL_TASK_ID="${SLURM_ARRAY_TASK_ID}"
+fi
+
 python workflow/run_one_task.py \
-    --task-id "${SLURM_ARRAY_TASK_ID}" \
+    --task-id "${REAL_TASK_ID}" \
     --tasks-csv "${TASKS_CSV}"
 
 echo "=========================================="
-echo "Task ${SLURM_ARRAY_TASK_ID} finished: $(date)"
+echo "Task ${REAL_TASK_ID} (array index ${SLURM_ARRAY_TASK_ID}) finished: $(date)"
 echo "=========================================="
