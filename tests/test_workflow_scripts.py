@@ -1075,6 +1075,173 @@ def test_extract_poscar_empty_bucketed_layout_exits_cleanly_with_no_completed_ru
 
 
 # ---------------------------------------------------------------------------
+# Tests for extract_structures.py
+# ---------------------------------------------------------------------------
+
+def _run_extract_structures(runs_dir: Path, out_dir: Path, *extra_args: str):
+    return subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "extract_structures.py"),
+            "--runs-dir",
+            str(runs_dir),
+            "--out-dir",
+            str(out_dir),
+            *extra_args,
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+
+def test_extract_structures_best_only_picks_lowest_e_ads(tmp_path):
+    """Best-only mode selects the single lowest-E_ads run per (surface, adsorbate)."""
+    runs_dir = tmp_path / "runs"
+    out_dir  = tmp_path / "out"
+
+    # Two seeds for the same system; seed1 has lower E_ads and should be selected
+    _write_extract_poscar_run(
+        runs_dir / "C1" / "Cu111_CO_seed0_sevennet_omni",
+        "Cu111", "CO", e_ads=-0.5,
+    )
+    _write_extract_poscar_run(
+        runs_dir / "C1" / "Cu111_CO_seed1_sevennet_omni",
+        "Cu111", "CO", e_ads=-1.2,
+    )
+
+    result = _run_extract_structures(runs_dir, out_dir)
+
+    assert result.returncode == 0, f"Script failed:\n{result.stderr}"
+    # Best-only => exactly one CIF and one PNG
+    cifs = list(out_dir.glob("*.cif"))
+    pngs = list(out_dir.glob("*.png"))
+    assert len(cifs) == 1, f"Expected 1 CIF, got {[f.name for f in cifs]}"
+    assert len(pngs) == 1, f"Expected 1 PNG, got {[f.name for f in pngs]}"
+    # Filename should be <surface>_<adsorbate> (single calc, best-only)
+    assert cifs[0].stem == "Cu111_CO"
+    assert pngs[0].stem == "Cu111_CO"
+    # OK line should report the lower energy
+    assert "-1.2" in result.stdout
+
+
+def test_extract_structures_excludes_unfinished_by_default(tmp_path):
+    """Unfinished runs are excluded by default."""
+    runs_dir = tmp_path / "runs"
+    out_dir  = tmp_path / "out"
+
+    _write_extract_poscar_run(
+        runs_dir / "C1" / "Cu111_CO_seed0_sevennet_omni",
+        "Cu111", "CO", e_ads=-1.0, status_state="running",
+    )
+
+    result = _run_extract_structures(runs_dir, out_dir)
+
+    assert result.returncode == 0
+    assert "No completed runs" in result.stdout
+    assert not any(out_dir.glob("*.cif"))
+
+
+def test_extract_structures_include_unfinished_flag(tmp_path):
+    """--include-unfinished processes runs regardless of status.json state."""
+    runs_dir = tmp_path / "runs"
+    out_dir  = tmp_path / "out"
+
+    _write_extract_poscar_run(
+        runs_dir / "C1" / "Cu111_CO_seed0_sevennet_omni",
+        "Cu111", "CO", e_ads=-1.0, status_state="running",
+    )
+
+    result = _run_extract_structures(runs_dir, out_dir, "--include-unfinished")
+
+    assert result.returncode == 0
+    assert len(list(out_dir.glob("*.cif"))) == 1
+
+
+def test_extract_structures_all_seeds_exports_one_per_seed(tmp_path):
+    """--all-seeds exports one CIF+PNG per seed, not just the best."""
+    runs_dir = tmp_path / "runs"
+    out_dir  = tmp_path / "out"
+
+    for seed in range(3):
+        _write_extract_poscar_run(
+            runs_dir / "C1" / f"Cu111_CO_seed{seed}_sevennet_omni",
+            "Cu111", "CO", e_ads=float(-seed - 0.5),
+        )
+
+    result = _run_extract_structures(runs_dir, out_dir, "--all-seeds")
+
+    assert result.returncode == 0, f"Script failed:\n{result.stderr}"
+    cifs = sorted(out_dir.glob("*.cif"))
+    pngs = sorted(out_dir.glob("*.png"))
+    assert len(cifs) == 3, f"Expected 3 CIFs, got {[f.name for f in cifs]}"
+    assert len(pngs) == 3, f"Expected 3 PNGs, got {[f.name for f in pngs]}"
+    # Filenames include calc and seed
+    stems = {f.stem for f in cifs}
+    assert "Cu111_CO_sevennet_omni_seed0" in stems
+
+
+def test_extract_structures_multi_calc_includes_calc_in_filename(tmp_path):
+    """Best-only with multiple calculators detected includes calc in filename."""
+    runs_dir = tmp_path / "runs"
+    out_dir  = tmp_path / "out"
+
+    _write_extract_poscar_run(
+        runs_dir / "C1" / "Cu111_CO_seed0_sevennet_omni",
+        "Cu111", "CO", e_ads=-1.0,
+    )
+    _write_extract_poscar_run(
+        runs_dir / "C1" / "Pt111_CO_seed0_5m",
+        "Pt111", "CO", e_ads=-0.8,
+    )
+
+    result = _run_extract_structures(runs_dir, out_dir)
+
+    assert result.returncode == 0, f"Script failed:\n{result.stderr}"
+    cif_stems = {f.stem for f in out_dir.glob("*.cif")}
+    # Each system gets calc in name since multiple calcs are present
+    assert "Cu111_CO_sevennet_omni" in cif_stems
+    assert "Pt111_CO_5m" in cif_stems
+
+
+def test_extract_structures_calculator_filter_no_calc_in_filename(tmp_path):
+    """Best-only with --calculator filter uses plain <surface>_<adsorbate> names."""
+    runs_dir = tmp_path / "runs"
+    out_dir  = tmp_path / "out"
+
+    _write_extract_poscar_run(
+        runs_dir / "C1" / "Cu111_CO_seed0_sevennet_omni",
+        "Cu111", "CO", e_ads=-1.0,
+    )
+
+    result = _run_extract_structures(
+        runs_dir, out_dir, "--calculator", "sevennet_omni"
+    )
+
+    assert result.returncode == 0, f"Script failed:\n{result.stderr}"
+    cifs = list(out_dir.glob("*.cif"))
+    assert len(cifs) == 1
+    assert cifs[0].stem == "Cu111_CO"
+
+
+def test_extract_structures_creates_output_dir(tmp_path):
+    """Output directory (and parents) is created automatically."""
+    runs_dir = tmp_path / "runs"
+    out_dir  = tmp_path / "deep" / "nested" / "out"
+
+    _write_extract_poscar_run(
+        runs_dir / "C1" / "Cu111_CO_seed0_sevennet_omni",
+        "Cu111", "CO", e_ads=-1.0,
+    )
+
+    result = _run_extract_structures(runs_dir, out_dir)
+
+    assert result.returncode == 0, f"Script failed:\n{result.stderr}"
+    assert out_dir.exists()
+    assert len(list(out_dir.glob("*.cif"))) == 1
+
+
+# ---------------------------------------------------------------------------
 # Tests for make_tasks_custom.py: three-tier seeds, SevenNet-first ordering,
 # selective 5M, and reversible --max-carbon cap
 # ---------------------------------------------------------------------------
