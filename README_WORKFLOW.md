@@ -300,9 +300,38 @@ column -s, -t < workflow/summary.csv
 ```
 
 ### Step 7 — Extract best geometries
+
+#### As VASP POSCARs (`extract_poscar.py`)
 ```bash
 python extract_poscar.py --verbose
 ```
+
+#### As CIF + PNG renders (`extract_structures.py`)
+
+Writes a `.cif` structure file and a `.png` visualization (Agg/headless-safe)
+for the **lowest-E\_ads run per (surface, adsorbate) pair** into `results/structure/`.
+
+```bash
+python extract_structures.py                       # best-only, all calculators
+python extract_structures.py --calculator sevennet_omni  # filter by calculator
+python extract_structures.py --all-seeds           # every finished run (one file per seed)
+python extract_structures.py --out-dir results/structure --runs-dir runs
+python extract_structures.py --include-unfinished  # include non-finished runs too
+```
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--runs-dir` | `runs` | Path to GOAD runs directory |
+| `--out-dir` | `results/structure` | Output directory for CIF/PNG files |
+| `--calculator` | (all) | Filter to a single calculator (e.g. `sevennet_omni`) |
+| `--all-seeds` | off | Export every finished run instead of best-only |
+| `--include-unfinished` | off | Include runs regardless of `status.json` state |
+| `--verbose` | off | Print one line per file written |
+
+**Naming scheme:**
+- best-only + `--calculator <calc>`: `<surface>_<adsorbate>.cif`
+- best-only, multiple calculators detected: `<surface>_<adsorbate>_<calc>.cif`
+- `--all-seeds`: `<surface>_<adsorbate>_<calc>_seed<N>.cif`
 
 ### Step 8 — Set up DFT adsorbed jobs (all 3 seeds)
 ```bash
