@@ -10,10 +10,12 @@ from .analysis.surface_analyzer import SurfaceAnalyzer
 from .analysis.molecule_analyzer import MoleculeAnalyzer
 from . import magnetism
 from . import hybrid
+from . import calibration
 
 __all__ = [
     "SurfaceAnalyzer",
     "MoleculeAnalyzer",
     "magnetism",
     "hybrid",
+    "calibration",
 ]

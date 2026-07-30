@@ -46,7 +46,9 @@ from ase.optimize import BFGS
 from . import magnetism
 
 # A molecule is "large" (CHGNet binding energy considered unreliable) when it
-# has at least this many heavy (non-H) atoms.
+# has at least this many heavy (non-H) atoms. This default is a physically
+# motivated guess; it can be replaced by a value fitted from measured
+# (n_heavy, |eps_v|) data via ``goad_v1.calibration.fit_threshold_for_target``.
 DEFAULT_HEAVY_ATOM_THRESHOLD = 6
 
 # Accurate, dispersion-aware default refiner for large organics.
@@ -223,3 +225,50 @@ def refine_binding_energy(system: Atoms,
         "phantom_binding": bool(phantom),
         "recommendation": recommendation,
     }
+
+
+def error_decomposition(eads_model_at_model_min: float,
+                        eads_model_at_ref_min: float,
+                        eads_ref_truth: float) -> Dict[str, float]:
+    r"""Split a model's binding-energy error into geometry vs value parts.
+
+    Given a reference (e.g. DFT) minimiser ``R*_ref`` and a model ``theta`` with
+    its own minimiser ``R*_theta``, the total binding-energy error decomposes
+    exactly (telescoping identity) as
+
+        E_ads[theta](R*_theta) - E*_ads(R*_ref)  =  eps_g  +  eps_v
+
+    where
+
+        eps_g = E_ads[theta](R*_theta) - E_ads[theta](R*_ref)   (GEOMETRY error)
+        eps_v = E_ads[theta](R*_ref)   - E*_ads(R*_ref)          (VALUE error)
+
+    * ``eps_g`` depends only on *where the model's minimiser lands* (its forces /
+      PES shape). It is large exactly when the model relaxes into the wrong
+      basin -- e.g. a spin-blind MLIP that lets the adsorbate detach on a
+      magnetic metal. |eps_g| approaches |E*_ads| for a fully detached result.
+    * ``eps_v`` depends only on the *value at the correct geometry* (well depth)
+      -- e.g. CHGNet's poor binding energy for large molecules.
+
+    The hybrid explorer/refiner design targets each term with the model that
+    minimises it: a spin-aware explorer to make ``eps_g`` small (correct
+    geometry), an accurate refiner to make ``eps_v`` small (correct depth).
+
+    Parameters
+    ----------
+    eads_model_at_model_min:
+        E_ads[theta](R*_theta) -- the model's own reported binding energy.
+    eads_model_at_ref_min:
+        E_ads[theta](R*_ref) -- the model's energy evaluated at the reference
+        geometry (single point, no relaxation).
+    eads_ref_truth:
+        E*_ads(R*_ref) -- the reference (DFT) binding energy.
+
+    Returns
+    -------
+    dict with ``eps_g``, ``eps_v``, ``total`` (== eps_g + eps_v, and equal to
+    the raw ``eads_model_at_model_min - eads_ref_truth`` up to float error).
+    """
+    eps_g = eads_model_at_model_min - eads_model_at_ref_min
+    eps_v = eads_model_at_ref_min - eads_ref_truth
+    return {"eps_g": eps_g, "eps_v": eps_v, "total": eps_g + eps_v}
