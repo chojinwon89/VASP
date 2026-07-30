@@ -53,6 +53,7 @@ import logging
 
 from ..calculator_manager import CalculatorManager
 from ..utils.torsion_handler import TorsionHandler
+from .. import magnetism
 
 logger = logging.getLogger(__name__)
 
@@ -206,7 +207,11 @@ class GeneticAlgorithm:
                  o_target_z: float = 2.3,
                  c_target_z: float = 2.1,
                  early_stop_patience: int = 30,
-                 early_stop_tol: float = 0.001):
+                 early_stop_tol: float = 0.001,
+                 seed_magmoms: bool = True,
+                 afm: bool = True,
+                 binding_guard: bool = True,
+                 detach_cutoff: float = 3.0):
         """
         Initialize GA.
 
@@ -321,6 +326,31 @@ class GeneticAlgorithm:
         # Vertical search-space parameters for mutation clamping
         self.surface_buffer = 2.0   # Å  COM minimum above surface_z_max
         self.max_height     = 5.0   # Å  COM maximum above surface_z_max
+
+        # ── Magnetic-surface awareness ──────────────────────────────────
+        # Seed physically-motivated initial magnetic moments so a spin-aware
+        # relaxation (CHGNet / DFT) can form the magnetic ground state that
+        # drives chemisorption on Cr/Mn/Fe/Co/Ni. Harmless for non-magnetic
+        # systems and for spin-agnostic MLIPs (the moments simply travel with
+        # the structure). See goad_v1/magnetism.py for the physics caveat.
+        self.seed_magmoms = seed_magmoms
+        self.afm = afm
+        self.binding_guard = binding_guard
+        self.detach_cutoff = detach_cutoff
+        self.n_surface_atoms = len(self.surface)
+        self.magnetic_surface = magnetism.is_magnetic_surface(self.surface)
+
+        if self.seed_magmoms:
+            magnetism.seed_initial_magmoms(self.surface, afm=self.afm)
+            magnetism.seed_initial_magmoms(self.molecule, afm=self.afm)
+
+        if self.magnetic_surface:
+            els = ", ".join(sorted(magnetism.magnetic_elements_in(self.surface)))
+            logger.info(f"Magnetic surface detected: {els}")
+            _, note = magnetism.recommend_calculator(self.surface,
+                                                     self.calculator_type)
+            if note:
+                logger.warning(note)
 
     # ------------------------------------------------------------------
     # Surface analysis & search-radius default
@@ -762,6 +792,7 @@ class GeneticAlgorithm:
             'fitness_history': self.fitness_history,
             'generations':     self.generations,
             'population_size': self.population_size,
+            'magnetic_surface': self.magnetic_surface,
         }
 
         logger.info(f"Best E_ads found: {self.best_energy:.4f} eV")
@@ -777,5 +808,39 @@ class GeneticAlgorithm:
                     "Best torsions (°): "
                     + " ".join(f"{t:.1f}" for t in self.best_individual['torsions'])
                 )
+
+        # ── Binding-integrity guard + magnetic-moment capture ───────────
+        best_structure = results['best_structure']
+        if best_structure is not None:
+            mag = magnetism.capture_magmoms(best_structure, metal_only=True)
+            results['surface_magmom'] = mag
+            if mag is not None:
+                logger.info(f"Captured surface magnetisation: "
+                            f"total={mag['total']:.2f} μB, "
+                            f"|Σ|={mag['abs_total']:.2f} μB, "
+                            f"max|m|={mag['max_abs']:.2f} μB")
+
+            if self.binding_guard:
+                status = magnetism.binding_status(
+                    best_structure, self.n_surface_atoms,
+                    detach_cutoff=self.detach_cutoff)
+                results['min_adsorbate_surface_distance'] = status['min_contact']
+                results['binding_detached'] = status['detached']
+                d = status['min_contact']
+                d_str = "n/a" if d is None else f"{d:.2f} Å"
+                if status['detached']:
+                    msg = (f"BINDING FAILED: best structure is detached "
+                           f"(nearest surface–adsorbate contact = {d_str} "
+                           f"> {self.detach_cutoff:.1f} Å).")
+                    if self.magnetic_surface and not magnetism.is_spin_aware(
+                            self.calculator_type):
+                        _, note = magnetism.recommend_calculator(
+                            self.surface, self.calculator_type)
+                        msg += " " + (note or "")
+                    results['binding_warning'] = msg
+                    logger.warning(msg)
+                else:
+                    logger.info(f"Binding OK: nearest surface–adsorbate "
+                                f"contact = {d_str}.")
 
         return results
