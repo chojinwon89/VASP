@@ -142,15 +142,15 @@ class CalculatorManager:
     @staticmethod
     def get_calculator_info(calculator_type: str) -> dict:
         info_map = {
-            "1m":                {"name": "MatterSim 1M",             "dispersion": "No"},
-            "5m":                {"name": "MatterSim 5M",             "dispersion": "No"},
-            "5m_d3":             {"name": "MatterSim 5M + D3",        "dispersion": "Yes (D3, post-hoc)"},
-            "sevennet_omni":     {"name": "SevenNet-OMNI (omat24)",   "dispersion": "Yes (D3, native via OMat24)"},
-            "sevennet_omni_mpa": {"name": "SevenNet-OMNI (mpa)",      "dispersion": "No (PBE head)"},
-            "sevennet_omat":     {"name": "SevenNet-OMat",            "dispersion": "Yes (D3, native)"},
-            "chgnet":            {"name": "CHGNet",                   "dispersion": "No"},
-            "mace_mp":           {"name": "MACE-MP-0 (medium)",       "dispersion": "No"},
-            "mace_mp_d3":        {"name": "MACE-MP-0 (medium) + D3",  "dispersion": "Yes (D3)"},
-            "mace_off":          {"name": "MACE-OFF23 (medium)",      "dispersion": "No"},
+            "1m":                {"name": "MatterSim 1M",             "dispersion": "No",  "magnetic": "No"},
+            "5m":                {"name": "MatterSim 5M",             "dispersion": "No",  "magnetic": "No"},
+            "5m_d3":             {"name": "MatterSim 5M + D3",        "dispersion": "Yes (D3, post-hoc)", "magnetic": "No"},
+            "sevennet_omni":     {"name": "SevenNet-OMNI (omat24)",   "dispersion": "Yes (D3, native via OMat24)", "magnetic": "No"},
+            "sevennet_omni_mpa": {"name": "SevenNet-OMNI (mpa)",      "dispersion": "No (PBE head)", "magnetic": "No"},
+            "sevennet_omat":     {"name": "SevenNet-OMat",            "dispersion": "Yes (D3, native)", "magnetic": "No"},
+            "chgnet":            {"name": "CHGNet",                   "dispersion": "No",  "magnetic": "Yes (predicts magmoms)"},
+            "mace_mp":           {"name": "MACE-MP-0 (medium)",       "dispersion": "No",  "magnetic": "No"},
+            "mace_mp_d3":        {"name": "MACE-MP-0 (medium) + D3",  "dispersion": "Yes (D3)", "magnetic": "No"},
+            "mace_off":          {"name": "MACE-OFF23 (medium)",      "dispersion": "No",  "magnetic": "No"},
         }
         return info_map.get(calculator_type.lower().replace("+", "_").replace("-", "_"), {})
