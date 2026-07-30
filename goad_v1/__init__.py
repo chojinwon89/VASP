@@ -9,9 +9,11 @@ __author__ = "GOAD Team"
 from .analysis.surface_analyzer import SurfaceAnalyzer
 from .analysis.molecule_analyzer import MoleculeAnalyzer
 from . import magnetism
+from . import hybrid
 
 __all__ = [
     "SurfaceAnalyzer",
     "MoleculeAnalyzer",
     "magnetism",
+    "hybrid",
 ]

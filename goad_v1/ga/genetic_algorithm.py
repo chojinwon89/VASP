@@ -54,6 +54,7 @@ import logging
 from ..calculator_manager import CalculatorManager
 from ..utils.torsion_handler import TorsionHandler
 from .. import magnetism
+from .. import hybrid
 
 logger = logging.getLogger(__name__)
 
@@ -211,7 +212,13 @@ class GeneticAlgorithm:
                  seed_magmoms: bool = True,
                  afm: bool = True,
                  binding_guard: bool = True,
-                 detach_cutoff: float = 3.0):
+                 detach_cutoff: float = 3.0,
+                 refiner_type: Optional[str] = None,
+                 refiner_calc=None,
+                 refiner_surface_energy: Optional[float] = None,
+                 refiner_molecule_energy: Optional[float] = None,
+                 refine_fmax: float = 0.05,
+                 refine_steps: int = 60):
         """
         Initialize GA.
 
@@ -340,6 +347,22 @@ class GeneticAlgorithm:
         self.n_surface_atoms = len(self.surface)
         self.magnetic_surface = magnetism.is_magnetic_surface(self.surface)
 
+        # Hybrid explorer/refiner scoring: the GA searches with this
+        # (calculator) as the EXPLORER; if a refiner is configured, the best
+        # bound structure is re-scored with the accurate refiner in
+        # _get_results. Resolves the "spin-aware but low large-molecule
+        # accuracy" dilemma (see goad_v1/hybrid.py).
+        self.refiner_type = refiner_type
+        self.refiner_calc = refiner_calc
+        self.refiner_surface_energy = (
+            refiner_surface_energy if refiner_surface_energy is not None
+            else surface_energy)
+        self.refiner_molecule_energy = (
+            refiner_molecule_energy if refiner_molecule_energy is not None
+            else molecule_energy)
+        self.refine_fmax = refine_fmax
+        self.refine_steps = refine_steps
+
         if self.seed_magmoms:
             magnetism.seed_initial_magmoms(self.surface, afm=self.afm)
             magnetism.seed_initial_magmoms(self.molecule, afm=self.afm)
@@ -347,10 +370,18 @@ class GeneticAlgorithm:
         if self.magnetic_surface:
             els = ", ".join(sorted(magnetism.magnetic_elements_in(self.surface)))
             logger.info(f"Magnetic surface detected: {els}")
-            _, note = magnetism.recommend_calculator(self.surface,
-                                                     self.calculator_type)
-            if note:
-                logger.warning(note)
+            plan = hybrid.plan_calculators(self.surface, self.molecule,
+                                           self.calculator_type)
+            for line in plan["rationale"]:
+                logger.info("calculator plan: " + line)
+            for line in plan["warnings"]:
+                logger.warning("calculator plan: " + line)
+            if (self.refiner_type is None and self.refiner_calc is None
+                    and plan["refiner"]):
+                logger.warning(
+                    f"Suggestion: set refiner_type='{plan['refiner']}' to score "
+                    f"the binding energy with an accurate model "
+                    f"(molecule size: {plan['molecule_size']}).")
 
     # ------------------------------------------------------------------
     # Surface analysis & search-radius default
@@ -843,4 +874,48 @@ class GeneticAlgorithm:
                     logger.info(f"Binding OK: nearest surface–adsorbate "
                                 f"contact = {d_str}.")
 
+            # ── Hybrid refiner: accurate binding energy for the bound geom ──
+            self._refine_best_binding(results, best_structure)
+
         return results
+
+    def _refine_best_binding(self, results: Dict, best_structure) -> None:
+        """Re-score the best bound structure with the accurate refiner model.
+
+        Only runs when a refiner is configured and the explorer geometry is
+        bound. Attaches refined_energy / refined_e_ads / phantom_binding etc.
+        to ``results``. Never raises: refiner load/relax failures are logged.
+        """
+        if self.refiner_type is None and self.refiner_calc is None:
+            return
+        if results.get('binding_detached'):
+            logger.info("Skipping energy refinement: explorer geometry is "
+                        "detached (nothing bound to refine).")
+            return
+        try:
+            calc = self.refiner_calc
+            if calc is None:
+                calc = CalculatorManager.get_calculator(self.refiner_type)
+            ref = hybrid.refine_binding_energy(
+                best_structure, self.n_surface_atoms, calc,
+                surface_energy=self.refiner_surface_energy,
+                molecule_energy=self.refiner_molecule_energy,
+                detach_cutoff=self.detach_cutoff,
+                fmax=self.refine_fmax, steps=self.refine_steps)
+        except Exception as e:  # noqa: BLE001 - refinement is best-effort
+            logger.warning(f"Binding-energy refinement failed: {e}")
+            results['refine_error'] = str(e)
+            return
+
+        results['refined_energy'] = ref['refined_energy']
+        results['refined_e_ads'] = ref['refined_e_ads']
+        results['refined_structure'] = ref['refined_structure']
+        results['refined_min_contact'] = ref['refined_min_contact']
+        results['refined_detached'] = ref['refined_detached']
+        results['phantom_binding'] = ref['phantom_binding']
+        logger.info(f"Refined E_ads ({self.refiner_type or 'refiner'}): "
+                    f"{ref['refined_e_ads']:.4f} eV "
+                    f"(explorer E_ads: {self.best_energy:.4f} eV)")
+        if ref['phantom_binding']:
+            results['binding_warning'] = ref['recommendation']
+            logger.warning(ref['recommendation'])
