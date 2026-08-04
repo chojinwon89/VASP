@@ -61,6 +61,9 @@ Usage
     # Include partial / unfinished runs if they already wrote a geometry
     python extract_poscar.py --include-unfinished
 
+    # Incremental: skip POSCARs that already exist in the output dir
+    python extract_poscar.py --skip-existing
+
     # All seeds + best, everything under a custom root
     python extract_poscar.py \\
         --runs-dir /scratch/jcho5/.../runs \\
@@ -365,6 +368,14 @@ def main():
         ),
     )
     parser.add_argument(
+        "--skip-existing", action="store_true",
+        help=(
+            "Do NOT re-write POSCAR files that already exist in --out-dir. "
+            "Useful for incremental runs so previously extracted (finished) "
+            "jobs are left untouched and only new geometries are written."
+        ),
+    )
+    parser.add_argument(
         "--no-sort", action="store_true",
         help="Do NOT sort atoms by species (default: sort, VASP convention)",
     )
@@ -414,6 +425,7 @@ def main():
     print()
 
     written = 0
+    skipped_existing = 0
 
     # ---- Per-seed POSCARs --------------------------------------------------
     if not args.best_only:
@@ -422,6 +434,11 @@ def main():
                 e["surface"], e["adsorbate"], e["calculator"], e["seed"])
             n_carbon = carbon_count(e["adsorbate"])
             poscar  = out_dir / "C{}".format(n_carbon) / label / "POSCAR"
+            if args.skip_existing and poscar.exists():
+                if args.verbose:
+                    print("  [skip-existing]  {}".format(poscar))
+                skipped_existing += 1
+                continue
             e_str   = "{:.4f} eV".format(e["E_ads_eV"]) \
                       if e["E_ads_eV"] is not None else "E_ads unknown"
             comment = ("{} + {} | seed={} | calc={} | E_ads={}".format(
@@ -442,6 +459,10 @@ def main():
         label   = "{}_{}".format(e["surface"], e["adsorbate"])
         n_carbon = carbon_count(e["adsorbate"])
         poscar  = best_dir / "C{}".format(n_carbon) / label / "POSCAR"
+        if args.skip_existing and poscar.exists():
+            print("  [skip-existing]  {}".format(poscar))
+            skipped_existing += 1
+            continue
         e_str   = "{:.4f} eV".format(e["E_ads_eV"]) \
                   if e["E_ads_eV"] is not None else "E_ads unknown"
         comment = ("{} + {} | BEST seed={} | calc={} | E_ads={}".format(
@@ -455,6 +476,9 @@ def main():
 
     # ---- Summary -----------------------------------------------------------
     print("\nWrote {} POSCAR file(s) under {}/".format(written, out_dir))
+    if args.skip_existing:
+        print("Skipped {} existing POSCAR file(s) (--skip-existing).".format(
+              skipped_existing))
     print()
     if args.best_only:
         print("Best-seed layout:  {}/C<n>/<surface>_<adsorbate>/POSCAR".format(out_dir))
