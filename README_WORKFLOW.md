@@ -501,6 +501,11 @@ python calc_binding_energy.py \
     --output dft_binding_energies_all.csv
 ```
 
+With `--calc-type single-point`, the slab+molecule **and** the bare-slab /
+gas-molecule reference OUTCARs are read from a `singlepoint/<functional>/`
+subdirectory when present (e.g. `vasp_slab/<surface>/singlepoint/<functional>/OUTCAR`),
+falling back to the plain `<functional>/` layout for older runs that lack it.
+
 | Flag | Default | Description |
 |------|---------|-------------|
 | `--best-dirs` | `poscar/best` | Directories with slab+molecule VASP jobs |
