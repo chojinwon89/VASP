@@ -211,24 +211,35 @@ def discover_system_dirs(best_dir: Path):
     bucket_dirs = [d for d in first_level_dirs if is_bucket_dir(d)]
 
     if bucket_dirs:
-        for stale_dir in first_level_dirs:
-            if is_bucket_dir(stale_dir):
-                continue
-            if (stale_dir / "POSCAR").exists():
-                print(
-                    "WARNING: found stale non-bucketed system directory "
-                    f"'{stale_dir}' alongside bucketed C<n>/ directories. "
-                    "This directory will be IGNORED. If this is a leftover "
-                    "from before carbon-count bucketing was introduced, verify "
-                    "the correct bucketed copy exists "
-                    f"(e.g. {best_dir}/C2/{stale_dir.name}/) and consider deleting "
-                    "the stale directory to avoid confusion."
-                )
-
+        seen_systems = set()
         for bucket_dir in bucket_dirs:
             for second_level_dir in sorted(bucket_dir.iterdir()):
                 if second_level_dir.is_dir() and (second_level_dir / "POSCAR").exists():
                     system_dirs.append(second_level_dir)
+                    seen_systems.add(second_level_dir.name)
+
+        # Also include non-bucketed system dirs sitting alongside the C<n>/
+        # buckets, unless the same system already exists in a bucket (in which
+        # case the bucketed copy wins to avoid double-counting).
+        for extra_dir in first_level_dirs:
+            if is_bucket_dir(extra_dir):
+                continue
+            if not (extra_dir / "POSCAR").exists():
+                continue
+            if extra_dir.name in seen_systems:
+                print(
+                    "NOTE: non-bucketed system directory "
+                    f"'{extra_dir}' duplicates a bucketed copy; using the "
+                    "bucketed one and skipping this duplicate."
+                )
+                continue
+            print(
+                "NOTE: including non-bucketed system directory "
+                f"'{extra_dir}' alongside the bucketed C<n>/ directories."
+            )
+            system_dirs.append(extra_dir)
+            seen_systems.add(extra_dir.name)
+
         return system_dirs
 
     for first_level_dir in first_level_dirs:
