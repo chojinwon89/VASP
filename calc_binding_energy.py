@@ -129,14 +129,21 @@ def read_energy_from_outcar(outcar_path: Path) -> float:
     resolved = _resolve_outcar(outcar_path)
 
     if not resolved.exists():
+        abs_hint = ""
+        try:
+            abs_path = outcar_path.resolve()
+            if str(abs_path) != str(outcar_path):
+                abs_hint = f" (resolved: {abs_path})"
+        except OSError:
+            pass
         # Distinguish a broken symlink (ls shows it, but target is missing)
         # from a genuinely absent file for a clearer message.
         if outcar_path.is_symlink():
             raise FileNotFoundError(
-                f"OUTCAR not found: {outcar_path} "
+                f"OUTCAR not found: {outcar_path}{abs_hint} "
                 f"(broken symlink -> {os.readlink(outcar_path)})"
             )
-        raise FileNotFoundError(f"OUTCAR not found: {outcar_path}")
+        raise FileNotFoundError(f"OUTCAR not found: {outcar_path}{abs_hint}")
 
     opener = gzip.open if resolved.suffix == ".gz" else open
 
