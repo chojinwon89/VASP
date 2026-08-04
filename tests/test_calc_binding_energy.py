@@ -103,6 +103,37 @@ def test_calc_binding_energy_discovers_bucketed_single_point_layout(tmp_path):
     assert float(rows[0]["E_ads"]) == -4.0
 
 
+def test_calc_binding_energy_single_point_references_in_singlepoint_subdir(tmp_path):
+    best_dir = tmp_path / "poscar" / "best"
+    system_dir = best_dir / "C1" / "Cu001_CO"
+    _write_poscar(system_dir / "POSCAR")
+    _write_outcar(system_dir / "singlepoint" / "PBE" / "OUTCAR", -16.0)
+
+    # Reference slab/molecule OUTCARs live under a singlepoint/ subdir too.
+    _write_outcar(
+        tmp_path / "vasp_slab" / "Cu001" / "singlepoint" / "PBE" / "OUTCAR", -10.0)
+    _write_outcar(
+        tmp_path / "vasp_mol" / "CO" / "singlepoint" / "PBE" / "OUTCAR", -2.0)
+
+    rows = _run_calc(
+        tmp_path,
+        "--best-dirs",
+        str(best_dir),
+        "--slab-dir",
+        str(tmp_path / "vasp_slab"),
+        "--mol-dir",
+        str(tmp_path / "vasp_mol"),
+        "--functional",
+        "PBE",
+        "--calc-type",
+        "single-point",
+    )
+
+    assert len(rows) == 1
+    assert rows[0]["status"] == "ok"
+    assert float(rows[0]["E_ads"]) == -4.0
+
+
 def test_calc_binding_energy_discovers_multiple_buckets(tmp_path):
     best_dir = tmp_path / "poscar" / "best"
     cu_dir = best_dir / "C1" / "Cu001_CO"

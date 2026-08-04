@@ -22,18 +22,20 @@ Bucketed slab+molecule layout (supported for --best-dirs):
 Single-point slab+molecule layout (supported with --calc-type single-point):
     poscar/best/C<n>/<surface>_<molecule>/singlepoint/<functional>/OUTCAR
 
+Single-point reference layout (also supported with --calc-type single-point):
+    vasp_slab/<surface>/singlepoint/<functional>/OUTCAR
+    vasp_mol/<molecule>/singlepoint/<functional>/OUTCAR
+
 best_dir discovery for slab+molecule jobs mirrors setup_vasp_jobs.py:
   (1) bucketed root: DIR/C<n>/<system>/...
   (2) single bucket: DIR/<system>/...
   (3) direct system: DIR is itself one <system> directory
 
-Reference assumptions confirmed from current setup_slab_jobs.py and
-setup_molecule_jobs.py:
+Path resolution notes:
   - vasp_slab and vasp_mol are not carbon-bucketed.
-  - single-point mode in those scripts changes INCAR settings only; it does not
-    add a singlepoint/ subdirectory.
-  - Therefore this script applies --calc-type path switching only to slab+mol
-    jobs under --best-dirs.
+  - With --calc-type single-point, slab+mol AND the slab/molecule references are
+    read from a singlepoint/ subdirectory when present, falling back to the
+    plain <functional>/ (or flat) layout for older runs that lack it.
 
 Formula
 -------
@@ -307,21 +309,54 @@ def calc_binding_energies(best_dirs, slab_dir: Path, mol_dir: Path,
 
             notes = []
 
-            # Build OUTCAR paths — flat or with functional subdirectory
+            # Build OUTCAR paths — flat or with functional subdirectory.
+            # For --calc-type single-point, slab+mol and the slab/molecule
+            # references may live under a singlepoint/ subdirectory; prefer that
+            # layout but fall back to the plain layout for older runs.
+            def _pick(*candidates: Path) -> Path:
+                """Return the first candidate with a readable OUTCAR/.gz,
+                else the first candidate (so errors show the primary path)."""
+                for cand in candidates:
+                    if _resolve_outcar(cand).exists():
+                        return cand
+                return candidates[0]
+
             if functional:
                 if calc_type == "single-point":
-                    slab_mol_outcar = job_dir / "singlepoint" / functional / "OUTCAR"
+                    slab_mol_outcar = _pick(
+                        job_dir / "singlepoint" / functional / "OUTCAR",
+                        job_dir / functional / "OUTCAR",
+                    )
+                    slab_outcar = _pick(
+                        slab_dir / surface / "singlepoint" / functional / "OUTCAR",
+                        slab_dir / surface / functional / "OUTCAR",
+                    )
+                    mol_outcar = _pick(
+                        mol_dir / molecule / "singlepoint" / functional / "OUTCAR",
+                        mol_dir / molecule / functional / "OUTCAR",
+                    )
                 else:
                     slab_mol_outcar = job_dir / functional / "OUTCAR"
-                slab_outcar     = slab_dir / surface  / functional / "OUTCAR"
-                mol_outcar      = mol_dir  / molecule / functional / "OUTCAR"
+                    slab_outcar     = slab_dir / surface  / functional / "OUTCAR"
+                    mol_outcar      = mol_dir  / molecule / functional / "OUTCAR"
             else:
                 if calc_type == "single-point":
-                    slab_mol_outcar = job_dir / "singlepoint" / "OUTCAR"
+                    slab_mol_outcar = _pick(
+                        job_dir / "singlepoint" / "OUTCAR",
+                        job_dir / "OUTCAR",
+                    )
+                    slab_outcar = _pick(
+                        slab_dir / surface / "singlepoint" / "OUTCAR",
+                        slab_dir / surface / "OUTCAR",
+                    )
+                    mol_outcar = _pick(
+                        mol_dir / molecule / "singlepoint" / "OUTCAR",
+                        mol_dir / molecule / "OUTCAR",
+                    )
                 else:
                     slab_mol_outcar = job_dir / "OUTCAR"
-                slab_outcar     = slab_dir / surface  / "OUTCAR"
-                mol_outcar      = mol_dir  / molecule / "OUTCAR"
+                    slab_outcar     = slab_dir / surface  / "OUTCAR"
+                    mol_outcar      = mol_dir  / molecule / "OUTCAR"
 
             # 1) Slab + molecule energy
             try:
