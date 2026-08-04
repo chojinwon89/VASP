@@ -478,3 +478,70 @@ for d in vasp_mol/*/*/; do
     [ -f "${d}/OUTCAR" ] || (cd "$d" && sbatch slm.vasp.kestrel)
 done
 ```
+
+### Step 11 — Collect DFT binding energies (`calc_binding_energy.py`)
+
+Once the adsorbed, bare-slab, and gas-molecule VASP jobs have finished, parse
+their `OUTCAR`s and compute `E_ads = E(slab+mol) - E(slab) - E(mol)` for every
+system and functional. Read all four functionals at once into one CSV:
+
+```bash
+python calc_binding_energy.py \
+    --best-dirs poscar/best \
+    --all-functionals --functionals PBE PBE_D3 r2scan beef_vdw \
+    --output dft_binding_energies_all.csv
+```
+
+For single-point jobs (extra `singlepoint/` level written by `setup_vasp_jobs.py`):
+
+```bash
+python calc_binding_energy.py \
+    --best-dirs poscar/best --calc-type single-point \
+    --all-functionals --functionals PBE PBE_D3 r2scan beef_vdw \
+    --output dft_binding_energies_all.csv
+```
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--best-dirs` | `poscar/best` | Directories with slab+molecule VASP jobs |
+| `--slab-dir` | `vasp_slab` | Bare-slab reference jobs |
+| `--mol-dir` | `vasp_mol` | Gas-phase molecule reference jobs |
+| `--functional` | (none) | Single functional subfolder (e.g. `PBE_D3`) |
+| `--all-functionals` | off | Merge all `--functionals` into one CSV with a `functional` column |
+| `--functionals` | `beef_vdw PBE PBE_D3 r2scan` | Functional subfolders to read with `--all-functionals` |
+| `--calc-type` | `relax` | `relax` or `single-point` (adds the `singlepoint/` path segment) |
+| `--output` | (screen) | Write results to this CSV |
+
+The resulting `dft_binding_energies_all.csv` is the DFT input for the comparison plot.
+
+### Step 12 — Compare MLIP vs DFT (`plot_dft_vs_sevennet.py`)
+
+Produce a 2×2 parity-plot grid (one panel per DFT functional) comparing the
+GOAD+MLIP adsorption energies (`workflow/summary.csv`) against DFT
+(`dft_binding_energies_all.csv`). Each panel overlays all ML calculators and
+reports per-panel MAE / RMSE / R² / bias computed within the plot window.
+
+```bash
+python plot_dft_vs_sevennet.py \
+    --dft dft_binding_energies_all.csv \
+    --ml  workflow/summary.csv \
+    --calculators sevennet_omni 5m \
+    --functionals pbe pbe_d3 beef_vdw r2scan \
+    --output results/dft_vs_mlip_all.png \
+    --csv-out results/dft_vs_mlip_all.csv
+```
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--dft` | `dft_binding_energies_all.csv` | DFT CSV from `calc_binding_energy.py` |
+| `--ml` | `workflow/summary.csv` | MLIP CSV from `collect_results.py` |
+| `--calculators` | `sevennet_omni` | ML calculators to overlay (SevenNet = filled, MatterSim = hollow) |
+| `--functionals` | `pbe pbe_d3 beef_vdw r2scan` | DFT functionals (one panel each) |
+| `--max-diff` | `5.0` | Exclude pairs where `|E_ads_DFT - E_ads_ML|` exceeds this (eV); `0` disables |
+| `--axis-min` / `--axis-max` | script defaults | Shared parity-axis limits (eV) |
+| `--output` | `results/dft_vs_mlip_all_functionals.png` | Output PNG |
+| `--csv-out` | (none) | Optional flat CSV of matched pairs after filtering |
+
+Point encoding: colour → metal surface, marker → molecule class, fill →
+calculator. The optional `--csv-out` table lists every matched MLIP/DFT pair
+that survived the `--max-diff` filter, useful for spotting remaining outliers.
