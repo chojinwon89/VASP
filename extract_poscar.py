@@ -64,6 +64,9 @@ Usage
     # Incremental: skip POSCARs that already exist in the output dir
     python extract_poscar.py --skip-existing
 
+    # Re-seat adsorbates that drifted too far from the surface during MLIP relax
+    python extract_poscar.py --reseat-gap --max-gap 3.0 --target-gap 2.2
+
     # All seeds + best, everything under a custom root
     python extract_poscar.py \\
         --runs-dir /scratch/jcho5/.../runs \\
@@ -140,6 +143,49 @@ def is_run_finished(run_dir: Path) -> bool:
         return data.get("state", "").strip() == "finished"
     except (json.JSONDecodeError, OSError):
         return False
+
+
+# Elements treated as the metal slab when re-seating a drifted adsorbate.
+SURFACE_ELEMENTS = {
+    "Cu", "Ag", "Au", "Pt", "Pd", "Ni", "Co", "Fe", "Rh", "Ir", "Ru", "Zn",
+}
+
+
+def reseat_adsorbate(atoms: Atoms, max_gap: float, target_gap: float,
+                     surface_elements: set = SURFACE_ELEMENTS):
+    """
+    If the vertical gap between the lowest adsorbate atom and the top surface
+    atom exceeds max_gap, translate the whole adsorbate straight down in z so
+    the gap becomes target_gap.
+
+    Returns (atoms, applied_shift). applied_shift is 0.0 when no change was
+    made (no surface atoms, no adsorbate atoms, or gap within tolerance).
+
+    Only the z coordinate is changed; x/y and the adsorbate's internal geometry
+    are preserved. Surface atoms are never moved.
+    """
+    symbols = atoms.get_chemical_symbols()
+    z = atoms.get_positions()[:, 2]
+
+    surf_idx = [i for i, s in enumerate(symbols) if s in surface_elements]
+    ads_idx = [i for i, s in enumerate(symbols) if s not in surface_elements]
+
+    if not surf_idx or not ads_idx:
+        return atoms, 0.0
+
+    surf_top = max(z[i] for i in surf_idx)
+    ads_bottom = min(z[i] for i in ads_idx)
+    gap = ads_bottom - surf_top
+
+    if gap <= max_gap:
+        return atoms, 0.0
+
+    shift = gap - target_gap  # positive => move adsorbate down
+    positions = atoms.get_positions()
+    for i in ads_idx:
+        positions[i, 2] -= shift
+    atoms.set_positions(positions)
+    return atoms, shift
 
 
 def sort_atoms_by_species(atoms: Atoms) -> Atoms:
@@ -376,6 +422,30 @@ def main():
         ),
     )
     parser.add_argument(
+        "--reseat-gap", action="store_true",
+        help=(
+            "Re-seat adsorbates that drifted away from the surface during MLIP "
+            "relaxation. If the vertical gap between the lowest adsorbate atom "
+            "and the top surface atom exceeds --max-gap, the adsorbate is "
+            "translated straight down in z to --target-gap before the POSCAR is "
+            "written. Surface atoms and adsorbate internal geometry are preserved."
+        ),
+    )
+    parser.add_argument(
+        "--max-gap", type=float, default=3.0, metavar="ANGSTROM",
+        help=(
+            "Only used with --reseat-gap. Maximum tolerated adsorbate-surface "
+            "vertical gap in Angstrom before re-seating (default: 3.0)."
+        ),
+    )
+    parser.add_argument(
+        "--target-gap", type=float, default=2.2, metavar="ANGSTROM",
+        help=(
+            "Only used with --reseat-gap. Target adsorbate-surface vertical gap "
+            "in Angstrom to seat the adsorbate at (default: 2.2)."
+        ),
+    )
+    parser.add_argument(
         "--no-sort", action="store_true",
         help="Do NOT sort atoms by species (default: sort, VASP convention)",
     )
@@ -423,6 +493,23 @@ def main():
     for calc, n in sorted(by_calc.items()):
         print("  {:<20}: {} runs".format(calc, n))
     print()
+
+    # ---- Re-seat drifted adsorbates ---------------------------------------
+    if args.reseat_gap:
+        reseated = 0
+        for e in entries:
+            _, shift = reseat_adsorbate(
+                e["atoms"], max_gap=args.max_gap, target_gap=args.target_gap)
+            if shift > 0.0:
+                reseated += 1
+                if args.verbose:
+                    print("  [reseat]  {}_{} seed{} calc={}: moved adsorbate "
+                          "down {:.2f} Angstrom".format(
+                              e["surface"], e["adsorbate"], e["seed"],
+                              e["calculator"], shift))
+        print("Re-seated {} adsorbate(s) with gap > {:.2f} Angstrom "
+              "(target {:.2f}).\n".format(
+                  reseated, args.max_gap, args.target_gap))
 
     written = 0
     skipped_existing = 0
