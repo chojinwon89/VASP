@@ -61,6 +61,7 @@ Usage
 
 import argparse
 import csv
+import os
 import re
 import sys
 from pathlib import Path
@@ -94,18 +95,53 @@ def normalise_func(name: str) -> str:
 # OUTCAR parser
 # ---------------------------------------------------------------------------
 
+def _resolve_outcar(outcar_path: Path) -> Path:
+    """
+    Given an intended OUTCAR path, return the actual file to read.
+
+    Handles the common cluster cases where the directory clearly contains an
+    OUTCAR but the literal path is not directly readable:
+      - the OUTCAR has been gzip-compressed to OUTCAR.gz
+      - the OUTCAR is a symlink (resolved transparently by open())
+
+    Preference order: OUTCAR, then OUTCAR.gz. Returns the original path
+    unchanged if neither exists, so callers can raise a clear FileNotFoundError.
+    """
+    if outcar_path.exists():
+        return outcar_path
+    gz = outcar_path.with_name(outcar_path.name + ".gz")
+    if gz.exists():
+        return gz
+    return outcar_path
+
+
 def read_energy_from_outcar(outcar_path: Path) -> float:
     """
     Extract the final total energy (free energy, sigma->0) from a VASP OUTCAR.
     Reads the last occurrence of:
         free  energy   TOTEN  =   -123.456 eV
-    Raises FileNotFoundError if OUTCAR missing, ValueError if no energy found.
+    Transparently reads a gzip-compressed OUTCAR.gz when the plain OUTCAR is
+    absent. Raises FileNotFoundError if neither is present (with a hint when a
+    dangling symlink is detected), ValueError if no energy found.
     """
-    if not outcar_path.exists():
+    import gzip
+
+    resolved = _resolve_outcar(outcar_path)
+
+    if not resolved.exists():
+        # Distinguish a broken symlink (ls shows it, but target is missing)
+        # from a genuinely absent file for a clearer message.
+        if outcar_path.is_symlink():
+            raise FileNotFoundError(
+                f"OUTCAR not found: {outcar_path} "
+                f"(broken symlink -> {os.readlink(outcar_path)})"
+            )
         raise FileNotFoundError(f"OUTCAR not found: {outcar_path}")
 
+    opener = gzip.open if resolved.suffix == ".gz" else open
+
     energy = None
-    with outcar_path.open() as f:
+    with opener(resolved, "rt") as f:
         for line in f:
             if "free  energy   TOTEN" in line:
                 try:
@@ -115,7 +151,7 @@ def read_energy_from_outcar(outcar_path: Path) -> float:
 
     if energy is None:
         raise ValueError(
-            f"No 'free  energy   TOTEN' line found in {outcar_path}.\n"
+            f"No 'free  energy   TOTEN' line found in {resolved}.\n"
             "Check that the VASP job completed successfully."
         )
     return energy
