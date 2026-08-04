@@ -69,7 +69,7 @@ Usage
 
     # Fix only the failed jobs from bond-distance-review, by nearest contact
     python extract_poscar.py \\
-        --reseat-contact --max-contact 3.0 --target-contact 2.2 \\
+        --reseat-contact --max-contact 3.5 --target-contact 2.5 \\
         --flagged-csv /path/to/flagged_shortlist.csv --verbose
 
     # All seeds + best, everything under a custom root
@@ -585,18 +585,18 @@ def main():
         ),
     )
     parser.add_argument(
-        "--max-contact", type=float, default=3.0, metavar="ANGSTROM",
+        "--max-contact", type=float, default=3.5, metavar="ANGSTROM",
         help=(
             "Only used with --reseat-contact. Maximum tolerated nearest "
             "metal-adsorbate contact distance in Angstrom before re-seating "
-            "(default: 3.0)."
+            "(default: 3.5)."
         ),
     )
     parser.add_argument(
-        "--target-contact", type=float, default=2.2, metavar="ANGSTROM",
+        "--target-contact", type=float, default=2.5, metavar="ANGSTROM",
         help=(
             "Only used with --reseat-contact. Target nearest metal-adsorbate "
-            "contact distance in Angstrom to seat the adsorbate at (default: 2.2, "
+            "contact distance in Angstrom to seat the adsorbate at (default: 2.5, "
             "a typical chemisorption contact distance)."
         ),
     )
