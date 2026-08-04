@@ -299,12 +299,69 @@ python collect_results.py
 column -s, -t < workflow/summary.csv
 ```
 
+**Incremental collection (skip jobs already summarized).** By default
+`collect_results.py` re-scans everything and rewrites the CSV. Use
+`--skip-existing` to keep the existing rows and only append runs whose
+`run_dir` is not already in the output — handy when new jobs finish over time:
+
+```bash
+python collect_results.py --skip-existing -o workflow/summary.csv
+# Prints: Loaded N existing / Skipped N already present / Newly added: N
+```
+
 ### Step 7 — Extract best geometries
 
 #### As VASP POSCARs (`extract_poscar.py`)
 ```bash
 python extract_poscar.py --verbose
 ```
+
+Only runs whose `status.json` has `state == finished` are extracted (pass
+`--include-unfinished` to override). Useful flags:
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--runs-dir` | `runs` | Path to GOAD runs directory |
+| `--out-dir` | `poscar` | Output root for POSCAR files |
+| `--calculator` | (all) | Only extract runs from this calculator (e.g. `sevennet_omni`, `5m`) |
+| `--best-only` | off | Only write the lowest-`E_ads` POSCAR per (surface, adsorbate) |
+| `--include-unfinished` | off | Include runs regardless of `status.json` state |
+| `--skip-existing` | off | Do not overwrite POSCARs that already exist in `--out-dir` (incremental) |
+| `--reseat-contact` | off | Re-seat drifted adsorbates by nearest metal–adsorbate contact (see below) |
+| `--max-contact` | `3.5` | Contact distance (Å) above which a structure is re-seated |
+| `--target-contact` | `2.5` | Contact distance (Å) to seat the adsorbate at |
+| `--flagged-csv` | (none) | Restrict re-seating to systems listed in a bond-distance-review CSV |
+| `--reseat-gap` | off | Re-seat by vertical z-gap instead of contact distance |
+| `--max-gap` / `--target-gap` | `3.0` / `2.2` | Gap thresholds for `--reseat-gap` |
+| `--verbose` | off | Print one line per POSCAR written / re-seated |
+
+**Incremental extraction:** re-run as new jobs finish without touching already-written POSCARs:
+```bash
+python extract_poscar.py --best-only --out-dir poscar/best --skip-existing
+```
+
+**Fixing failed MLIP jobs (detached adsorbates) before DFT.** When an MLIP
+relaxation lets a weakly-bound adsorbate drift away from the surface, the POSCAR
+has a large vacuum gap that wastes DFT ionic steps or converges to a desorbed
+state. `--reseat-contact` measures the **nearest metal–adsorbate heavy-atom
+contact distance in 3-D** (H excluded — the same metric the
+[`bond-distance-review`](https://github.com/chojinwon89/bond-distance-review)
+analysis flags on) and, if it exceeds `--max-contact` (3.5 Å), translates the
+whole adsorbate straight down in z until that contact equals `--target-contact`
+(2.5 Å). Surface atoms, x/y, and the adsorbate's internal geometry are preserved.
+
+Correct only the flagged failed jobs, driven by `flagged_shortlist.csv`:
+```bash
+python extract_poscar.py --best-only --out-dir poscar/best \
+    --reseat-contact \
+    --flagged-csv /path/to/bond-distance-review/flagged_shortlist.csv \
+    --verbose
+# [reseat/contact]  Cr110_CO2 seed0 calc=5m: moved adsorbate down 4.00 Angstrom (contact 6.20->2.50)
+# Re-seated N adsorbate(s) among M flagged system-run(s) with contact > 3.50 Angstrom (target 2.50).
+```
+
+Without `--flagged-csv`, every extracted structure with a contact > 3.5 Å is
+re-seated. Override the thresholds with `--max-contact` / `--target-contact`.
 
 #### As CIF + PNG renders (`extract_structures.py`)
 

@@ -24,6 +24,12 @@ python collect_results.py \\
     --canonical-prefix /home/jcho5=/scratch/jcho5 \\
     --out workflow/summary.csv
 
+# Incremental: keep existing rows, only append newly finished runs
+python collect_results.py \\
+    --runs-dir /scratch/jcho5/goad-global-optimization/runs \\
+    --skip-existing \\
+    --out workflow/summary.csv
+
 Arguments
 ---------
 --runs-dir        / -r  Path to a runs directory. Repeatable for multiple locations.
@@ -78,6 +84,14 @@ def parse_args():
             "May be repeated to apply multiple substitutions."
         ),
     )
+    parser.add_argument(
+        "--skip-existing", action="store_true",
+        help=(
+            "Incremental mode. If --out already exists, keep its rows and only "
+            "append runs whose normalized run_dir is not already present. "
+            "Previously collected (finished) jobs are left untouched."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -122,9 +136,15 @@ def format_table(rows, fieldnames):
         print("  ".join(value.ljust(widths[idx]) for idx, value in enumerate(line)))
 
 
-def collect(runs_dirs: list[Path], prefix_map: list[tuple[str, str]]) -> list[dict]:
+def collect(
+    runs_dirs: list[Path],
+    prefix_map: list[tuple[str, str]],
+    existing_run_dirs: set = None,
+) -> list[dict]:
     rows = []
     seen_run_dirs: set[str] = set()
+    existing_run_dirs = existing_run_dirs or set()
+    skipped_existing = 0
 
     for base in runs_dirs:
         base = Path(base)
@@ -149,6 +169,11 @@ def collect(runs_dirs: list[Path], prefix_map: list[tuple[str, str]]) -> list[di
             raw_run_dir = status.get("run_dir", str(run_dir))
             resolved_run_dir = normalize_run_dir(raw_run_dir, prefix_map)
 
+            # Incremental skip: this run is already in the existing output.
+            if resolved_run_dir in existing_run_dirs:
+                skipped_existing += 1
+                continue
+
             surface, adsorbate = parse_system(data.get("system", ""))
 
             row = {
@@ -166,6 +191,9 @@ def collect(runs_dirs: list[Path], prefix_map: list[tuple[str, str]]) -> list[di
                 "finished_at": status.get("finished_at", ""),
             }
             rows.append(row)
+
+    if existing_run_dirs:
+        print(f"Skipped {skipped_existing} run(s) already present in output (--skip-existing)")
 
     rows.sort(
         key=lambda row: (
@@ -203,7 +231,27 @@ def main():
         for old, new in prefix_map:
             print(f"  {old!r}  ->  {new!r}")
 
-    rows = collect(args.runs_dirs, prefix_map)
+    existing_rows: list[dict] = []
+    existing_run_dirs: set[str] = set()
+    if args.skip_existing and out_csv.exists():
+        with out_csv.open("r", newline="") as f:
+            for row in csv.DictReader(f):
+                existing_rows.append(row)
+                if row.get("run_dir"):
+                    existing_run_dirs.add(row["run_dir"])
+        print(f"Loaded {len(existing_rows)} existing row(s) from {out_csv}")
+
+    rows = collect(args.runs_dirs, prefix_map, existing_run_dirs)
+    new_count = len(rows)
+    rows = existing_rows + rows
+
+    rows.sort(
+        key=lambda row: (
+            row["task_id"] == "",
+            int(row["task_id"]) if str(row["task_id"]).strip() != "" else 0,
+            row["run_dir"],
+        )
+    )
 
     out_csv.parent.mkdir(parents=True, exist_ok=True)
     with out_csv.open("w", newline="") as f:
@@ -213,7 +261,9 @@ def main():
             writer.writerow(row)
 
     print(f"Wrote summary to {out_csv}")
-    print(f"Total runs found: {len(rows)}")
+    print(f"Total runs in output: {len(rows)}")
+    if args.skip_existing:
+        print(f"Newly added this run:  {new_count}")
     print(f"Finished: {sum(r['state'] == 'finished' for r in rows)}")
     print(f"Failed:   {sum(r['state'] == 'failed'   for r in rows)}")
     if rows:
