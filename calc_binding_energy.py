@@ -61,6 +61,7 @@ Usage
 
 import argparse
 import csv
+import os
 import re
 import sys
 from pathlib import Path
@@ -94,18 +95,60 @@ def normalise_func(name: str) -> str:
 # OUTCAR parser
 # ---------------------------------------------------------------------------
 
+def _resolve_outcar(outcar_path: Path) -> Path:
+    """
+    Given an intended OUTCAR path, return the actual file to read.
+
+    Handles the common cluster cases where the directory clearly contains an
+    OUTCAR but the literal path is not directly readable:
+      - the OUTCAR has been gzip-compressed to OUTCAR.gz
+      - the OUTCAR is a symlink (resolved transparently by open())
+
+    Preference order: OUTCAR, then OUTCAR.gz. Returns the original path
+    unchanged if neither exists, so callers can raise a clear FileNotFoundError.
+    """
+    if outcar_path.exists():
+        return outcar_path
+    gz = outcar_path.with_name(outcar_path.name + ".gz")
+    if gz.exists():
+        return gz
+    return outcar_path
+
+
 def read_energy_from_outcar(outcar_path: Path) -> float:
     """
     Extract the final total energy (free energy, sigma->0) from a VASP OUTCAR.
     Reads the last occurrence of:
         free  energy   TOTEN  =   -123.456 eV
-    Raises FileNotFoundError if OUTCAR missing, ValueError if no energy found.
+    Transparently reads a gzip-compressed OUTCAR.gz when the plain OUTCAR is
+    absent. Raises FileNotFoundError if neither is present (with a hint when a
+    dangling symlink is detected), ValueError if no energy found.
     """
-    if not outcar_path.exists():
-        raise FileNotFoundError(f"OUTCAR not found: {outcar_path}")
+    import gzip
+
+    resolved = _resolve_outcar(outcar_path)
+
+    if not resolved.exists():
+        abs_hint = ""
+        try:
+            abs_path = outcar_path.resolve()
+            if str(abs_path) != str(outcar_path):
+                abs_hint = f" (resolved: {abs_path})"
+        except OSError:
+            pass
+        # Distinguish a broken symlink (ls shows it, but target is missing)
+        # from a genuinely absent file for a clearer message.
+        if outcar_path.is_symlink():
+            raise FileNotFoundError(
+                f"OUTCAR not found: {outcar_path}{abs_hint} "
+                f"(broken symlink -> {os.readlink(outcar_path)})"
+            )
+        raise FileNotFoundError(f"OUTCAR not found: {outcar_path}{abs_hint}")
+
+    opener = gzip.open if resolved.suffix == ".gz" else open
 
     energy = None
-    with outcar_path.open() as f:
+    with opener(resolved, "rt") as f:
         for line in f:
             if "free  energy   TOTEN" in line:
                 try:
@@ -115,7 +158,7 @@ def read_energy_from_outcar(outcar_path: Path) -> float:
 
     if energy is None:
         raise ValueError(
-            f"No 'free  energy   TOTEN' line found in {outcar_path}.\n"
+            f"No 'free  energy   TOTEN' line found in {resolved}.\n"
             "Check that the VASP job completed successfully."
         )
     return energy
@@ -175,24 +218,35 @@ def discover_system_dirs(best_dir: Path):
     bucket_dirs = [d for d in first_level_dirs if is_bucket_dir(d)]
 
     if bucket_dirs:
-        for stale_dir in first_level_dirs:
-            if is_bucket_dir(stale_dir):
-                continue
-            if (stale_dir / "POSCAR").exists():
-                print(
-                    "WARNING: found stale non-bucketed system directory "
-                    f"'{stale_dir}' alongside bucketed C<n>/ directories. "
-                    "This directory will be IGNORED. If this is a leftover "
-                    "from before carbon-count bucketing was introduced, verify "
-                    "the correct bucketed copy exists "
-                    f"(e.g. {best_dir}/C2/{stale_dir.name}/) and consider deleting "
-                    "the stale directory to avoid confusion."
-                )
-
+        seen_systems = set()
         for bucket_dir in bucket_dirs:
             for second_level_dir in sorted(bucket_dir.iterdir()):
                 if second_level_dir.is_dir() and (second_level_dir / "POSCAR").exists():
                     system_dirs.append(second_level_dir)
+                    seen_systems.add(second_level_dir.name)
+
+        # Also include non-bucketed system dirs sitting alongside the C<n>/
+        # buckets, unless the same system already exists in a bucket (in which
+        # case the bucketed copy wins to avoid double-counting).
+        for extra_dir in first_level_dirs:
+            if is_bucket_dir(extra_dir):
+                continue
+            if not (extra_dir / "POSCAR").exists():
+                continue
+            if extra_dir.name in seen_systems:
+                print(
+                    "NOTE: non-bucketed system directory "
+                    f"'{extra_dir}' duplicates a bucketed copy; using the "
+                    "bucketed one and skipping this duplicate."
+                )
+                continue
+            print(
+                "NOTE: including non-bucketed system directory "
+                f"'{extra_dir}' alongside the bucketed C<n>/ directories."
+            )
+            system_dirs.append(extra_dir)
+            seen_systems.add(extra_dir.name)
+
         return system_dirs
 
     for first_level_dir in first_level_dirs:

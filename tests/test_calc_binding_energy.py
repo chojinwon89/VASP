@@ -133,7 +133,7 @@ def test_calc_binding_energy_discovers_multiple_buckets(tmp_path):
     assert all(r["status"] == "ok" for r in rows)
 
 
-def test_calc_binding_energy_bucketed_root_ignores_stale_flat_leftover(tmp_path):
+def test_calc_binding_energy_bucketed_root_dedupes_stale_flat_leftover(tmp_path):
     best_dir = tmp_path / "poscar" / "best"
     bucketed_system_dir = best_dir / "C2" / "Au100_DMSO"
     stale_flat_dir = best_dir / "Au100_DMSO"
@@ -160,12 +160,47 @@ def test_calc_binding_energy_bucketed_root_ignores_stale_flat_leftover(tmp_path)
         "single-point",
     )
 
+    # Duplicate flat dir is deduped against the bucketed copy -> exactly 1 row.
     assert len(rows) == 1
     assert rows[0]["system"] == "Au100_DMSO"
     assert rows[0]["status"] == "ok"
-    assert "WARNING: found stale non-bucketed system directory" in stdout
-    assert "Au100_DMSO" in stdout
-    assert "IGNORED" in stdout
+    assert "duplicates a bucketed copy" in stdout
+
+
+def test_calc_binding_energy_bucketed_root_includes_nonbucketed_system(tmp_path):
+    best_dir = tmp_path / "poscar" / "best"
+    bucketed_system_dir = best_dir / "C2" / "Au100_DMSO"
+    extra_flat_dir = best_dir / "Pt111_propene"
+
+    _write_poscar(bucketed_system_dir / "POSCAR")
+    _write_outcar(bucketed_system_dir / "singlepoint" / "PBE" / "OUTCAR", -25.0)
+
+    _write_poscar(extra_flat_dir / "POSCAR")
+    _write_outcar(extra_flat_dir / "singlepoint" / "PBE" / "OUTCAR", -30.0)
+
+    _write_outcar(tmp_path / "vasp_slab" / "Au100" / "PBE" / "OUTCAR", -20.0)
+    _write_outcar(tmp_path / "vasp_mol" / "DMSO" / "PBE" / "OUTCAR", -3.0)
+    _write_outcar(tmp_path / "vasp_slab" / "Pt111" / "PBE" / "OUTCAR", -22.0)
+    _write_outcar(tmp_path / "vasp_mol" / "propene" / "PBE" / "OUTCAR", -4.0)
+
+    rows, stdout = _run_calc_with_stdout(
+        tmp_path,
+        "--best-dirs",
+        str(best_dir),
+        "--slab-dir",
+        str(tmp_path / "vasp_slab"),
+        "--mol-dir",
+        str(tmp_path / "vasp_mol"),
+        "--functional",
+        "PBE",
+        "--calc-type",
+        "single-point",
+    )
+
+    systems = sorted(r["system"] for r in rows)
+    assert systems == ["Au100_DMSO", "Pt111_propene"]
+    assert all(r["status"] == "ok" for r in rows)
+    assert "including non-bucketed system directory" in stdout
 
 
 def test_calc_binding_energy_flat_layout_fallback_without_bucket_warning(tmp_path):
