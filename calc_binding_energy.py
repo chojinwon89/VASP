@@ -53,9 +53,9 @@ Usage
         --output dft_binding_energies_all.csv
 
     # Single-point DFT extraction across all functionals
+    # (writes dft_binding_energies_singlepoint_all.csv by default)
     python calc_binding_energy.py --best-dirs poscar/best --calc-type single-point \\
-        --all-functionals --functionals PBE PBE_D3 r2scan beef_vdw \\
-        --output dft_binding_energies_all.csv
+        --all-functionals --functionals PBE PBE_D3 r2scan beef_vdw
 
     # Flat layout (original behaviour)
     python calc_binding_energy.py --output dft_binding_energies.csv
@@ -438,6 +438,21 @@ def print_table(results, functional=None):
     print()
 
 
+def default_output_name(calc_type: str, all_functionals: bool,
+                        functional: str = None) -> str:
+    """Derive the default CSV filename from the run configuration.
+
+    Single-point runs get a ``_singlepoint`` marker so they don't clobber the
+    relaxation results, e.g. ``dft_binding_energies_singlepoint_all.csv``.
+    """
+    sp = "_singlepoint" if calc_type == "single-point" else ""
+    if all_functionals:
+        return f"dft_binding_energies{sp}_all.csv"
+    if functional:
+        return f"dft_binding_energies{sp}_{normalise_func(functional)}.csv"
+    return f"dft_binding_energies{sp}.csv"
+
+
 def write_csv(results, output_path: Path, include_functional: bool = True):
     """Write results to CSV."""
     fields = [
@@ -476,9 +491,9 @@ Examples
       --output dft_binding_energies_all.csv
 
   # Single-point DFT extraction across all functionals
+  # (auto-writes dft_binding_energies_singlepoint_all.csv)
   python calc_binding_energy.py --best-dirs poscar/best --calc-type single-point \\
-      --all-functionals --functionals PBE PBE_D3 r2scan beef_vdw \\
-      --output dft_binding_energies_all.csv
+      --all-functionals --functionals PBE PBE_D3 r2scan beef_vdw
 
   # Flat layout (no functional subdir)
   python calc_binding_energy.py --output dft_binding_energies.csv
@@ -536,9 +551,28 @@ Examples
     )
     parser.add_argument(
         "--output", default=None,
-        help="Save results to this CSV file (default: print to screen only)"
+        help=(
+            "Save results to this CSV file. If omitted, a name is derived "
+            "from the run type, e.g. dft_binding_energies_all.csv (relax) or "
+            "dft_binding_energies_singlepoint_all.csv (single-point). "
+            "Pass --no-output to only print to screen."
+        )
+    )
+    parser.add_argument(
+        "--no-output", action="store_true",
+        help="Print results to screen only; do not write a CSV file."
     )
     args = parser.parse_args()
+
+    # Resolve the output path: explicit --output wins, otherwise derive a
+    # sensible default (unless --no-output was requested).
+    if args.no_output:
+        output_path = None
+    elif args.output:
+        output_path = Path(args.output)
+    else:
+        output_path = Path(default_output_name(
+            args.calc_type, args.all_functionals, args.functional))
 
     best_dirs = [Path(d) for d in args.best_dirs]
     slab_dir  = Path(args.slab_dir)
@@ -569,8 +603,8 @@ Examples
             all_results.extend(results)
 
         print(f"\nTotal rows across all functionals: {len(all_results)}")
-        if args.output:
-            write_csv(all_results, Path(args.output), include_functional=True)
+        if output_path:
+            write_csv(all_results, output_path, include_functional=True)
         return
 
     # ── Single-functional or flat mode ─────────────────────────────────────
@@ -596,8 +630,8 @@ Examples
 
     print_table(results, functional=args.functional)
 
-    if args.output:
-        write_csv(results, Path(args.output),
+    if output_path:
+        write_csv(results, output_path,
                   include_functional=bool(args.functional))
 
 

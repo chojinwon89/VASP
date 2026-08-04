@@ -295,3 +295,30 @@ def test_calc_binding_energy_accepts_single_bucket_or_direct_system_best_dir(tmp
     assert bucket_rows[0]["status"] == "ok"
     assert len(direct_rows) == 1
     assert direct_rows[0]["status"] == "ok"
+
+
+def test_default_output_name():
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "calc_binding_energy", REPO_ROOT / "calc_binding_energy.py"
+    )
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+
+    assert (
+        mod.default_output_name("relax", True)
+        == "dft_binding_energies_all.csv"
+    )
+    assert (
+        mod.default_output_name("single-point", True)
+        == "dft_binding_energies_singlepoint_all.csv"
+    )
+    assert (
+        mod.default_output_name("single-point", False, "PBE_D3")
+        == "dft_binding_energies_singlepoint_pbe_d3.csv"
+    )
+    assert (
+        mod.default_output_name("relax", False)
+        == "dft_binding_energies.csv"
+    )
