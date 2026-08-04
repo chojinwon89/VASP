@@ -497,14 +497,16 @@ For single-point jobs (extra `singlepoint/` level written by `setup_vasp_jobs.py
 ```bash
 python calc_binding_energy.py \
     --best-dirs poscar/best --calc-type single-point \
-    --all-functionals --functionals PBE PBE_D3 r2scan beef_vdw \
-    --output dft_binding_energies_all.csv
+    --all-functionals --functionals PBE PBE_D3 r2scan beef_vdw
 ```
 
 With `--calc-type single-point`, the slab+molecule **and** the bare-slab /
 gas-molecule reference OUTCARs are read from a `singlepoint/<functional>/`
 subdirectory when present (e.g. `vasp_slab/<surface>/singlepoint/<functional>/OUTCAR`),
 falling back to the plain `<functional>/` layout for older runs that lack it.
+If `--output` is omitted the filename is derived automatically, so a single-point
+all-functionals run writes **`dft_binding_energies_singlepoint_all.csv`** (a relax
+run writes `dft_binding_energies_all.csv`). Pass `--no-output` to print only.
 
 | Flag | Default | Description |
 |------|---------|-------------|
@@ -515,9 +517,12 @@ falling back to the plain `<functional>/` layout for older runs that lack it.
 | `--all-functionals` | off | Merge all `--functionals` into one CSV with a `functional` column |
 | `--functionals` | `beef_vdw PBE PBE_D3 r2scan` | Functional subfolders to read with `--all-functionals` |
 | `--calc-type` | `relax` | `relax` or `single-point` (adds the `singlepoint/` path segment) |
-| `--output` | (screen) | Write results to this CSV |
+| `--output` | (auto) | Write to this CSV; default derived from run type (adds `_singlepoint` for single-point) |
+| `--no-output` | off | Print to screen only; write no CSV |
 
-The resulting `dft_binding_energies_all.csv` is the DFT input for the comparison plot.
+The resulting CSV (`dft_binding_energies_all.csv` for relax, or
+`dft_binding_energies_singlepoint_all.csv` for single-point) is the DFT input for
+the comparison plot.
 
 ### Step 12 — Compare MLIP vs DFT (`plot_dft_vs_sevennet.py`)
 
@@ -538,7 +543,7 @@ python plot_dft_vs_sevennet.py \
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--dft` | `dft_binding_energies_all.csv` | DFT CSV from `calc_binding_energy.py` |
+| `--dft` | `dft_binding_energies_all.csv` | DFT CSV from `calc_binding_energy.py` (use `dft_binding_energies_singlepoint_all.csv` for single-point) |
 | `--ml` | `workflow/summary.csv` | MLIP CSV from `collect_results.py` |
 | `--calculators` | `sevennet_omni` | ML calculators to overlay (SevenNet = filled, MatterSim = hollow) |
 | `--functionals` | `pbe pbe_d3 beef_vdw r2scan` | DFT functionals (one panel each) |
