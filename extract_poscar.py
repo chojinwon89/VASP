@@ -67,6 +67,11 @@ Usage
     # Re-seat adsorbates that drifted too far from the surface during MLIP relax
     python extract_poscar.py --reseat-gap --max-gap 3.0 --target-gap 2.2
 
+    # Fix only the failed jobs from bond-distance-review, by nearest contact
+    python extract_poscar.py \\
+        --reseat-contact --max-contact 3.0 --target-contact 2.2 \\
+        --flagged-csv /path/to/flagged_shortlist.csv --verbose
+
     # All seeds + best, everything under a custom root
     python extract_poscar.py \\
         --runs-dir /scratch/jcho5/.../runs \\
@@ -148,7 +153,46 @@ def is_run_finished(run_dir: Path) -> bool:
 # Elements treated as the metal slab when re-seating a drifted adsorbate.
 SURFACE_ELEMENTS = {
     "Cu", "Ag", "Au", "Pt", "Pd", "Ni", "Co", "Fe", "Rh", "Ir", "Ru", "Zn",
+    "Cr", "Mn", "Ti", "V", "W", "Mo", "Nb", "Ta", "Re", "Os", "Sc",
 }
+
+
+def _split_metal_adsorbate(atoms: Atoms, surface_elements: set):
+    """Return (surf_idx, ads_idx) index lists for slab vs adsorbate atoms."""
+    symbols = atoms.get_chemical_symbols()
+    surf_idx = [i for i, s in enumerate(symbols) if s in surface_elements]
+    ads_idx = [i for i, s in enumerate(symbols) if s not in surface_elements]
+    return surf_idx, ads_idx
+
+
+def min_metal_adsorbate_distance(atoms: Atoms,
+                                 surface_elements: set = SURFACE_ELEMENTS,
+                                 heavy_only: bool = True):
+    """
+    Nearest metal-adsorbate contact distance (Angstrom), matching the metric
+    used by the bond-distance-review analysis (min_dist_heavy / pair_heavy).
+
+    Returns (distance, i_metal, j_adsorbate) or (None, None, None) if there are
+    no metal or adsorbate atoms (or, with heavy_only, no heavy adsorbate atoms).
+    """
+    import numpy as np
+
+    surf_idx, ads_idx = _split_metal_adsorbate(atoms, surface_elements)
+    if heavy_only:
+        symbols = atoms.get_chemical_symbols()
+        ads_idx = [j for j in ads_idx if symbols[j] != "H"]
+    if not surf_idx or not ads_idx:
+        return None, None, None
+
+    pos = atoms.get_positions()
+    metal_pos = pos[surf_idx]
+    best = (float("inf"), None, None)
+    for j in ads_idx:
+        d = np.linalg.norm(metal_pos - pos[j], axis=1)
+        k = int(d.argmin())
+        if d[k] < best[0]:
+            best = (float(d[k]), surf_idx[k], j)
+    return best
 
 
 def reseat_adsorbate(atoms: Atoms, max_gap: float, target_gap: float,
@@ -167,8 +211,7 @@ def reseat_adsorbate(atoms: Atoms, max_gap: float, target_gap: float,
     symbols = atoms.get_chemical_symbols()
     z = atoms.get_positions()[:, 2]
 
-    surf_idx = [i for i, s in enumerate(symbols) if s in surface_elements]
-    ads_idx = [i for i, s in enumerate(symbols) if s not in surface_elements]
+    surf_idx, ads_idx = _split_metal_adsorbate(atoms, surface_elements)
 
     if not surf_idx or not ads_idx:
         return atoms, 0.0
@@ -186,6 +229,91 @@ def reseat_adsorbate(atoms: Atoms, max_gap: float, target_gap: float,
         positions[i, 2] -= shift
     atoms.set_positions(positions)
     return atoms, shift
+
+
+def reseat_adsorbate_contact(atoms: Atoms, max_contact: float,
+                             target_contact: float,
+                             surface_elements: set = SURFACE_ELEMENTS,
+                             heavy_only: bool = True):
+    """
+    Re-seat a drifted adsorbate using the nearest metal-adsorbate *contact*
+    distance (the same metric the bond-distance-review analysis flags on).
+
+    If the current minimum metal-adsorbate distance exceeds max_contact, the
+    whole adsorbate is translated straight down in z until that minimum contact
+    distance equals target_contact. A downward shift monotonically shrinks the
+    nearest contact, so the required shift is found by bisection.
+
+    Returns (atoms, applied_shift). applied_shift is 0.0 when no change was made
+    (no metal/adsorbate atoms or contact already within tolerance).
+
+    Only z is changed; x/y and the adsorbate's internal geometry are preserved.
+    """
+    import numpy as np
+
+    surf_idx, ads_idx = _split_metal_adsorbate(atoms, surface_elements)
+    heavy_ads = ads_idx
+    if heavy_only:
+        symbols = atoms.get_chemical_symbols()
+        heavy_ads = [j for j in ads_idx if symbols[j] != "H"]
+    if not surf_idx or not heavy_ads or not ads_idx:
+        return atoms, 0.0
+
+    pos = atoms.get_positions()
+    metal_pos = pos[surf_idx]
+    ads_heavy_pos = pos[heavy_ads]
+
+    def min_contact_after(shift):
+        shifted = ads_heavy_pos.copy()
+        shifted[:, 2] -= shift
+        # pairwise distances metal x adsorbate-heavy
+        diff = metal_pos[:, None, :] - shifted[None, :, :]
+        return float(np.sqrt((diff ** 2).sum(axis=2)).min())
+
+    current = min_contact_after(0.0)
+    if current <= max_contact:
+        return atoms, 0.0
+
+    # Bisect on downward shift to reach target_contact.
+    lo, hi = 0.0, current  # shifting by `current` guarantees contact <= target
+    for _ in range(60):
+        mid = 0.5 * (lo + hi)
+        if min_contact_after(mid) > target_contact:
+            lo = mid
+        else:
+            hi = mid
+    shift = 0.5 * (lo + hi)
+
+    positions = atoms.get_positions()
+    for i in ads_idx:
+        positions[i, 2] -= shift
+    atoms.set_positions(positions)
+    return atoms, shift
+
+
+def load_flagged_names(csv_path: Path) -> set:
+    """
+    Read a bond-distance-review CSV (flagged_shortlist.csv or bond_distances.csv)
+    and return the set of '<surface>_<molecule>' system names to re-seat.
+
+    Uses the 'name' column when present; otherwise builds it from the 'surface'
+    and 'molecule' columns.
+    """
+    import csv as _csv
+
+    names = set()
+    with Path(csv_path).open(newline="") as f:
+        reader = _csv.DictReader(f)
+        for row in reader:
+            name = (row.get("name") or "").strip()
+            if not name:
+                surface = (row.get("surface") or "").strip()
+                molecule = (row.get("molecule") or "").strip()
+                if surface and molecule:
+                    name = "{}_{}".format(surface, molecule)
+            if name:
+                names.add(name)
+    return names
 
 
 def sort_atoms_by_species(atoms: Atoms) -> Atoms:
@@ -446,6 +574,43 @@ def main():
         ),
     )
     parser.add_argument(
+        "--reseat-contact", action="store_true",
+        help=(
+            "Re-seat drifted adsorbates using the nearest metal-adsorbate CONTACT "
+            "distance (the metric the bond-distance-review analysis flags on). If "
+            "the minimum metal-adsorbate distance exceeds --max-contact, the "
+            "adsorbate is translated straight down in z until that contact equals "
+            "--target-contact. Recommended for fixing 'detached' failed jobs "
+            "before DFT. Preferred over --reseat-gap when both are given."
+        ),
+    )
+    parser.add_argument(
+        "--max-contact", type=float, default=3.0, metavar="ANGSTROM",
+        help=(
+            "Only used with --reseat-contact. Maximum tolerated nearest "
+            "metal-adsorbate contact distance in Angstrom before re-seating "
+            "(default: 3.0)."
+        ),
+    )
+    parser.add_argument(
+        "--target-contact", type=float, default=2.2, metavar="ANGSTROM",
+        help=(
+            "Only used with --reseat-contact. Target nearest metal-adsorbate "
+            "contact distance in Angstrom to seat the adsorbate at (default: 2.2, "
+            "a typical chemisorption contact distance)."
+        ),
+    )
+    parser.add_argument(
+        "--flagged-csv", default=None, metavar="FILE",
+        help=(
+            "Restrict re-seating to the systems listed in a bond-distance-review "
+            "CSV (e.g. flagged_shortlist.csv). Only runs whose "
+            "'<surface>_<adsorbate>' name matches a 'name' (or surface+molecule) "
+            "row in the CSV are re-seated; all others are written unchanged. "
+            "Requires --reseat-contact or --reseat-gap."
+        ),
+    )
+    parser.add_argument(
         "--no-sort", action="store_true",
         help="Do NOT sort atoms by species (default: sort, VASP convention)",
     )
@@ -495,21 +660,56 @@ def main():
     print()
 
     # ---- Re-seat drifted adsorbates ---------------------------------------
-    if args.reseat_gap:
+    if args.flagged_csv and not (args.reseat_contact or args.reseat_gap):
+        print("ERROR: --flagged-csv requires --reseat-contact or --reseat-gap")
+        raise SystemExit(1)
+
+    flagged_names = None
+    if args.flagged_csv:
+        flagged_names = load_flagged_names(Path(args.flagged_csv))
+        print("Loaded {} flagged system name(s) from {}".format(
+              len(flagged_names), args.flagged_csv))
+
+    if args.reseat_contact or args.reseat_gap:
         reseated = 0
+        matched_flagged = 0
         for e in entries:
-            _, shift = reseat_adsorbate(
-                e["atoms"], max_gap=args.max_gap, target_gap=args.target_gap)
+            system_name = "{}_{}".format(e["surface"], e["adsorbate"])
+            if flagged_names is not None and system_name not in flagged_names:
+                continue
+            matched_flagged += 1
+
+            if args.reseat_contact:
+                before, _, _ = min_metal_adsorbate_distance(e["atoms"])
+                _, shift = reseat_adsorbate_contact(
+                    e["atoms"], max_contact=args.max_contact,
+                    target_contact=args.target_contact)
+                mode = "contact"
+            else:
+                before = None
+                _, shift = reseat_adsorbate(
+                    e["atoms"], max_gap=args.max_gap, target_gap=args.target_gap)
+                mode = "gap"
+
             if shift > 0.0:
                 reseated += 1
                 if args.verbose:
-                    print("  [reseat]  {}_{} seed{} calc={}: moved adsorbate "
-                          "down {:.2f} Angstrom".format(
-                              e["surface"], e["adsorbate"], e["seed"],
-                              e["calculator"], shift))
-        print("Re-seated {} adsorbate(s) with gap > {:.2f} Angstrom "
+                    extra = (" (contact {:.2f}->{:.2f})".format(
+                                before, args.target_contact)
+                             if before is not None else "")
+                    print("  [reseat/{}]  {} seed{} calc={}: moved adsorbate "
+                          "down {:.2f} Angstrom{}".format(
+                              mode, system_name, e["seed"],
+                              e["calculator"], shift, extra))
+
+        thr = args.max_contact if args.reseat_contact else args.max_gap
+        tgt = args.target_contact if args.reseat_contact else args.target_gap
+        metric = "contact" if args.reseat_contact else "gap"
+        scope = (" among {} flagged system-run(s)".format(matched_flagged)
+                 if flagged_names is not None else "")
+        print("Re-seated {} adsorbate(s){} with {} > {:.2f} Angstrom "
               "(target {:.2f}).\n".format(
-                  reseated, args.max_gap, args.target_gap))
+                  reseated, scope, metric, thr, tgt))
 
     written = 0
     skipped_existing = 0
