@@ -524,7 +524,7 @@ The resulting CSV (`dft_binding_energies_all.csv` for relax, or
 `dft_binding_energies_singlepoint_all.csv` for single-point) is the DFT input for
 the comparison plot.
 
-### Step 12 — Compare MLIP vs DFT (`plot_dft_vs_sevennet.py`)
+### Step 12 — Compare MLIP vs DFT (`plot_dft_vs_mlip.py`)
 
 Produce a 2×2 parity-plot grid (one panel per DFT functional) comparing the
 GOAD+MLIP adsorption energies (`workflow/summary.csv`) against DFT
@@ -532,7 +532,7 @@ GOAD+MLIP adsorption energies (`workflow/summary.csv`) against DFT
 reports per-panel MAE / RMSE / R² / bias computed within the plot window.
 
 ```bash
-python plot_dft_vs_sevennet.py \
+python plot_dft_vs_mlip.py \
     --dft dft_binding_energies_all.csv \
     --ml  workflow/summary.csv \
     --calculators sevennet_omni 5m \

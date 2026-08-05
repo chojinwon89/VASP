@@ -3,7 +3,7 @@ from pathlib import Path
 import numpy as np
 from ase.io import read
 
-from plot_dft_vs_sevennet import CLASS_MARKERS, CLASS_ORDER, MOL_CLASS
+from plot_dft_vs_mlip import CLASS_MARKERS, CLASS_ORDER, MOL_CLASS
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 INPUTS_DIR = REPO_ROOT / 'inputs'

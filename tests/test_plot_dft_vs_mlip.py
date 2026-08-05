@@ -2,7 +2,7 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 
-from plot_dft_vs_sevennet import (
+from plot_dft_vs_mlip import (
     AXIS_LABEL_FONTSIZE,
     LEGEND_FONTSIZE,
     LEGEND_TITLE_FONTSIZE,
