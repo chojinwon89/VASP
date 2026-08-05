@@ -3,7 +3,9 @@
 collect_results.py
 ==================
 Scan one or more runs directories for result.json files and write a
-consolidated summary CSV.
+consolidated summary CSV. Both the flat layout (``runs/<run>/result.json``)
+and the carbon-count bucketed layout (``runs/C<n>/<run>/result.json``) are
+discovered automatically.
 
 Usage
 -----
@@ -43,7 +45,31 @@ Arguments
 import argparse
 import json
 import csv
+import re
 from pathlib import Path
+
+
+_BUCKET_RE = re.compile(r"C\d+")
+
+
+def find_result_files(base: Path):
+    """Yield result.json files under ``base`` for both layouts.
+
+    Supports the flat layout ``base/<run>/result.json`` and the
+    carbon-count bucketed layout ``base/C<n>/<run>/result.json`` written by
+    newer GOAD runs. Results are de-duplicated and returned sorted.
+    """
+    found = {}
+    # Flat: base/<run>/result.json
+    for result_file in base.glob("*/result.json"):
+        found[result_file.resolve()] = result_file
+    # Bucketed: base/C<n>/<run>/result.json
+    for bucket in base.iterdir():
+        if bucket.is_dir() and _BUCKET_RE.fullmatch(bucket.name):
+            for result_file in bucket.glob("*/result.json"):
+                found[result_file.resolve()] = result_file
+    return [found[k] for k in sorted(found)]
+
 
 
 def parse_args():
@@ -152,7 +178,7 @@ def collect(
             print(f"WARNING: runs directory not found, skipping: {base}")
             continue
 
-        for result_file in sorted(base.glob("*/result.json")):
+        for result_file in find_result_files(base):
             run_dir = result_file.parent
             # Deduplicate in case the same physical path appears under two bases
             resolved = str(run_dir.resolve())

@@ -299,6 +299,10 @@ python collect_results.py
 column -s, -t < workflow/summary.csv
 ```
 
+`collect_results.py` discovers `result.json` files in both the flat
+(`runs/<run>/result.json`) and carbon-count bucketed
+(`runs/C<n>/<run>/result.json`) layouts automatically.
+
 **Incremental collection (skip jobs already summarized).** By default
 `collect_results.py` re-scans everything and rewrites the CSV. Use
 `--skip-existing` to keep the existing rows and only append runs whose
