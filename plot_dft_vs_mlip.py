@@ -95,24 +95,26 @@ FUNC_LABELS = {
 }
 
 METAL_COLORS = {
-    "Cu": "#D55E00",
-    "Pt": "#0072B2",
-    "Pd": "#009E73",
-    "Ni": "#CC79A7",
-    "Ag": "#F0E442",
-    "Au": "#56B4E9",
-    "Co": "#8C564B",
-    "Fe": "#E41A1C",
-    "Cr": "#9467BD",
-    "Mn": "#BCBD22",
-    "Mo": "#FF7F0E",
-    "W":  "#7B3F00",
-    "V":  "#17BECF",
-    "Ti": "#1F77B4",
-    "Zn": "#7F7F7F",
-    "Ru": "#2CA02C",
-    "Rh": "#E377C2",
-    "Ir": "#005B5B",
+    # Original six (unchanged for consistency with earlier figures)
+    "Cu": "#D55E00",   # orange-red
+    "Pt": "#0072B2",   # blue
+    "Pd": "#009E73",   # green
+    "Ni": "#CC79A7",   # pink
+    "Ag": "#F0E442",   # yellow
+    "Au": "#56B4E9",   # light blue
+    # Additional metals — chosen to stay visually distinct from the six above
+    "Co": "#6A3D9A",   # deep purple
+    "Fe": "#7B0000",   # maroon
+    "Cr": "#000000",   # black
+    "Mn": "#FB9A99",   # salmon
+    "Mo": "#1B9E77",   # teal
+    "W":  "#666666",   # grey
+    "V":  "#A6CEE3",   # pale blue
+    "Ti": "#FF69B4",   # hot pink
+    "Zn": "#B2DF8A",   # pale green
+    "Ru": "#E7298A",   # magenta
+    "Rh": "#FFB300",   # amber
+    "Ir": "#4B0082",   # indigo
 }
 
 
