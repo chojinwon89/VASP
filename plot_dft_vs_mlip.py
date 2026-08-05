@@ -10,7 +10,7 @@ showing all ML calculators overlaid, with per-panel MAE / RMSE / R² / bias
 stats computed only on the data within the plot window.
 
 Point style encoding:
-  - Colour  → metal surface  (Cu/Pt/Pd/Ni/Ag/Au)
+  - Colour  → metal surface  (Cu/Pt/Pd/Ni/Ag/Au/Co/Fe/Cr/Mn/Mo/W/V/… )
   - Marker  → molecule class
   - Fill    → calculator  (SevenNet = filled, MatterSim = hollow)
 
@@ -101,7 +101,39 @@ METAL_COLORS = {
     "Ni": "#CC79A7",
     "Ag": "#F0E442",
     "Au": "#56B4E9",
+    "Co": "#8C564B",
+    "Fe": "#E41A1C",
+    "Cr": "#9467BD",
+    "Mn": "#BCBD22",
+    "Mo": "#FF7F0E",
+    "W":  "#7B3F00",
+    "V":  "#17BECF",
+    "Ti": "#1F77B4",
+    "Zn": "#7F7F7F",
+    "Ru": "#2CA02C",
+    "Rh": "#E377C2",
+    "Ir": "#005B5B",
 }
+
+
+def parse_metal(surface: str) -> str:
+    """Extract the metal element symbol from a surface label.
+
+    Handles both two-letter metals (``Cr111`` -> ``Cr``) and single-letter
+    metals (``W110`` -> ``W``) by taking the leading alphabetic characters and
+    matching them against the known ``METAL_COLORS`` symbols. Falls back to the
+    leading letters (or the first two characters) when unknown.
+    """
+    import re as _re
+    m = _re.match(r"[A-Za-z]+", surface or "")
+    letters = m.group() if m else (surface or "")
+    # Prefer a two-letter symbol we know, else a one-letter symbol, else raw.
+    if letters[:2] in METAL_COLORS:
+        return letters[:2]
+    if letters[:1] in METAL_COLORS:
+        return letters[:1]
+    return letters[:2] if len(letters) >= 2 else letters
+
 
 CLASS_MARKERS = {
     "Alkane":            "v",
@@ -431,7 +463,7 @@ def _plot_panel(ax, func, func_label, calc_pairs, dft_vals, ml_data,
             if x < axis_min or x > axis_max or y < axis_min or y > axis_max:
                 continue
 
-            metal  = surf[:2] if len(surf) >= 2 else surf
+            metal  = parse_metal(surf)
             mcolor = METAL_COLORS.get(metal, "grey")
             _, marker = get_molecule_class_and_marker(mol)
 
@@ -569,7 +601,7 @@ def make_figure(functionals, calc_pairs_per_func, dft_data, ml_data,
                    markerfacecolor=c, markeredgecolor="k",
                    markersize=LEGEND_MARKERSIZE, label=m)
         for m, c in METAL_COLORS.items()
-        if any(k[0].startswith(m) for k in all_pairs)
+        if any(parse_metal(k[0]) == m for k in all_pairs)
     ]
     fig.legend(handles=metal_handles, title="Metal",
                loc="upper right", bbox_to_anchor=(0.99, 0.94),

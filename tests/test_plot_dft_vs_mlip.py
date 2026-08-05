@@ -127,3 +127,17 @@ def test_make_figure_legend_layout_for_one_to_three_functionals(tmp_path, monkey
         visible_axes = [ax for ax in fig.axes if ax.get_visible()]
         assert len(visible_axes) == n_funcs
         _assert_legends_do_not_overlap_axes(fig)
+
+
+def test_parse_metal_handles_single_and_two_letter():
+    from plot_dft_vs_mlip import parse_metal, METAL_COLORS
+
+    assert parse_metal("Cr111") == "Cr"
+    assert parse_metal("Co0001") == "Co"
+    assert parse_metal("Fe110") == "Fe"
+    assert parse_metal("W110") == "W"     # single-letter metal
+    assert parse_metal("V111") == "V"     # single-letter metal
+    assert parse_metal("Ag100") == "Ag"
+    # All parsed metals used in tests should have an assigned colour.
+    for surf in ["Cr111", "Co0001", "Fe110", "W110", "V111"]:
+        assert parse_metal(surf) in METAL_COLORS
