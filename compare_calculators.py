@@ -380,7 +380,7 @@ def main():
     print(f"  1. Review {args.priority_csv}")
     print(f"  2. Run VASP (PBE+D3) on the HIGH priority pairs first")
     print(f"  3. After VASP, run: python calc_binding_energy.py --output dft_binding_energies.csv")
-    print(f"  4. Then: python plot_dft_vs_sevennet.py --calculators sevennet_omni 5m")
+    print(f"  4. Then: python plot_dft_vs_mlip.py --calculators sevennet_omni 5m")
     print()
 
 

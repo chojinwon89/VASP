@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """
-plot_dft_vs_sevennet.py
-=======================
+plot_dft_vs_mlip.py
+===================
 Compare GOAD+MLIP adsorption energies against DFT calculations across
 multiple DFT functionals.
 
@@ -28,17 +28,17 @@ Output
 
 Usage
 -----
-    python plot_dft_vs_sevennet.py \\
+    python plot_dft_vs_mlip.py \\
         --calculators sevennet_omni 5m \\
         --functionals pbe pbe_d3 beef_vdw r2scan \\
         --output results/dft_vs_mlip_all.png \\
         --csv-out results/dft_vs_mlip_all.csv
 
     # Exclude pairs where |E_ads_DFT - E_ads_ML| > 5 eV (default)
-    python plot_dft_vs_sevennet.py --max-diff 5.0
+    python plot_dft_vs_mlip.py --max-diff 5.0
 
     # Override axis limits
-    python plot_dft_vs_sevennet.py --axis-min -3.0 --axis-max 0.5
+    python plot_dft_vs_mlip.py --axis-min -3.0 --axis-max 0.5
 """
 
 import argparse
