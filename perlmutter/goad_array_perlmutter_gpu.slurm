@@ -18,7 +18,7 @@
 # (Its generated submit_missing.sh passes GOAD_TASK_ID_LIST, handled below.)
 # ============================================================================
 #SBATCH -J goad_gpu
-#SBATCH -A <NERSC_PROJECT>          # your project (GPU hours). Delete to use Iris default.
+#SBATCH -A m5281          # your project (GPU hours). Delete to use Iris default.
 #SBATCH -C gpu                      # GPU nodes (A100). Use "gpu&hbm80g" for 80 GB A100s.
 #SBATCH -q shared                   # shared QOS: 1-2 GPUs, fractional-node charging
 #SBATCH -t 12:00:00                 # shared allows up to 48h; tune down after a test batch

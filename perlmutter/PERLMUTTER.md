@@ -25,7 +25,7 @@ software environment differ. Files in this folder:
 | Queue | partition implies it | `-q shared` / `regular` / `preempt` (**must set — default is `debug`, 30 min!**) |
 | GPU request | `--gres=gpu:1` | `--gpus=1` |
 | 1-GPU job | dedicated node | `-q shared` → ¼ node, ¼ charge |
-| Account | `--account=ccpc` | `-A <project>` (CPU & GPU hours are **separate pools**) |
+| Account | `--account=ccpc` | `-A m5281` (CPU & GPU hours are **separate pools**) |
 | GPU | H100 | A100 (sm_80, CUDA 12.1 wheels) |
 | Cores/CPU node | 104 | 128 physical / 256 logical |
 | Scratch | `/scratch/jcho5` | `$PSCRATCH` |
@@ -42,12 +42,11 @@ git clone https://github.com/chojinwon89/VASP.git
 cd VASP
 
 # 2. Build the conda env (see options/paths inside the script)
-export GOAD_ENV=$PSCRATCH/goad-env          # or /global/common/software/<project>/goad-env
+export GOAD_ENV=/global/common/software/m5281/goad-env   # persistent; or $PSCRATCH/goad-env (purged ~8wk idle)
 bash perlmutter/setup_perlmutter_env.sh
 
-# 3. Put your project code into the two .slurm files (or delete the -A line to
-#    use your Iris default project):
-sed -i 's/<NERSC_PROJECT>/mXXXX/' perlmutter/goad_array_perlmutter_*.slurm
+# 3. The two .slurm files are already set to  -A m5281  (your project).
+#    To use a different project, edit the "#SBATCH -A" line in each.
 ```
 
 > **Run `runs/` on `$PSCRATCH`, not `$HOME`.** The output tree has many files and
@@ -121,7 +120,7 @@ python collect_results.py                # gather finished runs
 - **CPU and GPU hours are separate allocations** — a project can have one and not the
   other. Check in [Iris](https://iris.nersc.gov).
 - **`$PSCRATCH` is purged** after ~8 weeks of no access. Copy `runs/` results you want
-  to keep to `$CFS/<project>/` or off-site (`collect_results.py` first).
+  to keep to `$CFS/m5281/` or off-site (`collect_results.py` first).
 - **`preempt` QOS** (`-q preempt`, add `--requeue`) is 4× cheaper after the first 2 h
   and a great fit here since tasks are idempotent/restartable — consider it for the big
   52k sweep once the GPU version is proven.

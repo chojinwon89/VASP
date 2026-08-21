@@ -6,7 +6,7 @@
 #     bash perlmutter/setup_perlmutter_env.sh
 #
 # Where to put the env (set GOAD_ENV before running):
-#   * BEST: /global/common/software/<project>/goad-env
+#   * BEST: /global/common/software/m5281/goad-env
 #       -> read-optimised, persistent, meant for software/conda envs.
 #   * OK:   $PSCRATCH/goad-env   (the default below)
 #       -> fast + big, but PURGED after ~8 weeks of no access. Re-run if purged.
@@ -20,7 +20,7 @@ GOAD_ENV="${GOAD_ENV:-$PSCRATCH/goad-env}"
 PYVER="${PYVER:-3.11}"
 
 echo ">> Target env: $GOAD_ENV  (python $PYVER)"
-echo ">> Set GOAD_ENV to change location (e.g. /global/common/software/<project>/goad-env)"
+echo ">> Set GOAD_ENV to change location (e.g. /global/common/software/m5281/goad-env)"
 
 module load conda
 
@@ -64,5 +64,5 @@ echo
 echo ">> Done. Before submitting jobs, export the env path so the .slurm scripts find it:"
 echo "     export GOAD_ENV=$GOAD_ENV"
 echo ">> Verify the GPU is visible on a compute node:"
-echo "     salloc -A <NERSC_PROJECT> -C gpu -q shared -t 0:15:00 -n1 -c32 --gpus=1"
+echo "     salloc -A m5281 -C gpu -q shared -t 0:15:00 -n1 -c32 --gpus=1"
 echo "     conda activate $GOAD_ENV && python -c 'import torch; print(torch.cuda.get_device_name(0))'"

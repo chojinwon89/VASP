@@ -13,7 +13,7 @@
 #   sbatch --array=0-199%20 perlmutter/goad_array_perlmutter_cpu.slurm workflow/tasks_custom.csv
 # ============================================================================
 #SBATCH -J goad_cpu
-#SBATCH -A <NERSC_PROJECT>          # your project (CPU hours). Delete to use Iris default.
+#SBATCH -A m5281          # your project (CPU hours). Delete to use Iris default.
 #SBATCH -C cpu
 #SBATCH -q shared                   # sub-node, fractional-node charging (max 0.5 node)
 #SBATCH -t 12:00:00
