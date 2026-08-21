@@ -51,6 +51,13 @@ ASE_NAMED = {
     "NO":  "NO",
     "NO2": "NO2",
     "SO2": "SO2",
+    # --- Missing reaction fragments (SevenNet gallery gap-fill) ---
+    # ASE's G2 database carries proper (radical) geometries for these, so we
+    # prefer it over an RDKit closed-shell surrogate.
+    "acetylene": "C2H2",
+    "HCN":       "HCN",
+    "hydroxyl":  "OH",     # OH radical
+    "methoxy":   "CH3O",   # CH3O radical
 }
 
 # ---------------------------------------------------------------------------
@@ -248,6 +255,18 @@ def smiles_to_atoms(smiles: str, cell_size: float = _CELL_SIZE) -> Atoms:
     return atoms
 
 
+# ---------------------------------------------------------------------------
+# Single-atom adsorbates (atomic H, atomic O)
+# ---------------------------------------------------------------------------
+# ase.build.molecule() has no single-atom entries and RDKit cannot embed a lone
+# atom, so build these directly as a one-atom ASE Atoms object in the vacuum
+# cell.  Used as atomic adsorbates (adatoms) in the adsorption workflow.
+ATOMIC = {
+    "atomicH": "H",
+    "atomicO": "O",
+}
+
+
 written = []
 skipped = []
 
@@ -279,6 +298,21 @@ for name, smiles in SMILES_MOLECULES.items():
         written.append(f"{name} ({len(atoms)} atoms)")
     except Exception as exc:
         print(f"  WARNING: could not build {name} from SMILES '{smiles}': {exc}")
+
+# --- Single-atom adsorbates ---
+for name, symbol in ATOMIC.items():
+    out_path = f"inputs/{name}.cif"
+    if os.path.exists(out_path):
+        skipped.append(name)
+        continue
+    try:
+        atoms = Atoms(symbol, positions=[(0.0, 0.0, 0.0)],
+                      cell=[_CELL_SIZE, _CELL_SIZE, _CELL_SIZE], pbc=True)
+        atoms.center()
+        write(out_path, atoms)
+        written.append(f"{name} ({len(atoms)} atoms)")
+    except Exception as exc:
+        print(f"  WARNING: could not build atomic {name}: {exc}")
 
 print(f"\n{'='*60}")
 print(f"Molecule CIF generation complete")

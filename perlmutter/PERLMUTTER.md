@@ -60,6 +60,29 @@ Production tasks already exist in `workflow/tasks_custom.csv`
 (**52,440** tasks: `task_id, surface, adsorbate, seed, calculator, population_size, generations, n_carbon`).
 Regenerate/extend with `workflow/make_tasks_custom.py` if needed.
 
+### Gap-fill: the 6 missing SevenNet structures
+
+Six adsorbates have **no** SevenNet-OMNI gallery structure yet:
+`acetylene`, `methoxy`, `HCN`, `hydroxyl`, `atomicH`, `atomicO`.
+A dedicated, self-contained task list covers them on all 7 non-magnetic metals:
+
+- `workflow/tasks_missing_sevennet.csv` — **252 tasks**
+  (6 adsorbates × {Ag,Au,Cu,Ir,Pd,Pt,Rh} × {100,110,111} × 2 seeds × `sevennet_omni`).
+- Regenerate with `python workflow/make_tasks_missing_sevennet.py`.
+
+Their gas-phase CIFs are already committed under `inputs/`, and
+`molecule_utils.py` / `generate_molecule_cifs.py` know how to (re)build them
+(ASE G2 for the 4 molecular species, single-atom `Atoms()` for H/O).
+
+Run it (from the repo root, after `conda activate $GOAD_ENV`):
+```bash
+python generate_surface_cifs.py       # ensures inputs/{Ag100..Rh111}.cif exist (idempotent)
+python generate_molecule_cifs.py      # builds the 6 adsorbate CIFs (skips existing)
+sbatch --array=0-251%50 perlmutter/goad_array_perlmutter_gpu.slurm workflow/tasks_missing_sevennet.csv
+```
+Results land in `runs/C{n}/<surface>_<adsorbate>_seed<seed>_sevennet_omni/`.
+
+
 ---
 
 ## Submitting

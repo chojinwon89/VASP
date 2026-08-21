@@ -151,6 +151,16 @@ MOLECULE_SMILES = {
     "propyl_syringol":          "CCCc1cc(OC)c(O)c(OC)c1",
     # C3 multi-OH
     "glycerol":                 "OCC(O)CO",
+
+    # --- Missing reaction fragments (SevenNet gallery gap-fill) ---
+    # Open-shell / atomic species. These SMILES are geometry-only surrogates
+    # used for carbon_count and metadata; they are NOT spin/charge-accurate.
+    "acetylene":                "C#C",    # C2
+    "HCN":                      "C#N",    # C1
+    "methoxy":                  "C[O]",   # C1  (CH3O radical)
+    "hydroxyl":                 "[OH]",   # C0  (OH radical)
+    "atomicH":                  "[H]",    # C0
+    "atomicO":                  "[O]",    # C0
 }
 
 
