@@ -38,8 +38,11 @@ Usage
 Then, on Perlmutter (after `python generate_surface_cifs.py` and
 `python generate_molecule_cifs.py`):
 
-    sbatch --array=0-251%50 perlmutter/goad_array_perlmutter_gpu.slurm \
+    sbatch --array=0-587%50 -t 00:20:00 perlmutter/goad_array_perlmutter_gpu.slurm \
         workflow/tasks_missing_sevennet.csv
+
+(-t 00:20:00 overrides the script's 12h default so the NERSC cost estimate is
+~49 node-hours instead of 1764; these <=C2 tasks finish in <=~11 min on an A100.)
 """
 import csv
 import sys
@@ -111,9 +114,11 @@ def main():
         writer.writerows(rows)
 
     print(f"Wrote {task_id} tasks to {out}")
-    print(f"Submit with:  sbatch --array=0-{task_id - 1}%50 "
+    print(f"Submit with:  sbatch --array=0-{task_id - 1}%50 -t 00:20:00 "
           f"perlmutter/goad_array_perlmutter_gpu.slurm "
           f"workflow/tasks_missing_sevennet.csv")
+    print("  (-t 00:20:00: these are <=C2, ~<=11 min each; keeps the NERSC cost "
+          "estimate ~49 node-h. The script's 12h default is for the big library run.)")
     print()
     print("Adsorbate breakdown:")
     counts = Counter(r["adsorbate"] for r in rows)

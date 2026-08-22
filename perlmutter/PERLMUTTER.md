@@ -92,9 +92,19 @@ Run it (from the repo root, after `conda activate $GOAD_ENV`):
 ```bash
 python generate_surface_cifs.py       # ensures inputs/{Ag100..Rh111}.cif exist (idempotent)
 python generate_molecule_cifs.py      # builds the adsorbate CIFs (skips existing)
-sbatch --array=0-587%50 perlmutter/goad_array_perlmutter_gpu.slurm workflow/tasks_missing_sevennet.csv
+mkdir -p slurm-logs runs              # Slurm needs the -o log dir to exist before submit
+sbatch --array=0-587%50 -t 00:20:00 perlmutter/goad_array_perlmutter_gpu.slurm workflow/tasks_missing_sevennet.csv
 ```
 Results land in `runs/C{n}/<surface>_<adsorbate>_seed<seed>_sevennet_omni/`.
+
+> 💰 **Wall time drives the NERSC cost gate.** The estimate = `N_tasks × -t × 0.25`
+> (shared QOS, 1 A100 = ¼ node). The script's `#SBATCH -t 12:00:00` default is
+> sized for the big `tasks_custom.csv` (large molecules) and would estimate this
+> 588-task batch at 1764 node-hours — over a typical small balance. These
+> adsorbates are all ≤ C2 and finish in **≤ ~11 min each** (measured on A100), so
+> override with **`-t 00:20:00`** on the command line: estimate ≈ 49 node-hours,
+> actual charge far less. Do **not** lower the in-script default — the full
+> library run still needs the long wall.
 
 
 
