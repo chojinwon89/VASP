@@ -62,18 +62,20 @@ Regenerate/extend with `workflow/make_tasks_custom.py` if needed.
 
 ### Gap-fill: the missing SevenNet structures (incl. open-shell radicals)
 
-**18 adsorbates** have **no** SevenNet-OMNI gallery structure yet. A dedicated,
-self-contained task list covers them on all 7 non-magnetic metals:
+**14 adsorbates** have **no** SevenNet-OMNI gallery structure yet. A dedicated,
+self-contained task list covers them on all 7 non-magnetic metals. Species that
+*already* have gallery results (`CH2`, `CH3`, `HCO`, `O2`) are deliberately
+**excluded** so we don't recompute them.
 
 - Closed-shell / atomic gap-fill (6): `acetylene`, `HCN`, `methoxy`, `hydroxyl`,
   `atomicH`, `atomicO`.
-- Open-shell radicals (12), well-known C/H/O validation set:
-  `CH3`, `CH2`, `CH`, `atomicC` (CHx ladder); `C2H5`, `C2H3`, `C2H` (C2Hx ladder);
-  `O2`, `HCO`, `CH2OH`, `OOH`, `COOH` (oxygen + catalysis intermediates
+- Open-shell radicals (8), well-known C/H/O validation set:
+  `CH`, `atomicC` (CHx ladder); `C2H5`, `C2H3`, `C2H` (C2Hx ladder);
+  `CH2OH`, `OOH`, `COOH` (oxygen + catalysis intermediates
   — `OOH`=hydroperoxyl is the ORR/OER `*OOH`; `COOH`=carboxyl is the CO₂RR `*COOH`).
 
-- `workflow/tasks_missing_sevennet.csv` — **756 tasks**
-  (18 adsorbates × {Ag,Au,Cu,Ir,Pd,Pt,Rh} × {100,110,111} × 2 seeds × `sevennet_omni`).
+- `workflow/tasks_missing_sevennet.csv` — **588 tasks**
+  (14 adsorbates × {Ag,Au,Cu,Ir,Pd,Pt,Rh} × {100,110,111} × 2 seeds × `sevennet_omni`).
 - Regenerate with `python workflow/make_tasks_missing_sevennet.py`.
 
 Their gas-phase CIFs are committed under `inputs/`, and `molecule_utils.py` /
@@ -90,7 +92,7 @@ Run it (from the repo root, after `conda activate $GOAD_ENV`):
 ```bash
 python generate_surface_cifs.py       # ensures inputs/{Ag100..Rh111}.cif exist (idempotent)
 python generate_molecule_cifs.py      # builds the adsorbate CIFs (skips existing)
-sbatch --array=0-755%50 perlmutter/goad_array_perlmutter_gpu.slurm workflow/tasks_missing_sevennet.csv
+sbatch --array=0-587%50 perlmutter/goad_array_perlmutter_gpu.slurm workflow/tasks_missing_sevennet.csv
 ```
 Results land in `runs/C{n}/<surface>_<adsorbate>_seed<seed>_sevennet_omni/`.
 

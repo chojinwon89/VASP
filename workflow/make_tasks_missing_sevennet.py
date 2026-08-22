@@ -8,16 +8,20 @@ are MISSING from the SevenNet gallery (i.e. no *_sevennet_omni.cif exists yet).
 Unlike make_tasks_custom.py -- which auto-discovers EVERY molecule in inputs/
 and would emit >50k tasks -- this script emits only the gap-fill set:
 
-    18 adsorbates  x  7 non-magnetic metals  x  3 facets  x  2 seeds  x  1 calc
-      = 756 SevenNet-OMNI GOAD tasks.
+    14 adsorbates  x  7 non-magnetic metals  x  3 facets  x  2 seeds  x  1 calc
+      = 588 SevenNet-OMNI GOAD tasks.
+
+Only adsorbates with NO existing SevenNet gallery structure are included; species
+that already have gallery results (CH2, CH3, HCO, O2) are deliberately excluded so
+we don't recompute them.
 
 Adsorbates (all C0-C2 -> 2 seeds each, per the standard tiered scheme):
     Original gap-fill (6):
         acetylene (C2)  methoxy (C1)  HCN (C1)  hydroxyl (C0)  atomicH (C0)  atomicO (C0)
-    Open-shell radicals (12), well-known C/H/O validation set:
-        CH3, CH2, CH, atomicC        (CHx ladder)
+    Open-shell radicals (8), well-known C/H/O validation set:
+        CH, atomicC                  (CHx ladder)
         C2H5, C2H3, C2H              (C2Hx ladder)
-        O2, HCO, CH2OH, OOH, COOH    (oxygen + catalysis intermediates)
+        CH2OH, OOH, COOH             (oxygen + catalysis intermediates)
 
 None of these have a SevenNet gallery structure yet, so they are generated from
 scratch (see molecule_utils.py / generate_molecule_cifs.py). The radicals use
@@ -55,12 +59,13 @@ FACETS = ["100", "110", "111"]
 ADSORBATES = [
     # original gap-fill (6)
     "acetylene", "HCN", "methoxy", "hydroxyl", "atomicH", "atomicO",
-    # open-shell radicals -- CHx ladder
-    "CH3", "CH2", "CH", "atomicC",
+    # open-shell radicals -- CHx ladder (CH3, CH2 already in gallery -> excluded)
+    "CH", "atomicC",
     # open-shell radicals -- C2Hx ladder
     "C2H5", "C2H3", "C2H",
-    # open-shell radicals -- oxygen radicals
-    "O2", "HCO", "CH2OH", "OOH", "COOH",
+    # open-shell radicals -- oxygen / catalysis intermediates
+    # (O2, HCO already in gallery -> excluded)
+    "CH2OH", "OOH", "COOH",
 ]
 
 CALCULATOR = "sevennet_omni"   # 7net-mf-ompa (omat24, PBE+D3) -- the gallery calc
