@@ -36,6 +36,9 @@ pip install torch --index-url https://download.pytorch.org/whl/cu121
 
 echo ">> Installing GOAD scientific stack..."
 pip install ase numpy matplotlib
+# RDKit is required by generate_molecule_cifs.py (SMILES molecules) and by the
+# GA torsion detection. Needed for the full tasks_custom.csv set.
+pip install rdkit
 
 echo ">> Installing MLIP calculators used by tasks_custom.csv (sevennet_omni) + MatterSim..."
 pip install sevenn
@@ -44,13 +47,12 @@ pip install mattersim || echo "!! mattersim failed to install — fine if you on
 # Optional extra calculators (uncomment if your tasks use them):
 # pip install chgnet
 # pip install mace-torch
-# conda install -y -c conda-forge rdkit
 
 echo
 echo ">> Verifying imports (torch.cuda is expected to be False on a login node — check on a GPU node):"
 python - <<'PY'
 import importlib
-for m in ["ase", "numpy", "torch", "sevenn"]:
+for m in ["ase", "numpy", "torch", "sevenn", "rdkit"]:
     try:
         mod = importlib.import_module(m)
         print(f"  OK  {m} {getattr(mod,'__version__','?')}")

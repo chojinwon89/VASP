@@ -18,8 +18,16 @@ import os
 from ase.build import molecule as ase_molecule
 from ase import Atoms
 from ase.io import write
-from rdkit import Chem
-from rdkit.Chem import AllChem
+
+# RDKit is only needed for the SMILES-built molecules. Make it optional so the
+# ASE-named + single-atom adsorbates (which cover the SevenNet gap-fill set)
+# can still be generated in a minimal env without RDKit.
+try:
+    from rdkit import Chem
+    from rdkit.Chem import AllChem
+    _HAVE_RDKIT = True
+except ImportError:
+    _HAVE_RDKIT = False
 
 os.makedirs("inputs", exist_ok=True)
 
@@ -286,18 +294,25 @@ for name, ase_name in ASE_NAMED.items():
     except Exception as exc:
         print(f"  WARNING: could not build {name} via ASE: {exc}")
 
-# --- SMILES-based molecules ---
-for name, smiles in SMILES_MOLECULES.items():
-    out_path = f"inputs/{name}.cif"
-    if os.path.exists(out_path):
-        skipped.append(name)
-        continue
-    try:
-        atoms = smiles_to_atoms(smiles)
-        write(out_path, atoms)
-        written.append(f"{name} ({len(atoms)} atoms)")
-    except Exception as exc:
-        print(f"  WARNING: could not build {name} from SMILES '{smiles}': {exc}")
+# --- SMILES-based molecules (requires RDKit) ---
+if not _HAVE_RDKIT:
+    _pending = [n for n in SMILES_MOLECULES if not os.path.exists(f"inputs/{n}.cif")]
+    if _pending:
+        print(f"  NOTE: RDKit unavailable — skipping {len(_pending)} SMILES-built "
+              f"molecules (ASE-named + single-atom adsorbates were still generated).")
+        print("        Install RDKit (pip install rdkit) to build the full molecule set.")
+else:
+    for name, smiles in SMILES_MOLECULES.items():
+        out_path = f"inputs/{name}.cif"
+        if os.path.exists(out_path):
+            skipped.append(name)
+            continue
+        try:
+            atoms = smiles_to_atoms(smiles)
+            write(out_path, atoms)
+            written.append(f"{name} ({len(atoms)} atoms)")
+        except Exception as exc:
+            print(f"  WARNING: could not build {name} from SMILES '{smiles}': {exc}")
 
 # --- Single-atom adsorbates ---
 for name, symbol in ATOMIC.items():
