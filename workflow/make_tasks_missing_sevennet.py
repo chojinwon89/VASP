@@ -8,15 +8,21 @@ are MISSING from the SevenNet gallery (i.e. no *_sevennet_omni.cif exists yet).
 Unlike make_tasks_custom.py -- which auto-discovers EVERY molecule in inputs/
 and would emit >50k tasks -- this script emits only the gap-fill set:
 
-    6 adsorbates  x  7 non-magnetic metals  x  3 facets  x  2 seeds  x  1 calc
-      = 252 SevenNet-OMNI GOAD tasks.
+    17 adsorbates  x  7 non-magnetic metals  x  3 facets  x  2 seeds  x  1 calc
+      = 714 SevenNet-OMNI GOAD tasks.
 
 Adsorbates (all C0-C2 -> 2 seeds each, per the standard tiered scheme):
-    acetylene (C2)  methoxy (C1)  HCN (C1)  hydroxyl (C0)  atomicH (C0)  atomicO (C0)
+    Original gap-fill (6):
+        acetylene (C2)  methoxy (C1)  HCN (C1)  hydroxyl (C0)  atomicH (C0)  atomicO (C0)
+    Open-shell radicals (11), well-known C/H/O validation set:
+        CH3, CH2, CH, atomicC        (CHx ladder)
+        C2H5, C2H3, C2H              (C2Hx ladder)
+        O2, HCO, CH2OH, HO2          (oxygen radicals)
 
-These six have ZERO structure in the SevenNet gallery under any naming token,
-so they must be generated from scratch (see molecule_utils.py /
-generate_molecule_cifs.py, which now know how to build them).
+None of these have a SevenNet gallery structure yet, so they are generated from
+scratch (see molecule_utils.py / generate_molecule_cifs.py). The radicals use
+ASE G2 geometries where available, explicit coordinates for C2H/CH2OH/HO2, and
+single-atom cells for atomicH/atomicO/atomicC -- so this batch needs no RDKit.
 
 Output CSV schema matches make_tasks_custom.py exactly:
     task_id,surface,adsorbate,seed,calculator,population_size,generations,n_carbon
@@ -45,8 +51,17 @@ from molecule_utils import carbon_count  # noqa: E402
 METALS = ["Ag", "Au", "Cu", "Ir", "Pd", "Pt", "Rh"]
 FACETS = ["100", "110", "111"]
 
-# The six adsorbates with no SevenNet gallery structure.
-ADSORBATES = ["acetylene", "methoxy", "HCN", "hydroxyl", "atomicH", "atomicO"]
+# The adsorbates with no SevenNet gallery structure.
+ADSORBATES = [
+    # original gap-fill (6)
+    "acetylene", "HCN", "methoxy", "hydroxyl", "atomicH", "atomicO",
+    # open-shell radicals -- CHx ladder
+    "CH3", "CH2", "CH", "atomicC",
+    # open-shell radicals -- C2Hx ladder
+    "C2H5", "C2H3", "C2H",
+    # open-shell radicals -- oxygen radicals
+    "O2", "HCO", "CH2OH", "HO2",
+]
 
 CALCULATOR = "sevennet_omni"   # 7net-mf-ompa (omat24, PBE+D3) -- the gallery calc
 POP = 60

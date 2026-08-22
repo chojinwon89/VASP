@@ -161,6 +161,21 @@ MOLECULE_SMILES = {
     "hydroxyl":                 "[OH]",   # C0  (OH radical)
     "atomicH":                  "[H]",    # C0
     "atomicO":                  "[O]",    # C0
+
+    # --- Open-shell radicals (well-known validation set; all C/H/O) ---
+    # SMILES here only feed carbon_count/metadata; the actual geometries come
+    # from ASE G2 (or explicit coordinates) in generate_molecule_cifs.py.
+    "CH3":                      "[CH3]",  # C1  methyl radical
+    "CH2":                      "[CH2]",  # C1  methylene (triplet)
+    "CH":                       "[CH]",   # C1  methylidyne
+    "atomicC":                  "[C]",    # C1  atomic carbon (triplet)
+    "C2H5":                     "C[CH2]", # C2  ethyl radical
+    "C2H3":                     "C=[CH]", # C2  vinyl radical
+    "C2H":                      "C#[C]",  # C2  ethynyl radical
+    "O2":                       "O=O",    # C0  triplet dioxygen
+    "HCO":                      "[CH]=O", # C1  formyl radical
+    "CH2OH":                    "[CH2]O", # C1  hydroxymethyl radical
+    "HO2":                      "O[O]",   # C0  hydroperoxyl radical
 }
 
 

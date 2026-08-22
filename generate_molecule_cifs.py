@@ -66,6 +66,14 @@ ASE_NAMED = {
     "HCN":       "HCN",
     "hydroxyl":  "OH",     # OH radical
     "methoxy":   "CH3O",   # CH3O radical
+    # --- Open-shell radicals via ASE G2 (reference-quality geometries) ---
+    "CH3":  "CH3",         # methyl radical
+    "CH2":  "CH2_s3B1d",   # methylene, triplet ground state
+    "CH":   "CH",          # methylidyne
+    "C2H5": "C2H5",        # ethyl radical
+    "C2H3": "C2H3",        # vinyl radical
+    "HCO":  "HCO",         # formyl radical
+    # (O2 triplet is already listed above)
 }
 
 # ---------------------------------------------------------------------------
@@ -236,9 +244,6 @@ SMILES_MOLECULES = {
     # charge-sensitive DFT/MLIP calculations without appropriate settings.
     "formate":    "[O-]C=O",   # formate anion (approximation)
     "carbonate":  "[O-]C(=O)[O-]",  # carbonate dianion (approximation)
-    "HCO":        "C=O",       # formyl radical approximated as formaldehyde
-    "CH2":        "[CH2]",     # singlet/triplet methylene (approximation)
-    "CH3":        "[CH3]",     # methyl radical (approximation)
 }
 
 
@@ -272,6 +277,30 @@ def smiles_to_atoms(smiles: str, cell_size: float = _CELL_SIZE) -> Atoms:
 ATOMIC = {
     "atomicH": "H",
     "atomicO": "O",
+    "atomicC": "C",
+}
+
+# ---------------------------------------------------------------------------
+# Radicals with no ASE G2 entry: explicit starting geometries (Angstrom).
+# ---------------------------------------------------------------------------
+# These are reasonable near-equilibrium geometries (correct connectivity); the
+# MLIP relaxes them during the workflow, so exact bond lengths are not critical
+# -- the point is to start from a bonded (non-dissociated) configuration.
+EXPLICIT_GEOM = {
+    # ethynyl radical H-C#C (linear)
+    "C2H": [("H", (0.000,  0.000, 0.000)),
+            ("C", (0.000,  0.000, 1.047)),
+            ("C", (0.000,  0.000, 2.264))],
+    # hydroperoxyl radical H-O-O (bent, ~104 deg)
+    "HO2": [("O", (0.000,  0.000, 0.000)),
+            ("O", (1.331,  0.000, 0.000)),
+            ("H", (-0.237, 0.942, 0.000))],
+    # hydroxymethyl radical .CH2-OH
+    "CH2OH": [("C", ( 0.000,  0.000, 0.000)),
+              ("O", ( 1.370,  0.000, 0.000)),
+              ("H", (-0.560,  0.930, 0.000)),
+              ("H", (-0.560, -0.930, 0.000)),
+              ("H", ( 1.700,  0.900, 0.000))],
 }
 
 
@@ -328,6 +357,23 @@ for name, symbol in ATOMIC.items():
         written.append(f"{name} ({len(atoms)} atoms)")
     except Exception as exc:
         print(f"  WARNING: could not build atomic {name}: {exc}")
+
+# --- Explicit-geometry radicals (no ASE G2 entry) ---
+for name, spec in EXPLICIT_GEOM.items():
+    out_path = f"inputs/{name}.cif"
+    if os.path.exists(out_path):
+        skipped.append(name)
+        continue
+    try:
+        symbols = [s for s, _ in spec]
+        positions = [p for _, p in spec]
+        atoms = Atoms(symbols=symbols, positions=positions,
+                      cell=[_CELL_SIZE, _CELL_SIZE, _CELL_SIZE], pbc=True)
+        atoms.center()
+        write(out_path, atoms)
+        written.append(f"{name} ({len(atoms)} atoms)")
+    except Exception as exc:
+        print(f"  WARNING: could not build {name} from explicit geometry: {exc}")
 
 print(f"\n{'='*60}")
 print(f"Molecule CIF generation complete")
