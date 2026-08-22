@@ -62,23 +62,24 @@ Regenerate/extend with `workflow/make_tasks_custom.py` if needed.
 
 ### Gap-fill: the missing SevenNet structures (incl. open-shell radicals)
 
-**17 adsorbates** have **no** SevenNet-OMNI gallery structure yet. A dedicated,
+**18 adsorbates** have **no** SevenNet-OMNI gallery structure yet. A dedicated,
 self-contained task list covers them on all 7 non-magnetic metals:
 
 - Closed-shell / atomic gap-fill (6): `acetylene`, `HCN`, `methoxy`, `hydroxyl`,
   `atomicH`, `atomicO`.
-- Open-shell radicals (11), well-known C/H/O validation set:
+- Open-shell radicals (12), well-known C/H/O validation set:
   `CH3`, `CH2`, `CH`, `atomicC` (CHx ladder); `C2H5`, `C2H3`, `C2H` (C2Hx ladder);
-  `O2`, `HCO`, `CH2OH`, `HO2` (oxygen radicals).
+  `O2`, `HCO`, `CH2OH`, `OOH`, `COOH` (oxygen + catalysis intermediates
+  — `OOH`=hydroperoxyl is the ORR/OER `*OOH`; `COOH`=carboxyl is the CO₂RR `*COOH`).
 
-- `workflow/tasks_missing_sevennet.csv` — **714 tasks**
-  (17 adsorbates × {Ag,Au,Cu,Ir,Pd,Pt,Rh} × {100,110,111} × 2 seeds × `sevennet_omni`).
+- `workflow/tasks_missing_sevennet.csv` — **756 tasks**
+  (18 adsorbates × {Ag,Au,Cu,Ir,Pd,Pt,Rh} × {100,110,111} × 2 seeds × `sevennet_omni`).
 - Regenerate with `python workflow/make_tasks_missing_sevennet.py`.
 
 Their gas-phase CIFs are committed under `inputs/`, and `molecule_utils.py` /
 `generate_molecule_cifs.py` know how to (re)build them (ASE G2 geometries,
-explicit coordinates for `C2H`/`CH2OH`/`HO2`, single-atom cells for the atoms) —
-so this batch needs **no RDKit**.
+explicit coordinates for `C2H`/`CH2OH`/`OOH`/`COOH`, single-atom cells for the
+atoms) — so this batch needs **no RDKit**.
 
 > ⚠️ SevenNet-OMNI and MatterSim are spin-agnostic. For a fair DFT comparison,
 > set the correct gas-phase multiplicities in your DFT references (triplet
@@ -89,7 +90,7 @@ Run it (from the repo root, after `conda activate $GOAD_ENV`):
 ```bash
 python generate_surface_cifs.py       # ensures inputs/{Ag100..Rh111}.cif exist (idempotent)
 python generate_molecule_cifs.py      # builds the adsorbate CIFs (skips existing)
-sbatch --array=0-713%50 perlmutter/goad_array_perlmutter_gpu.slurm workflow/tasks_missing_sevennet.csv
+sbatch --array=0-755%50 perlmutter/goad_array_perlmutter_gpu.slurm workflow/tasks_missing_sevennet.csv
 ```
 Results land in `runs/C{n}/<surface>_<adsorbate>_seed<seed>_sevennet_omni/`.
 

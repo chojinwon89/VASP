@@ -175,7 +175,8 @@ MOLECULE_SMILES = {
     "O2":                       "O=O",    # C0  triplet dioxygen
     "HCO":                      "[CH]=O", # C1  formyl radical
     "CH2OH":                    "[CH2]O", # C1  hydroxymethyl radical
-    "HO2":                      "O[O]",   # C0  hydroperoxyl radical
+    "OOH":                      "O[O]",   # C0  hydroperoxyl (*OOH; ORR/OER intermediate)
+    "COOH":                     "[C](=O)O", # C1 carboxyl radical (*COOH; CO2RR intermediate)
 }
 
 

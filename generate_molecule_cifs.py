@@ -291,8 +291,8 @@ EXPLICIT_GEOM = {
     "C2H": [("H", (0.000,  0.000, 0.000)),
             ("C", (0.000,  0.000, 1.047)),
             ("C", (0.000,  0.000, 2.264))],
-    # hydroperoxyl radical H-O-O (bent, ~104 deg)
-    "HO2": [("O", (0.000,  0.000, 0.000)),
+    # hydroperoxyl radical H-O-O (bent, ~104 deg) -- adsorbed as *OOH
+    "OOH": [("O", (0.000,  0.000, 0.000)),
             ("O", (1.331,  0.000, 0.000)),
             ("H", (-0.237, 0.942, 0.000))],
     # hydroxymethyl radical .CH2-OH
@@ -301,6 +301,11 @@ EXPLICIT_GEOM = {
               ("H", (-0.560,  0.930, 0.000)),
               ("H", (-0.560, -0.930, 0.000)),
               ("H", ( 1.700,  0.900, 0.000))],
+    # carboxyl radical .C(=O)OH (planar) -- adsorbed as *COOH
+    "COOH": [("C", ( 0.000,  0.000, 0.000)),
+             ("O", ( 0.545,  1.069, 0.000)),   # carbonyl C=O
+             ("O", ( 0.604, -1.185, 0.000)),   # hydroxyl C-O
+             ("H", ( 1.561, -1.033, 0.000))],  # O-H
 }
 
 
