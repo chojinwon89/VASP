@@ -263,27 +263,44 @@ for f in pbe pbe-d3 r2scan beef-vdw; do
 done
 ```
 This writes `dft_jobs/<system>/<FUNC>/{INCAR,KPOINTS,POTCAR,slm.vasp.perlmutter}`
-(relax: `NSW=1000, IBRION=2, EDIFFG=-5E-02`). Edit the `module load vasp/...` line
-in the template to your build. (`--calc-type single-point` inserts a `singlepoint/`
+(relax: `NSW=1000, IBRION=2, EDIFFG=-5E-02`). The module (`vasp-tpc/6.4.2-cpu`) is
+already set in the template. (`--calc-type single-point` inserts a `singlepoint/`
 level instead, so relax and SP never collide.)
 
-> **beef-vdw only:** needs `vdw_kernel.bindat`. Pass
-> `--vdw-kernel-path /pscratch/sd/j/jcho5/vdw_kernel.bindat` (the setup script copies
-> it into each beef-vdw job dir):
+> **beef-vdw only:** needs `vdw_kernel.bindat`. Point the setup script at yours so
+> it copies the kernel into each `beef_vdw/` job dir:
 > ```bash
+> export VASP_VDW_KERNEL_PATH=/pscratch/sd/j/jcho5/vdw_kernel.bindat
 > python setup_vasp_jobs.py --poscar-dir dft_jobs --functional beef-vdw \
->     --cluster perlmutter-cpu \
->     --vdw-kernel-path /pscratch/sd/j/jcho5/vdw_kernel.bindat
+>     --cluster perlmutter-cpu
 > ```
+> Without it the folders are missing the kernel and VASP aborts (INCAR has
+> `LUSE_VDW=.TRUE.`).
 
-### 3. Submit
+### 3. Submit — job array on the `shared` QOS (not 1,508 full-node jobs!)
+377 systems × 4 functionals is ~1,500 small slab relaxations. Submit them as a
+throttled array charged fractionally (`shared` QOS), one array task per job.
+
+**First, smoke-test a single job** to confirm the module/POTCAR/vdw setup runs and
+to measure wall time:
 ```bash
-for d in dft_jobs/*/{PBE,PBE_D3,r2scan,beef_vdw}/; do
-    (cd "$d" && sbatch slm.vasp.perlmutter)
-done
+mkdir -p slurm-logs
+(cd dft_jobs/CO_Ag111/PBE && sbatch slm.vasp.perlmutter)   # one job, full-node script
 ```
-**Cost:** 377 × 4 functionals full slab relaxations is large. Start with **PBE
-only** on a handful, measure wall time, then decide. For these small slabs the
-`shared` QOS (fractional-node charging) is far cheaper than a full `regular` node —
-see the commented block in `slm.vasp.perlmutter`.
+
+**Then batch the rest as an array** (PBE first). `make_dft_joblist.py` lists only
+the not-yet-converged jobs, so you can run in waves and re-submit safely:
+```bash
+python workflow/make_dft_joblist.py --jobs-dir dft_jobs --functional pbe > joblist_pbe.txt
+N=$(grep -vc '^#' joblist_pbe.txt)                          # number of jobs
+sbatch --array=0-$((N-1))%20 perlmutter/vasp_dft_array_cpu.slurm joblist_pbe.txt
+```
+`%20` caps concurrent tasks (lower it for a small balance). Repeat for
+`pbe-d3`, `r2scan`, `beef-vdw` once PBE looks good. Re-running the same two
+commands after a wave automatically skips whatever already converged.
+
+**Cost:** each array task uses 32/128 of a node (`-n 32`, `shared`), so a ~2 h PBE
+relax ≈ 0.5 node-hr. Measure your real per-job time from the smoke test and the
+first array wave before launching all four functionals — r2scan/beef-vdw are
+2–3× slower. Bump `-n`/`-t` in `vasp_dft_array_cpu.slurm` for the heavier ones.
 
