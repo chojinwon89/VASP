@@ -230,19 +230,22 @@ Prints a system × functional table (`R+` relax-converged / `R-` relax-not-conve
 / `R.` running / `S` single-point / `.` none) and writes `dft_audit_matrix.csv` +
 `dft_audit_jobs.csv`. Whatever shows `R+` is done; everything else needs running.
 
-### 1. Stage MLIP structures → POSCAR tree (on Perlmutter)
-Needs the `structure/` gallery + `DFT_results/MANIFEST.csv` on Perlmutter (git
-clone / rsync them). `--fix-bottom-layers 2` freezes the bottom 2 slab layers for a
-proper geo-opt (matches the GOAD 4-layer/bottom-2-fixed slab):
+### 1. Stage MLIP structures → POSCAR tree
+**Already done for you** — `dft_jobs/` (377 POSCARs, bottom-2-layers fixed) is
+committed in this repo, so on Perlmutter just `git pull` and skip to step 2. It was
+staged locally because that needs `ase` + the 333 MB `structure/` gallery, neither
+of which has to live on Perlmutter.
+
+To (re)stage yourself — e.g. after the SevenNet gap-fill fills the 101 missing
+systems (methoxy, acetylene, HCN, OH, atomic H/O …) — you need `structure/` +
+`DFT_results/MANIFEST.csv` present, then:
 ```bash
 python workflow/stage_dft_poscars.py \
     --manifest DFT_results/MANIFEST.csv --structure-dir structure \
     --out-dir dft_jobs --fix-bottom-layers 2
 ```
-Writes `dft_jobs/<system_id>/POSCAR` (377 systems) + `dft_jobs/staged_systems.csv`.
-Systems whose MLIP structure doesn't exist yet (the 101 gap: methoxy, acetylene,
-HCN, OH, atomic H/O …) are listed — they fill in after the SevenNet gap-fill +
-`collect_missing_sevennet.py`; just re-run the stager then.
+`--fix-bottom-layers 2` freezes the bottom 2 slab layers (Selective dynamics `F F F`)
+for a proper geo-opt, matching the GOAD 4-layer/bottom-2-fixed slab.
 
 ### 2. Generate VASP inputs per functional (relax, Perlmutter CPU submit script)
 ```bash
