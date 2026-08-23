@@ -207,9 +207,65 @@ right-size `-t` before the big submission (shared allows up to 48 h).
 
 ---
 
-## Also need VASP DFT here?
+## VASP DFT on Perlmutter (full geo-opt from MLIP structures)
 
-This port covers the **GOAD (MLIP)** workflow only. The repo's `setup_vasp_jobs.py` /
-`extract_poscar.py` path targets DFT — NERSC provides `module load vasp/6.x.x-gpu`, but
-access is restricted to license-verified users (the `vasp` unix group; request via a
-NERSC ticket). Ask and I'll add matching `*_perlmutter_vasp.slurm` scripts.
+The MLIP (GOAD/SevenNet) relaxed geometries are the *starting point* for DFT. The
+pipeline: **audit what DFT already exists → stage MLIP structures to POSCARs →
+generate VASP inputs per functional → submit.** Functionals: `pbe`, `pbe-d3`,
+`r2scan`, `beef-vdw`. Scope: the 25 well-known molecules × 7 non-magnetic metals ×
+3 facets (378 systems; 377 already have an MLIP structure).
+
+> VASP on Perlmutter is license-gated (the `vasp` unix group; request via a NERSC
+> ticket). CPU build: `module avail vasp` → e.g. `vasp/6.4.3-cpu`. Set the module
+> in the generated `slm.vasp.perlmutter` and point `VASP_PP_PATH` at your PBE PAW
+> POTCAR library (+ `VASP_VDW_KERNEL_PATH` for beef-vdw).
+
+### 0. Audit existing (Kestrel) DFT — did we run full geo-opt or only single-point?
+Run **on Kestrel**, pointed at your DFT run tree (the `--poscar-dir` you gave
+`setup_vasp_jobs.py`, or any parent):
+```bash
+python workflow/audit_dft_runs.py --root /scratch/jcho5/.../poscar/best
+```
+Prints a system × functional table (`R+` relax-converged / `R-` relax-not-converged
+/ `R.` running / `S` single-point / `.` none) and writes `dft_audit_matrix.csv` +
+`dft_audit_jobs.csv`. Whatever shows `R+` is done; everything else needs running.
+
+### 1. Stage MLIP structures → POSCAR tree (on Perlmutter)
+Needs the `structure/` gallery + `DFT_results/MANIFEST.csv` on Perlmutter (git
+clone / rsync them). `--fix-bottom-layers 2` freezes the bottom 2 slab layers for a
+proper geo-opt (matches the GOAD 4-layer/bottom-2-fixed slab):
+```bash
+python workflow/stage_dft_poscars.py \
+    --manifest DFT_results/MANIFEST.csv --structure-dir structure \
+    --out-dir dft_jobs --fix-bottom-layers 2
+```
+Writes `dft_jobs/<system_id>/POSCAR` (377 systems) + `dft_jobs/staged_systems.csv`.
+Systems whose MLIP structure doesn't exist yet (the 101 gap: methoxy, acetylene,
+HCN, OH, atomic H/O …) are listed — they fill in after the SevenNet gap-fill +
+`collect_missing_sevennet.py`; just re-run the stager then.
+
+### 2. Generate VASP inputs per functional (relax, Perlmutter CPU submit script)
+```bash
+export VASP_PP_PATH=/path/to/potpaw_PBE        # your PBE PAW library
+export VASP_VDW_KERNEL_PATH=/path/to/vdw_kernel.bindat   # for beef-vdw
+for f in pbe pbe-d3 r2scan beef-vdw; do
+    python setup_vasp_jobs.py --poscar-dir dft_jobs --functional $f \
+        --cluster perlmutter-cpu
+done
+```
+This writes `dft_jobs/<system>/<FUNC>/{INCAR,KPOINTS,POTCAR,slm.vasp.perlmutter}`
+(relax: `NSW=1000, IBRION=2, EDIFFG=-5E-02`). Edit the `module load vasp/...` line
+in the template to your build. (`--calc-type single-point` inserts a `singlepoint/`
+level instead, so relax and SP never collide.)
+
+### 3. Submit
+```bash
+for d in dft_jobs/*/{PBE,PBE_D3,r2scan,beef_vdw}/; do
+    (cd "$d" && sbatch slm.vasp.perlmutter)
+done
+```
+**Cost:** 377 × 4 functionals full slab relaxations is large. Start with **PBE
+only** on a handful, measure wall time, then decide. For these small slabs the
+`shared` QOS (fractional-node charging) is far cheaper than a full `regular` node —
+see the commented block in `slm.vasp.perlmutter`.
+
