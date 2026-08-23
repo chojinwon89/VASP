@@ -97,6 +97,29 @@ sbatch --array=0-587%50 -t 00:20:00 perlmutter/goad_array_perlmutter_gpu.slurm w
 ```
 Results land in `runs/C{n}/<surface>_<adsorbate>_seed<seed>_sevennet_omni/`.
 
+### After the array finishes — collect the structures
+
+`workflow/collect_missing_sevennet.py` walks `runs/`, picks the **best seed**
+(lowest final `E_ads`) for each of the 14 × 21 = 294 systems, and extracts the
+relaxed structure + energetics for evaluation:
+
+```bash
+python workflow/collect_missing_sevennet.py
+```
+
+It produces:
+- `collected/sevennet_missing/<surface>_<adsorbate>_sevennet_omni.cif` — the
+  best relaxed adsorbate-on-surface structure, named to match the SevenNet
+  gallery convention (drop straight into `structure/` or link into `MANIFEST.csv`).
+- `collected/sevennet_missing_summary.csv` — one row per system:
+  `E_ads_eV`, `E_total/surface/molecule_eV`, and the **molecule–surface bond
+  distance** (`min_surf_ads_dist_A`, `z_gap_A`) — the quantity this benchmark
+  is about — plus `best_seed` and the source `run_dir`.
+- a completeness report: any **MISSING** system prints its re-run `task_id`s,
+  so you can resubmit just those with
+  `sbatch --array=<ids> -t 00:20:00 perlmutter/goad_array_perlmutter_gpu.slurm workflow/tasks_missing_sevennet.csv`.
+
+
 > 💰 **Wall time drives the NERSC cost gate.** The estimate = `N_tasks × -t × 0.25`
 > (shared QOS, 1 A100 = ¼ node). The script's `#SBATCH -t 12:00:00` default is
 > sized for the big `tasks_custom.csv` (large molecules) and would estimate this
