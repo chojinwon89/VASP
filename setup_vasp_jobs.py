@@ -215,6 +215,48 @@ srun vasp_std
 """
 
 # ---------------------------------------------------------------------------
+# Slurm template  (Perlmutter, NERSC — CPU nodes)
+# ---------------------------------------------------------------------------
+SLURM_TEMPLATE_PERLMUTTER_CPU = """\
+#!/bin/bash
+#SBATCH -J {job_name}
+#SBATCH -A m5281
+#SBATCH -C cpu
+#SBATCH -q regular
+#SBATCH -N 1
+#SBATCH --ntasks-per-node=128
+#SBATCH --cpus-per-task=2
+#SBATCH -t 12:00:00
+#SBATCH -o {job_name}.out
+#SBATCH -e {job_name}.err
+
+# --- VASP module -----------------------------------------------------------
+# EDIT to the CPU VASP build you have NERSC access to (run: module avail vasp).
+module load vasp/6.4.3-cpu
+
+export OMP_NUM_THREADS=1
+export OMP_PLACES=cores
+export OMP_PROC_BIND=spread
+
+# Full CPU node = 128 physical cores; pure MPI (OMP=1), no hyperthreading.
+srun --cpu-bind=cores vasp_std
+
+# Cost note (small balances): each slab is small, so a whole 128-core node can be
+# overkill. For fractional-node charging use the shared QOS instead, e.g.:
+#   #SBATCH -q shared
+#   #SBATCH -n 64
+#   #SBATCH --mem=120G
+# and drop -N / --ntasks-per-node. Scale -N up (regular QOS) only if one node is
+# too slow or runs out of memory.
+"""
+
+# cluster name -> (slurm template, filename written into each job dir)
+SLURM_TEMPLATES = {
+    "kestrel": (SLURM_TEMPLATE, "slm.vasp.kestrel"),
+    "perlmutter-cpu": (SLURM_TEMPLATE_PERLMUTTER_CPU, "slm.vasp.perlmutter"),
+}
+
+# ---------------------------------------------------------------------------
 # POTCAR element name mapping
 # Maps element symbol -> list of candidate subfolder names to try in order
 # under the POTCAR library root.
@@ -307,7 +349,9 @@ def setup_job_dir(job_dir: Path, system_name: str,
                   ionic_block: str, ediffg_line: str,
                   dry_run: bool = False,
                   system_dir: Path | None = None,
-                  vdw_kernel_path: Path | None = None) -> dict:
+                  vdw_kernel_path: Path | None = None,
+                  slurm_template: str = SLURM_TEMPLATE,
+                  slurm_filename: str = "slm.vasp.kestrel") -> dict:
     """Write INCAR, KPOINTS, POTCAR, slm.vasp.kestrel into job_dir.
 
     job_dir is the functional subfolder, e.g. poscar/best/C1/Cu001_CO2/PBE
@@ -384,9 +428,9 @@ def setup_job_dir(job_dir: Path, system_name: str,
         status["status"] = "partial"
 
     job_name = system_name.replace(" ", "_").replace("+", "")[:40]
-    slurm_path = job_dir / "slm.vasp.kestrel"
+    slurm_path = job_dir / slurm_filename
     if not dry_run:
-        slurm_path.write_text(SLURM_TEMPLATE.format(job_name=job_name))
+        slurm_path.write_text(slurm_template.format(job_name=job_name))
         slurm_path.chmod(0o755)
 
     return status
@@ -447,6 +491,15 @@ def main():
         ),
     )
     parser.add_argument(
+        "--cluster", default="kestrel",
+        choices=sorted(SLURM_TEMPLATES.keys()),
+        help=(
+            "Which cluster's Slurm submit script to write into each job dir. "
+            "'kestrel' (default) writes slm.vasp.kestrel; 'perlmutter-cpu' "
+            "writes slm.vasp.perlmutter (-A m5281 -C cpu -q regular)."
+        ),
+    )
+    parser.add_argument(
         "--pp-path", default=None,
         help=(
             "Path to VASP PBE PAW pseudopotential library root. "
@@ -491,10 +544,12 @@ def main():
     }[args.calc_type]
     ionic_block = calc_type_cfg["ionic_block"]
     ediffg_line = calc_type_cfg["ediffg_line"]
+    slurm_template, slurm_filename = SLURM_TEMPLATES[args.cluster]
 
     print(f"Processing POSCAR subdirectories in: {poscar_dir}")
     print(f"Functional : {args.functional}  ->  subfolder name: {subfolder}")
     print(f"Calc type  : {args.calc_type}  ({calc_type_cfg['summary']})")
+    print(f"Cluster    : {args.cluster}  ->  submit script: {slurm_filename}")
     print()
 
     # ---- Resolve POTCAR library path -----------------------------------------
@@ -578,12 +633,14 @@ def main():
             dry_run=args.dry_run,
             system_dir=sys_dir,
             vdw_kernel_path=vdw_kernel_path if args.functional == "beef-vdw" else None,
+            slurm_template=slurm_template,
+            slurm_filename=slurm_filename,
         )
 
         print(f"    species:  {' '.join(result.get('species', []))}")
 
         if not args.dry_run:
-            files = ["POSCAR", "INCAR", "KPOINTS", "slm.vasp.kestrel"]
+            files = ["POSCAR", "INCAR", "KPOINTS", slurm_filename]
             if result["status"] == "ok":
                 files.append("POTCAR")
             if result.get("vdw_kernel_written"):
@@ -617,7 +674,7 @@ def main():
         print(f"     for d in {poscar_dir}/*/*/singlepoint/{subfolder}/; do")
     else:
         print(f"     for d in {poscar_dir}/*/*/{subfolder}/; do")
-    print("       (cd \"$d\" && sbatch slm.vasp.kestrel)")
+    print("       (cd \"$d\" && sbatch " + slurm_filename + ")")
     print("     done")
     print()
     print("3. After VASP finishes, compute E_ads from OUTCAR:")
