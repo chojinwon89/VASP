@@ -246,8 +246,7 @@ HCN, OH, atomic H/O …) are listed — they fill in after the SevenNet gap-fill
 
 ### 2. Generate VASP inputs per functional (relax, Perlmutter CPU submit script)
 ```bash
-export VASP_PP_PATH=/path/to/potpaw_PBE        # your PBE PAW library
-export VASP_VDW_KERNEL_PATH=/path/to/vdw_kernel.bindat   # for beef-vdw
+export VASP_PP_PATH=/pscratch/sd/j/jcho5/paw64/potpaw_PBE_64   # your PBE PAW library
 for f in pbe pbe-d3 r2scan beef-vdw; do
     python setup_vasp_jobs.py --poscar-dir dft_jobs --functional $f \
         --cluster perlmutter-cpu
@@ -257,6 +256,10 @@ This writes `dft_jobs/<system>/<FUNC>/{INCAR,KPOINTS,POTCAR,slm.vasp.perlmutter}
 (relax: `NSW=1000, IBRION=2, EDIFFG=-5E-02`). Edit the `module load vasp/...` line
 in the template to your build. (`--calc-type single-point` inserts a `singlepoint/`
 level instead, so relax and SP never collide.)
+
+> **beef-vdw only:** needs `vdw_kernel.bindat`. If you don't have one, either pass
+> `--vdw-kernel-path /path/to/vdw_kernel.bindat`, or just let VASP generate it at
+> startup (it will if the file is absent — costs a few minutes the first run).
 
 ### 3. Submit
 ```bash
