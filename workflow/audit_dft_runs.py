@@ -45,8 +45,8 @@ import re
 import sys
 from pathlib import Path
 
-# Canonical functional display order; extras (pbe-d3, scan, ...) appended as seen.
-CANONICAL_FUNCS = ["pbe", "rpbe", "beef-vdw", "r2scan"]
+# Canonical functional display order; extras (rpbe, scan, ...) appended as seen.
+CANONICAL_FUNCS = ["pbe", "pbe-d3", "r2scan", "beef-vdw"]
 
 # Folder-name -> functional fallback (used only if INCAR detection fails).
 FOLDER_FUNC = {
@@ -283,6 +283,40 @@ def cell_code(jobs: list) -> str:
 # --------------------------------------------------------------------------- #
 # Main
 # --------------------------------------------------------------------------- #
+def load_manifest_scope(manifest_path, include_groups=None, exclude_groups=None):
+    """Read MANIFEST.csv and return (scope_stems, meta).
+
+    scope_stems : set of gallery_cif basenames (no .cif extension) for in-scope
+                  rows -- these are the Kestrel/gallery system directory names to
+                  keep (e.g. 'Ag100_ethylene').
+    A row is in scope if its `group` passes the include/exclude filters.  Rows
+    with an empty `gallery_cif` are counted (no_cif) but cannot be mapped to a
+    run directory -- they need the SevenNet gap-fill first.
+    """
+    inc = {g.strip() for g in include_groups} if include_groups else None
+    exc = {g.strip() for g in exclude_groups} if exclude_groups else set()
+    stems: set[str] = set()
+    n_rows = n_scope = n_no_cif = 0
+    with open(manifest_path, newline="") as fh:
+        for row in csv.DictReader(fh):
+            n_rows += 1
+            grp = (row.get("group") or "").strip()
+            if inc is not None and grp not in inc:
+                continue
+            if grp in exc:
+                continue
+            n_scope += 1
+            cif = (row.get("gallery_cif") or "").strip()
+            if not cif:
+                n_no_cif += 1
+                continue
+            stem = cif[:-4] if cif.lower().endswith(".cif") else cif
+            stems.add(stem)
+    meta = {"rows": n_rows, "in_scope": n_scope, "no_cif": n_no_cif,
+            "stems": len(stems)}
+    return stems, meta
+
+
 def main():
     ap = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -290,7 +324,30 @@ def main():
                     help="DFT run tree root (repeatable).")
     ap.add_argument("--out-prefix", default="dft_audit",
                     help="Prefix for output CSVs (default: dft_audit).")
+    ap.add_argument("--manifest", default=None, metavar="CSV",
+                    help="Optional MANIFEST.csv; restrict the report to its "
+                         "in-scope systems (matched via the gallery_cif column). "
+                         "Use with --exclude-groups deoxy for the well-known set.")
+    ap.add_argument("--exclude-groups", default="", metavar="G1,G2",
+                    help="Comma list of manifest 'group' values to drop "
+                         "(e.g. deoxy). Requires --manifest.")
+    ap.add_argument("--include-groups", default="", metavar="G1,G2",
+                    help="Comma list of manifest 'group' values to keep "
+                         "(default: all but --exclude-groups). Requires --manifest.")
     args = ap.parse_args()
+
+    scope_stems = None
+    scope_meta = None
+    if args.manifest:
+        mpath = Path(args.manifest)
+        if not mpath.is_file():
+            ap.error(f"--manifest not found: {mpath}")
+        inc = [g for g in args.include_groups.split(",") if g.strip()] or None
+        exc = [g for g in args.exclude_groups.split(",") if g.strip()]
+        scope_stems, scope_meta = load_manifest_scope(mpath, inc, exc)
+        if not scope_stems:
+            ap.error("Manifest scope is empty after filtering "
+                     "(check --include-groups/--exclude-groups).")
 
     roots = [Path(r).resolve() for r in args.root]
     for r in roots:
@@ -314,6 +371,18 @@ def main():
         print(f"No VASP jobs or POSCAR system dirs found under: "
               f"{', '.join(str(r) for r in roots)}", file=sys.stderr)
         sys.exit(1)
+
+    # ---- optional scope filter: keep only in-scope (well-known) systems ----
+    if scope_stems is not None:
+        keep = []
+        for j in all_jobs:
+            base = j["system"].rsplit("/", 1)[-1]
+            if base in scope_stems:
+                j["system"] = base  # normalize to basename for grouping
+                keep.append(j)
+        all_jobs = keep
+        # report on EVERY in-scope system, so never-run ones show as absent
+        system_ids = set(scope_stems)
 
     # functional column order: always show the 4 canonical, then extras seen
     seen_funcs = {j["functional"] for j in all_jobs}
@@ -366,6 +435,17 @@ def main():
     print("DFT run audit")
     print("=" * 70)
     print(f"Roots scanned : {', '.join(str(r) for r in roots)}")
+    if scope_meta is not None:
+        matched = len({j["system"] for j in all_jobs})
+        print(f"Scope filter  : {Path(args.manifest).name} "
+              f"(excluded groups: {args.exclude_groups or 'none'})")
+        print(f"  in-scope systems (mapped to a gallery name) : "
+              f"{scope_meta['stems']}")
+        print(f"    with >=1 Kestrel DFT job : {matched}")
+        print(f"    with NO DFT job (all '.'): {scope_meta['stems'] - matched}")
+        if scope_meta["no_cif"]:
+            print(f"  (+{scope_meta['no_cif']} in-scope systems have no "
+                  f"gallery_cif yet -> need SevenNet gap-fill; not shown)")
     print(f"Systems found : {len(systems)}")
     print(f"Jobs found    : {len(all_jobs)}")
     print()

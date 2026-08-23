@@ -231,8 +231,9 @@ SLURM_TEMPLATE_PERLMUTTER_CPU = """\
 #SBATCH -e {job_name}.err
 
 # --- VASP module -----------------------------------------------------------
-# EDIT to the CPU VASP build you have NERSC access to (run: module avail vasp).
-module load vasp/6.4.3-cpu
+# NERSC CPU VASP build (license-gated: vasp unix group). If yours differs,
+# run `module avail vasp` and edit this line.
+module load vasp-tpc/6.4.2-cpu
 
 export OMP_NUM_THREADS=1
 export OMP_PLACES=cores

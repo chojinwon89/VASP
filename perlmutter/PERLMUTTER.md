@@ -216,19 +216,26 @@ generate VASP inputs per functional → submit.** Functionals: `pbe`, `pbe-d3`,
 3 facets (378 systems; 377 already have an MLIP structure).
 
 > VASP on Perlmutter is license-gated (the `vasp` unix group; request via a NERSC
-> ticket). CPU build: `module avail vasp` → e.g. `vasp/6.4.3-cpu`. Set the module
-> in the generated `slm.vasp.perlmutter` and point `VASP_PP_PATH` at your PBE PAW
-> POTCAR library (+ `VASP_VDW_KERNEL_PATH` for beef-vdw).
+> ticket). CPU build here: **`vasp-tpc/6.4.2-cpu`** (already set in the generated
+> `slm.vasp.perlmutter`). POTCAR lib: `VASP_PP_PATH=/pscratch/sd/j/jcho5/paw64/potpaw_PBE_64`.
+> beef-vdw kernel: `/pscratch/sd/j/jcho5/vdw_kernel.bindat`.
 
 ### 0. Audit existing (Kestrel) DFT — did we run full geo-opt or only single-point?
-Run **on Kestrel**, pointed at your DFT run tree (the `--poscar-dir` you gave
-`setup_vasp_jobs.py`, or any parent):
+Run **on Kestrel**. Add `--manifest DFT_results/MANIFEST.csv --exclude-groups deoxy`
+to focus the report on just the 478 well-known systems (instead of all ~5,400 in the
+gallery):
 ```bash
-python workflow/audit_dft_runs.py --root /scratch/jcho5/.../poscar/best
+python workflow/audit_dft_runs.py \
+    --root /scratch/jcho5/goad-global-optimization/poscar/best \
+    --manifest DFT_results/MANIFEST.csv --exclude-groups deoxy
 ```
 Prints a system × functional table (`R+` relax-converged / `R-` relax-not-converged
 / `R.` running / `S` single-point / `.` none) and writes `dft_audit_matrix.csv` +
 `dft_audit_jobs.csv`. Whatever shows `R+` is done; everything else needs running.
+
+**Result (2026-08): the Kestrel runs are single-point only** — `sp_only≈2951`,
+`relax_ok` 0–1 across pbe/pbe-d3/r2scan/beef-vdw. So the entire well-known scope
+needs a full geo-opt here on Perlmutter.
 
 ### 1. Stage MLIP structures → POSCAR tree
 **Already done for you** — `dft_jobs/` (377 POSCARs, bottom-2-layers fixed) is
@@ -260,9 +267,14 @@ This writes `dft_jobs/<system>/<FUNC>/{INCAR,KPOINTS,POTCAR,slm.vasp.perlmutter}
 in the template to your build. (`--calc-type single-point` inserts a `singlepoint/`
 level instead, so relax and SP never collide.)
 
-> **beef-vdw only:** needs `vdw_kernel.bindat`. If you don't have one, either pass
-> `--vdw-kernel-path /path/to/vdw_kernel.bindat`, or just let VASP generate it at
-> startup (it will if the file is absent — costs a few minutes the first run).
+> **beef-vdw only:** needs `vdw_kernel.bindat`. Pass
+> `--vdw-kernel-path /pscratch/sd/j/jcho5/vdw_kernel.bindat` (the setup script copies
+> it into each beef-vdw job dir):
+> ```bash
+> python setup_vasp_jobs.py --poscar-dir dft_jobs --functional beef-vdw \
+>     --cluster perlmutter-cpu \
+>     --vdw-kernel-path /pscratch/sd/j/jcho5/vdw_kernel.bindat
+> ```
 
 ### 3. Submit
 ```bash
