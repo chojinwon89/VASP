@@ -90,10 +90,23 @@ from pathlib import Path
 
 
 # ---------------------------------------------------------------------------
-# Default POTCAR library path for Kestrel
+# Default POTCAR / vdW-kernel paths, per cluster.
+# Resolution order for each: --pp-path/--vdw-kernel-path flag
+#   > VASP_PP_PATH / VASP_VDW_KERNEL_PATH env var
+#   > per-cluster default below (keyed by --cluster)
+#   > generic fallback (DEFAULT_PP_PATH / DEFAULT_VDW_KERNEL_PATH)
 # ---------------------------------------------------------------------------
 DEFAULT_PP_PATH = "/projects/2dmgcat/paw64/potpaw_PBE_64"
 DEFAULT_VDW_KERNEL_PATH = "/projects/2dmgcat/vdw_kernel.bindat"
+
+CLUSTER_PP_PATH = {
+    "kestrel":        "/projects/2dmgcat/paw64/potpaw_PBE_64",
+    "perlmutter-cpu": "/pscratch/sd/j/jcho5/paw64/potpaw_PBE_64",
+}
+CLUSTER_VDW_KERNEL_PATH = {
+    "kestrel":        "/projects/2dmgcat/vdw_kernel.bindat",
+    "perlmutter-cpu": "/pscratch/sd/j/jcho5/vdw_kernel.bindat",
+}
 
 
 # ---------------------------------------------------------------------------
@@ -504,8 +517,9 @@ def main():
         "--pp-path", default=None,
         help=(
             "Path to VASP PBE PAW pseudopotential library root. "
-            "Priority: --pp-path > VASP_PP_PATH env var > built-in default "
-            f"({DEFAULT_PP_PATH})"
+            "Priority: --pp-path > VASP_PP_PATH env var > per-cluster default "
+            f"(perlmutter-cpu: {CLUSTER_PP_PATH['perlmutter-cpu']}; "
+            f"kestrel: {CLUSTER_PP_PATH['kestrel']})"
         ),
     )
     parser.add_argument(
@@ -513,7 +527,9 @@ def main():
         help=(
             "Path to vdw_kernel.bindat for beef-vdw jobs. "
             "Priority: --vdw-kernel-path > VASP_VDW_KERNEL_PATH env var > "
-            f"built-in default ({DEFAULT_VDW_KERNEL_PATH})"
+            f"per-cluster default (perlmutter-cpu: "
+            f"{CLUSTER_VDW_KERNEL_PATH['perlmutter-cpu']}; "
+            f"kestrel: {CLUSTER_VDW_KERNEL_PATH['kestrel']})"
         ),
     )
     parser.add_argument(
@@ -523,11 +539,13 @@ def main():
     parser.add_argument(
         "--skip-existing", action="store_true",
         help=(
-            "Skip any system whose functional job dir already has an INCAR "
-            "(i.e. was already set up / has run). Use this for incremental "
-            "waves: after adding new gap-fill systems, re-run setup with "
-            "--skip-existing to create inputs ONLY for the new systems and "
-            "leave already-converged/running jobs untouched."
+            "Skip any system whose functional job dir is already fully set up "
+            "(has BOTH INCAR and POTCAR). A dir with an INCAR but a missing "
+            "POTCAR is re-generated so the POTCAR gets written. Use this for "
+            "incremental waves: after adding new gap-fill systems, re-run "
+            "setup with --skip-existing to create inputs ONLY for the new (or "
+            "incomplete) systems and leave already-converged/running jobs "
+            "untouched."
         ),
     )
     args = parser.parse_args()
@@ -564,9 +582,10 @@ def main():
     print()
 
     # ---- Resolve POTCAR library path -----------------------------------------
+    cluster_pp_default = CLUSTER_PP_PATH.get(args.cluster, DEFAULT_PP_PATH)
     pp_path_str = (args.pp_path
                    or os.environ.get("VASP_PP_PATH", "")
-                   or DEFAULT_PP_PATH)
+                   or cluster_pp_default)
     pp_root = Path(pp_path_str)
 
     if not pp_root.exists():
@@ -579,13 +598,15 @@ def main():
     else:
         source = ("--pp-path" if args.pp_path
                   else "VASP_PP_PATH" if os.environ.get("VASP_PP_PATH")
-                  else "default")
+                  else f"{args.cluster} default")
         print(f"Using POTCAR library ({source}): {pp_root}")
 
     # ---- Resolve vdW kernel path ---------------------------------------------
+    cluster_vdw_default = CLUSTER_VDW_KERNEL_PATH.get(args.cluster,
+                                                      DEFAULT_VDW_KERNEL_PATH)
     vdw_kernel_path_str = (args.vdw_kernel_path
                            or os.environ.get("VASP_VDW_KERNEL_PATH", "")
-                           or DEFAULT_VDW_KERNEL_PATH)
+                           or cluster_vdw_default)
     vdw_kernel_path = Path(vdw_kernel_path_str)
 
     if not vdw_kernel_path.exists():
@@ -597,7 +618,7 @@ def main():
     elif args.functional == "beef-vdw":
         source = ("--vdw-kernel-path" if args.vdw_kernel_path
                   else "VASP_VDW_KERNEL_PATH" if os.environ.get("VASP_VDW_KERNEL_PATH")
-                  else "default")
+                  else f"{args.cluster} default")
         print(f"Using vdw_kernel.bindat ({source}): {vdw_kernel_path}")
 
     # ---- Collect system directories with a POSCAR ----------------------------
@@ -635,7 +656,8 @@ def main():
         else:
             job_dir = sys_dir / subfolder
 
-        if args.skip_existing and (job_dir / "INCAR").exists():
+        if args.skip_existing and (job_dir / "INCAR").exists() \
+                and (job_dir / "POTCAR").exists():
             n_skipped += 1
             continue
 
@@ -684,7 +706,7 @@ def main():
     print()
     if not all_ok:
         print("1. Some input files were not built automatically — check warnings above.")
-        print(f"   Verify the POTCAR library path: {pp_root or DEFAULT_PP_PATH}")
+        print(f"   Verify the POTCAR library path: {pp_root or cluster_pp_default}")
         if args.functional == "beef-vdw":
             print(f"   Verify the vdW kernel path: {vdw_kernel_path}")
         print(f"   Then re-run:")

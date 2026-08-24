@@ -27,6 +27,8 @@ git pull
 
 # DFT (Stage B) environment:
 module load vasp-tpc/6.4.2-cpu
+# POTCAR + vdw-kernel paths below are the built-in --cluster perlmutter-cpu
+# defaults, so these two exports are OPTIONAL (set them only to override):
 export VASP_PP_PATH=/pscratch/sd/j/jcho5/paw64/potpaw_PBE_64
 export VASP_VDW_KERNEL_PATH=/pscratch/sd/j/jcho5/vdw_kernel.bindat   # beef-vdw only
 ```
@@ -41,8 +43,11 @@ MANIFEST are committed.
 | Perlmutter CPU | `vasp-tpc/6.4.2-cpu` | `/pscratch/sd/j/jcho5/paw64/potpaw_PBE_64` | `/pscratch/sd/j/jcho5/vdw_kernel.bindat` |
 | Kestrel | `vasp/6.3.2_openMP+tpc` | `/projects/2dmgcat/paw64/potpaw_PBE_64` (default) | `/projects/2dmgcat/vdw_kernel.bindat` (default) |
 
-On Kestrel the `setup_vasp_jobs.py` defaults already point at the right paths,
-so no env vars are needed.
+`setup_vasp_jobs.py` picks the POTCAR + vdw-kernel path automatically from
+`--cluster` (perlmutter-cpu → pscratch, kestrel → 2dmgcat), so POTCAR is written
+without any env var on either machine. Priority if you want to override:
+`--pp-path` / `--vdw-kernel-path` flag > `VASP_PP_PATH` / `VASP_VDW_KERNEL_PATH`
+env var > per-cluster default.
 
 ---
 
@@ -129,11 +134,12 @@ This writes `dft_jobs/<system>/<FUNC>/{INCAR,KPOINTS,POTCAR,slm.vasp.perlmutter}
 `NSW=1000, IBRION=2, EDIFFG=-5E-02`, `ENCUT=450`, `ISPIN=2`, `EDIFF=1E-05`,
 KPOINTS Monkhorst-Pack 2×2×1. beef-vdw copies `vdw_kernel.bindat` into each job.
 
-**`--skip-existing` is the key to incremental waves:** it creates inputs only for
-systems that don't already have an `INCAR`, so **already-converged / running jobs
-are never touched**. Add new gap-fill systems, re-run the loop, and only the new
-folders get set up. On Kestrel drop `--cluster` (default) — it writes
-`slm.vasp.kestrel`.
+**`--skip-existing` is the key to incremental waves:** it skips systems that are
+already fully set up (have **both** INCAR and POTCAR), so **already-converged /
+running jobs are never touched**. A dir with an INCAR but a missing POTCAR (an
+incomplete earlier run) is re-generated so the POTCAR gets written. Add new
+gap-fill systems, re-run the loop, and only the new/incomplete folders get set
+up. On Kestrel drop `--cluster` (default) — it writes `slm.vasp.kestrel`.
 
 ### 3b. Submit the array (runs only non-converged jobs)
 
