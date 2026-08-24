@@ -154,6 +154,22 @@ the array only ever runs jobs that still need it. Repeat for `pbe-d3`, `r2scan`,
 `beef-vdw` once PBE looks good (r2scan / beef-vdw are 2–3× slower). On Kestrel use
 `vasp_dft_array_kestrel.slurm`.
 
+**Submit exactly the jobs a `setup` run just created.** Instead of re-scanning the
+whole tree, have `setup_vasp_jobs.py` record the dirs it wrote this run and submit
+just those:
+
+```bash
+python setup_vasp_jobs.py --poscar-dir dft_jobs --functional pbe \
+    --cluster perlmutter-cpu --skip-existing --emit-joblist joblist_new_pbe.txt
+mkdir -p slurm-logs
+N=$(grep -vc '^#' joblist_new_pbe.txt)
+sbatch --array=0-$((N-1))%20 perlmutter/vasp_dft_array_cpu.slurm joblist_new_pbe.txt
+```
+
+`--emit-joblist` lists only the fully-runnable dirs (POTCAR present) created in
+that invocation, so a new gap-fill wave is submitted without touching anything
+already staged. `setup` prints the exact `sbatch` line for you.
+
 ### 3c. Only run the newly-added / failed jobs
 
 You do **not** have to re-run converged systems. Two independent safeguards make
@@ -207,7 +223,7 @@ what this benchmark measures. `plot_dft_vs_mlip.py` renders the comparison.
 | `workflow/collect_missing_sevennet.py` | Pick best seed per system → `collected/sevennet_missing/`; report re-run ids |
 | `workflow/import_sevennet_to_gallery.py` | Copy collected CIFs into `structure/` + fill MANIFEST `gallery_cif` |
 | `workflow/stage_dft_poscars.py` | Gallery CIF → species-sorted VASP5 POSCAR tree (`--fix-bottom-layers`) |
-| `setup_vasp_jobs.py` | Write INCAR/KPOINTS/POTCAR/slurm per functional (`--skip-existing`, `--cluster`) |
+| `setup_vasp_jobs.py` | Write INCAR/KPOINTS/POTCAR/slurm per functional (`--skip-existing`, `--emit-joblist`, `--cluster`) |
 | `workflow/make_dft_joblist.py` | List non-converged job dirs for one functional (array input) |
 | `perlmutter/vasp_dft_array_cpu.slurm` (Perlmutter) / `vasp_dft_array_kestrel.slurm` (repo root, Kestrel) | DFT job-array submit scripts |
 | `workflow/resubmit_dft.py` | Scan + resubmit failed/missing DFT jobs (`--restart-from-contcar`) |

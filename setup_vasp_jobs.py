@@ -548,6 +548,16 @@ def main():
             "untouched."
         ),
     )
+    parser.add_argument(
+        "--emit-joblist", default=None, metavar="PATH",
+        help=(
+            "Write the runnable job dirs CREATED this run to PATH (one per "
+            "line), ready to submit directly with the DFT job array. Combine "
+            "with --skip-existing to capture only the newly-created wave, then: "
+            "N=$(grep -vc '^#' PATH); sbatch --array=0-$((N-1))%%20 "
+            "perlmutter/vasp_dft_array_cpu.slurm PATH"
+        ),
+    )
     args = parser.parse_args()
 
     poscar_dir = Path(args.poscar_dir)
@@ -649,6 +659,7 @@ def main():
     all_ok = True
     n_created = 0
     n_skipped = 0
+    created_dirs = []
     for sys_dir in system_dirs:
         system_name = sys_dir.name
         if args.calc_type == "single-point":
@@ -687,11 +698,33 @@ def main():
             if result.get("vdw_kernel_written"):
                 files.append("vdw_kernel.bindat")
             print(f"    written:  {', '.join(files)}")
+            # Only list fully-runnable dirs (POTCAR present) in the joblist.
+            if (job_dir / "POTCAR").is_file():
+                created_dirs.append(job_dir)
 
         for w in result.get("warnings", []):
             print(f"    WARNING:  {w}")
             all_ok = False
 
+        print()
+
+    # ---- Optionally emit a joblist of exactly what was created this run ------
+    if args.emit_joblist and not args.dry_run:
+        jl = Path(args.emit_joblist)
+        jl.write_text(
+            f"# {len(created_dirs)} runnable job dir(s) created by "
+            f"setup_vasp_jobs.py --functional {args.functional} this run\n"
+            + "".join(f"{d.as_posix()}\n" for d in created_dirs)
+        )
+        print("=" * 65)
+        print(f"Wrote {len(created_dirs)} job dir(s) -> {jl}")
+        if created_dirs:
+            print("Submit exactly these jobs with:")
+            print()
+            print(f"    mkdir -p slurm-logs")
+            print(f"    N=$(grep -vc '^#' {jl})")
+            print(f"    sbatch --array=0-$((N-1))%20 "
+                  f"perlmutter/vasp_dft_array_cpu.slurm {jl}")
         print()
 
     # ---- Final instructions --------------------------------------------------
