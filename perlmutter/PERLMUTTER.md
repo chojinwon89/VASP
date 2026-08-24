@@ -315,6 +315,49 @@ exists but wasn't staged → a real `stage_dft_poscars.py` bug). Most of the ~10
 gaps are Pt111 + the six radicals (C2H2, CH3O, H, HCN, O, OH), all awaiting a
 SevenNet run.
 
+### 3c. Gap-fill: produce the missing MLIP structures, then re-stage
+The `missing_no_cif` systems have no SevenNet structure yet, so there is nothing
+to stage. Closing that gap is a five-step loop (SevenNet on GPU → collect →
+import → re-stage → verify). The ~100 gaps fall in two buckets, each with its own
+task list:
+
+1. **Radicals (78 systems: C2H2, CH3O, H, HCN, O, OH)** — the existing
+   `workflow/tasks_missing_sevennet.csv` (588 tasks) already covers these:
+   ```bash
+   python workflow/make_tasks_missing_sevennet.py         # (re)generate the CSV
+   sbatch --array=0-587%50 -t 00:20:00 \
+       perlmutter/goad_array_perlmutter_gpu.slurm workflow/tasks_missing_sevennet.csv
+   ```
+2. **Literature "existing"-group systems (~22, mostly Pt111: CH3, CO, CH4, …)** —
+   generate a dedicated small batch:
+   ```bash
+   python workflow/make_tasks_existing_gap.py             # -> tasks_existing_gap.csv (44 tasks)
+   sbatch --array=0-43%50 -t 00:20:00 \
+       perlmutter/goad_array_perlmutter_gpu.slurm workflow/tasks_existing_gap.csv
+   ```
+
+Once both arrays drain, collect the best seed per system, import into the gallery
++ MANIFEST, then re-stage:
+```bash
+# 1) collect best-seed CIFs -> collected/sevennet_missing/
+python workflow/collect_missing_sevennet.py --tasks-csv workflow/tasks_missing_sevennet.csv
+python workflow/collect_missing_sevennet.py --tasks-csv workflow/tasks_existing_gap.csv
+
+# 2) import: copy CIFs into structure/ + fill MANIFEST gallery_cif (dry-run first)
+python workflow/import_sevennet_to_gallery.py --dry-run
+python workflow/import_sevennet_to_gallery.py          # backs up MANIFEST.csv.bak
+
+# 3) re-stage the now-fillable systems, then verify coverage
+python workflow/stage_dft_poscars.py --manifest DFT_results/MANIFEST.csv \
+    --structure-dir structure --out-dir dft_jobs --fix-bottom-layers 2
+python workflow/check_dft_coverage.py                  # should approach 477/477
+```
+`import_sevennet_to_gallery.py` maps each collected `<surface>_<adsorbate>` CIF to
+its MANIFEST row (resolving name aliases like `methanol→CH3OH`, `acetylene→C2H2`),
+and fills one representative row per physical system (site variants share a
+structure). Then generate DFT inputs for the new folders and submit as usual
+(steps 2–4 above).
+
 ### 4. Find & resubmit missing / failed jobs
 After an array drains, scan for anything that didn't converge and resubmit it in
 one step with `workflow/resubmit_dft.py`. It classifies every job — `done`,
