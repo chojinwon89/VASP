@@ -299,6 +299,22 @@ sbatch --array=0-$((N-1))%20 perlmutter/vasp_dft_array_cpu.slurm joblist_pbe.txt
 `pbe-d3`, `r2scan`, `beef-vdw` once PBE looks good. Re-running the same two
 commands after a wave automatically skips whatever already converged.
 
+### 3b. Check staging coverage (what never got a job at all)
+`resubmit_dft.py` only sees systems that were *staged* (have a job dir). To catch
+systems that never got a POSCAR — e.g. `CH3_Pt111` — reconcile the in-scope
+MANIFEST against `dft_jobs/` with `workflow/check_dft_coverage.py`:
+```bash
+python workflow/check_dft_coverage.py                 # full report + dft_coverage.csv
+python workflow/check_dft_coverage.py --system CH3_Pt111   # look up one system
+python workflow/check_dft_coverage.py --missing-only       # just the gaps
+```
+It collapses adsorption-site variants (`CO_Pt111_atop/fcc` → `CO_Pt111`) and
+classifies each gap: `missing_no_cif` (no SevenNet gallery structure yet → run
+the gap-fill, collect the CIF, re-stage) vs `missing_has_cif` (a gallery CIF
+exists but wasn't staged → a real `stage_dft_poscars.py` bug). Most of the ~100
+gaps are Pt111 + the six radicals (C2H2, CH3O, H, HCN, O, OH), all awaiting a
+SevenNet run.
+
 ### 4. Find & resubmit missing / failed jobs
 After an array drains, scan for anything that didn't converge and resubmit it in
 one step with `workflow/resubmit_dft.py`. It classifies every job — `done`,
