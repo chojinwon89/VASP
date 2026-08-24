@@ -299,6 +299,25 @@ sbatch --array=0-$((N-1))%20 perlmutter/vasp_dft_array_cpu.slurm joblist_pbe.txt
 `pbe-d3`, `r2scan`, `beef-vdw` once PBE looks good. Re-running the same two
 commands after a wave automatically skips whatever already converged.
 
+### 4. Find & resubmit missing / failed jobs
+After an array drains, scan for anything that didn't converge and resubmit it in
+one step with `workflow/resubmit_dft.py`. It classifies every job — `done`,
+`running` (excluded so you never double-submit), `unconverged`, `crashed`/timed
+out, `not_started` — writes the resubmit list, and prints (or runs) the `sbatch`:
+```bash
+# scan + preview (does not submit):
+python workflow/resubmit_dft.py --jobs-dir dft_jobs --functional pbe
+# scan + actually submit the array of missing jobs:
+python workflow/resubmit_dft.py --jobs-dir dft_jobs --functional pbe --submit
+# continue relaxations from the last geometry instead of restarting:
+python workflow/resubmit_dft.py --jobs-dir dft_jobs --functional pbe \
+    --restart-from-contcar --submit
+# all four functionals at once (mixed list is fine):
+python workflow/resubmit_dft.py --jobs-dir dft_jobs --functional all --submit
+```
+On Kestrel add `--cluster kestrel`. Run it once `squeue` is empty for an exact
+count (jobs still in flight are reported as `running` and left alone).
+
 **Cost:** each array task uses 32/128 of a node (`-n 32`, `shared`), so a ~2 h PBE
 relax ≈ 0.5 node-hr. Measure your real per-job time from the smoke test and the
 first array wave before launching all four functionals — r2scan/beef-vdw are
