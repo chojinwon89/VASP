@@ -28,6 +28,7 @@ Then submit (throttle to 20 concurrent):
     sbatch --array=0-$((N-1))%20 perlmutter/vasp_dft_array_cpu.slurm joblist_pbe.txt
 """
 import argparse
+import mmap
 import sys
 from pathlib import Path
 
@@ -40,22 +41,30 @@ FUNC_DIR = {
 }
 
 CONVERGED_MARKER = "reached required accuracy"
+CONVERGED_MARKER_B = CONVERGED_MARKER.encode()
 
 
 def is_converged(outcar: Path) -> bool:
-    """True if the OUTCAR shows a converged ionic relaxation."""
+    """True if the OUTCAR shows a converged ionic relaxation.
+
+    Scans the WHOLE OUTCAR: 'reached required accuracy' is followed by a large
+    final block, so a tail-only check can miss it on big jobs and wrongly
+    re-list a converged system. mmap + find scans the full file at C speed
+    without reading it into Python memory.
+    """
     if not outcar.is_file():
         return False
     try:
-        # only the tail matters; avoid reading huge OUTCARs fully
+        if outcar.stat().st_size == 0:
+            return False
         with outcar.open("rb") as fh:
-            fh.seek(0, 2)
-            size = fh.tell()
-            fh.seek(max(0, size - 8192))
-            tail = fh.read().decode("utf-8", errors="ignore")
-    except Exception:
+            mm = mmap.mmap(fh.fileno(), 0, access=mmap.ACCESS_READ)
+            try:
+                return mm.find(CONVERGED_MARKER_B) != -1
+            finally:
+                mm.close()
+    except (ValueError, OSError):
         return False
-    return CONVERGED_MARKER in tail
 
 
 def main():

@@ -35,6 +35,8 @@ Typical use (Perlmutter CPU)
 On Kestrel add `--cluster kestrel`.
 """
 import argparse
+import argparse
+import mmap
 import shutil
 import subprocess
 import sys
@@ -56,28 +58,42 @@ ARRAY_SCRIPT = {
 
 CONVERGED = "reached required accuracy"
 FINISHED = "General timing and accounting"
+CONVERGED_B = CONVERGED.encode()
+FINISHED_B = FINISHED.encode()
 RESUBMIT_STATES = ("not_started", "crashed", "unconverged")
 
 
-def tail_text(path: Path, nbytes: int = 16384) -> str:
+def outcar_markers(path: Path):
+    """Scan the ENTIRE OUTCAR for the convergence / finish markers.
+
+    Returns (has_converged, has_finished). We must scan the whole file, not a
+    tail: after 'reached required accuracy' VASP writes a large final block
+    (forces, stress, DOS, timing), so on big jobs the marker sits well outside
+    any fixed tail window and a tail-only check misreports a converged run as
+    crashed. mmap + find scans the full file at C speed via the page cache
+    without loading it into Python memory.
+    """
     try:
+        if path.stat().st_size == 0:
+            return (False, False)
         with path.open("rb") as fh:
-            fh.seek(0, 2)
-            size = fh.tell()
-            fh.seek(max(0, size - nbytes))
-            return fh.read().decode("utf-8", errors="ignore")
-    except Exception:
-        return ""
+            mm = mmap.mmap(fh.fileno(), 0, access=mmap.ACCESS_READ)
+            try:
+                return (mm.find(CONVERGED_B) != -1, mm.find(FINISHED_B) != -1)
+            finally:
+                mm.close()
+    except (ValueError, OSError):
+        return (False, False)
 
 
 def classify(jobdir: Path, running_window_s: float) -> str:
     outcar = jobdir / "OUTCAR"
     if not outcar.is_file():
         return "not_started"
-    txt = tail_text(outcar)
-    if CONVERGED in txt:
+    has_conv, has_fin = outcar_markers(outcar)
+    if has_conv:
         return "done"
-    if FINISHED in txt:
+    if has_fin:
         return "unconverged"
     age = time.time() - outcar.stat().st_mtime
     return "running" if age < running_window_s else "crashed"
