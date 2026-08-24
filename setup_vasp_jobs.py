@@ -520,6 +520,16 @@ def main():
         "--dry-run", action="store_true",
         help="Print what would be done without writing any files",
     )
+    parser.add_argument(
+        "--skip-existing", action="store_true",
+        help=(
+            "Skip any system whose functional job dir already has an INCAR "
+            "(i.e. was already set up / has run). Use this for incremental "
+            "waves: after adding new gap-fill systems, re-run setup with "
+            "--skip-existing to create inputs ONLY for the new systems and "
+            "leave already-converged/running jobs untouched."
+        ),
+    )
     args = parser.parse_args()
 
     poscar_dir = Path(args.poscar_dir)
@@ -616,14 +626,22 @@ def main():
     print()
 
     all_ok = True
+    n_created = 0
+    n_skipped = 0
     for sys_dir in system_dirs:
         system_name = sys_dir.name
         if args.calc_type == "single-point":
             job_dir = sys_dir / "singlepoint" / subfolder
         else:
             job_dir = sys_dir / subfolder
+
+        if args.skip_existing and (job_dir / "INCAR").exists():
+            n_skipped += 1
+            continue
+
         action = "[DRY-RUN]" if args.dry_run else "writing"
         print(f"  {action}: {job_dir}/")
+        n_created += 1
 
         result = setup_job_dir(
             job_dir, system_name,
@@ -656,6 +674,11 @@ def main():
 
     # ---- Final instructions --------------------------------------------------
     print("=" * 65)
+    if args.skip_existing:
+        print(f"--skip-existing: created {n_created}, skipped "
+              f"{n_skipped} already-set-up system(s).")
+        if n_created == 0:
+            print("Nothing new to set up — all systems already have inputs.")
     print("NEXT STEPS")
     print("=" * 65)
     print()
