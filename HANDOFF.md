@@ -170,9 +170,12 @@ Script reference table + quick recipe: bottom of `README_Perlmutter.md`.
 - **Built by:** `generate_mlip_html.py` (in the session `files/` dir), which
   reads `mlip_bench/*.json` (SevenNet/MatterSim results + figures) and writes the
   HTML + assets into `/tmp/bond-pages/`. Publish = commit + push that repo.
-- **Current content:** MLIP-only benchmark (28→ up to the 25-molecule grid),
-  SevenNet vs MatterSim geometry/energy tables + per-system image gallery. No DFT
-  numbers yet (Stage B still running).
+- **Current content:** MLIP benchmark (SevenNet vs MatterSim geometry/energy
+  tables + per-system image gallery) over the 28 benchmarked non-magnetic
+  systems. A **"DFT validation in progress on Perlmutter"** status banner (added
+  2026-08-25, pages commit `dd556b8`) links to `README_Perlmutter.md`. No DFT
+  numbers yet (Stage B still running); the banner is the placeholder until
+  converged OUTCARs populate DFT columns.
 
 To refresh/publish:
 ```bash
