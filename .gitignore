@@ -11,6 +11,12 @@ slurm-logs/
 mlip_bench/
 dft_audit/
 
+# --- dft_jobs: ONLY <sys>/POSCAR is tracked. Prune every generated functional
+#     subdir (pbe/, pbe-d3/, r2scan/, beef_vdw/, rpbe/ ...) so git never descends
+#     into the ~1500 job dirs. This is the big `git status` win on Lustre.
+dft_jobs/*/*
+!dft_jobs/*/POSCAR
+
 # --- VASP job outputs (regenerated; POTCAR is license-restricted) -----------
 POTCAR
 WAVECAR
