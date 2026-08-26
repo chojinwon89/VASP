@@ -50,6 +50,7 @@ For beef-vdw jobs, this script also tries to copy:
 
 import argparse
 import os
+import re
 import shutil
 from pathlib import Path
 
@@ -57,6 +58,16 @@ from ase.io import read
 from ase import Atoms
 
 DEFAULT_VDW_KERNEL_PATH = "/projects/2dmgcat/vdw_kernel.bindat"
+
+# Per-cluster POTCAR / vdW-kernel defaults (mirror setup_vasp_jobs.py).
+CLUSTER_PP_PATH = {
+    "kestrel":        "/projects/2dmgcat/paw64/potpaw_PBE_64",
+    "perlmutter-cpu": "/pscratch/sd/j/jcho5/paw64/potpaw_PBE_64",
+}
+CLUSTER_VDW_KERNEL_PATH = {
+    "kestrel":        "/projects/2dmgcat/vdw_kernel.bindat",
+    "perlmutter-cpu": "/pscratch/sd/j/jcho5/vdw_kernel.bindat",
+}
 
 
 # ---------------------------------------------------------------------------
@@ -109,7 +120,7 @@ SYSTEM = {system}
 ! Startparameter
 NWRITE = 2
 ISTART = 0
-ISPIN  = 1
+ISPIN  = {ispin}
 
 ! Electronic Relaxation
 ENCUT  = 450
@@ -172,6 +183,55 @@ srun vasp_std
 """
 
 # ---------------------------------------------------------------------------
+# Slurm — Perlmutter (NERSC, CPU nodes). Molecules are tiny, so shared QOS on a
+# fraction of a node keeps the charge small.
+# ---------------------------------------------------------------------------
+SLURM_TEMPLATE_PERLMUTTER_CPU = """\
+#!/bin/bash
+#SBATCH -J {job_name}
+#SBATCH -A m5281
+#SBATCH -C cpu
+#SBATCH -q shared
+#SBATCH -n 32
+#SBATCH --mem=60G
+#SBATCH -t 04:00:00
+#SBATCH -o {job_name}.out
+#SBATCH -e {job_name}.err
+
+module load vasp-tpc/6.4.2-cpu
+
+export OMP_NUM_THREADS=1
+export OMP_PLACES=cores
+export OMP_PROC_BIND=spread
+
+srun --cpu-bind=cores vasp_std
+"""
+
+# cluster name -> (slurm template, filename written into each job dir)
+SLURM_TEMPLATES = {
+    "kestrel":        (SLURM_TEMPLATE, "slm.vasp.kestrel"),
+    "perlmutter-cpu": (SLURM_TEMPLATE_PERLMUTTER_CPU, "slm.vasp.perlmutter"),
+}
+
+# ---------------------------------------------------------------------------
+# Formula alias map: dft_jobs/<FORMULA>_<surface> uses formula names, but the
+# molecule CIFs use common names. Maps the formula (also the vasp_mol/ dir name
+# calc_binding_energy.py expects) -> registry key with the CIF geometry.
+# ---------------------------------------------------------------------------
+FORMULA_TO_REGISTRY = {
+    "C2H4":     "ethylene",
+    "C2H6":     "ethane",
+    "CH3CH2OH": "ethanol",
+    "CH3CHO":   "acetaldehyde",
+    "CH3COOH":  "acetic_acid",
+    "CH3OCH3":  "DME",
+    "CH3OH":    "methanol",
+    "H2CO":     "formaldehyde",
+    "HCOOH":    "formic_acid",
+    # direct (formula == registry key): CH3, CH4, CO, CO2, H2O, H2S, N2, NH3, NO, SO2
+}
+
+# ---------------------------------------------------------------------------
 # POTCAR element map
 # ---------------------------------------------------------------------------
 POTCAR_MAP = {
@@ -217,6 +277,8 @@ MOLECULE_REGISTRY = {
     "SO2":   "inputs/SO2.cif",
     "H2S":   "inputs/H2S.cif",
     "NH3":   "inputs/NH3.cif",
+    # Radicals (open-shell → need ISPIN=2)
+    "CH3":   "inputs/CH3.cif",
     # C1 references
     "CH4":         "inputs/CH4.cif",
     "methane":     "inputs/methane.cif",
@@ -342,6 +404,9 @@ MOLECULE_REGISTRY = {
     "vanillin":             "inputs/vanillin.cif",
 }
 
+# Open-shell species (odd electron count) — must be spin-polarized (ISPIN=2).
+OPEN_SHELL = {"CH3", "NO", "O2"}
+
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -418,8 +483,12 @@ def build_potcar(species, pp_root, out_path, dry_run=False):
 # ---------------------------------------------------------------------------
 
 def setup_mol_dir(mol_name, cif_path, out_dir, pp_root,
-                  functional, single_point=False, dry_run=False, force=False):
+                  functional, single_point=False, dry_run=False, force=False,
+                  cluster="kestrel", vdw_kernel_path=None):
     """Load molecule CIF and write all VASP input files into out_dir/mol_name/subfolder/."""
+
+    slurm_template, slurm_filename = SLURM_TEMPLATES[cluster]
+    ispin = 2 if mol_name in OPEN_SHELL else 1
 
     func_cfg = FUNCTIONAL_CONFIGS[functional]
     subfolder = func_cfg["subfolder"]
@@ -468,10 +537,14 @@ def setup_mol_dir(mol_name, cif_path, out_dir, pp_root,
     if not dry_run:
         (job_dir / "POSCAR").write_text(poscar_text)
 
+    if ispin == 2:
+        status["warnings"].append("open-shell radical — ISPIN=2")
+
     # INCAR
     if not dry_run:
         (job_dir / "INCAR").write_text(
-            INCAR_TEMPLATE.format(system=mol_name, nsw=nsw, ibrion=ibrion, xc_block=xc_block)
+            INCAR_TEMPLATE.format(system=mol_name, nsw=nsw, ibrion=ibrion,
+                                  xc_block=xc_block, ispin=ispin)
         )
 
     # KPOINTS
@@ -503,14 +576,14 @@ def setup_mol_dir(mol_name, cif_path, out_dir, pp_root,
         status["status"] = "partial"
 
     # Slurm
-    slurm_path = job_dir / "slm.vasp.kestrel"
+    slurm_path = job_dir / slurm_filename
     if not dry_run:
-        slurm_path.write_text(SLURM_TEMPLATE.format(job_name=mol_name[:40]))
+        slurm_path.write_text(slurm_template.format(job_name=mol_name[:40]))
         slurm_path.chmod(0o755)
 
     # vdw_kernel.bindat for beef-vdw
     if functional == "beef-vdw":
-        kernel_path = Path(DEFAULT_VDW_KERNEL_PATH)
+        kernel_path = Path(vdw_kernel_path or DEFAULT_VDW_KERNEL_PATH)
         if kernel_path.exists():
             if not dry_run:
                 shutil.copy2(kernel_path, job_dir / "vdw_kernel.bindat")
@@ -526,11 +599,47 @@ def setup_mol_dir(mol_name, cif_path, out_dir, pp_root,
 
 
 # ---------------------------------------------------------------------------
+# Systems-dir → molecule set
+# ---------------------------------------------------------------------------
+
+_SURFACE_SUFFIX = re.compile(
+    r"_(Ag|Au|Cu|Ir|Pd|Pt|Rh|Ni|Co|Fe|Cr)(100|110|111)$"
+)
+
+
+def derive_molecules_from_systems(systems_dir: Path) -> list[str]:
+    """Return the unique adsorbate formula names under a staged DFT jobs tree.
+
+    Strips the trailing _<metal><facet> from each <FORMULA>_<surface> dir name.
+    """
+    if not systems_dir.exists():
+        raise FileNotFoundError(f"--systems-dir not found: {systems_dir}")
+    formulas = set()
+    for d in systems_dir.iterdir():
+        if not d.is_dir():
+            continue
+        formulas.add(_SURFACE_SUFFIX.sub("", d.name))
+    return sorted(formulas)
+
+
+def resolve_cif(name: str):
+    """Map a target name (registry key OR dft_jobs formula) to (registry_key, cif_path).
+
+    Returns (None, None) if the name cannot be resolved.
+    """
+    if name in MOLECULE_REGISTRY:
+        return name, MOLECULE_REGISTRY[name]
+    reg_key = FORMULA_TO_REGISTRY.get(name)
+    if reg_key and reg_key in MOLECULE_REGISTRY:
+        return reg_key, MOLECULE_REGISTRY[reg_key]
+    return None, None
+
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
 def main():
-    all_mol_names = list(MOLECULE_REGISTRY.keys())
 
     parser = argparse.ArgumentParser(
         description="Generate VASP inputs for gas-phase molecule reference energy calculations."
@@ -549,16 +658,43 @@ def main():
     )
     parser.add_argument(
         "--molecules", nargs="+",
-        default=all_mol_names,
-        help=f"Molecule names to set up (default: all {len(all_mol_names)} molecules)"
+        default=None,
+        help=(
+            "Molecule/adsorbate names to set up. Accepts registry keys "
+            "(e.g. ethanol) or dft_jobs formula names (e.g. CH3CH2OH); formula "
+            "names are mapped to their CIF and the output dir keeps the formula "
+            "so calc_binding_energy.py finds vasp_mol/<FORMULA>/. "
+            "Default: all registry molecules (or the set derived from --systems-dir)."
+        )
+    )
+    parser.add_argument(
+        "--systems-dir", default=None,
+        help=(
+            "Derive the exact molecule set from a staged DFT jobs tree "
+            "(e.g. dft_jobs). Each <FORMULA>_<surface> dir contributes its "
+            "<FORMULA>; references are written to vasp_mol/<FORMULA>/ to match "
+            "calc_binding_energy.py."
+        )
     )
     parser.add_argument(
         "--out-dir", default="vasp_mol",
         help="Output root directory (default: ./vasp_mol)"
     )
     parser.add_argument(
+        "--cluster", choices=list(SLURM_TEMPLATES.keys()), default="kestrel",
+        help=(
+            "Target cluster: sets the slurm script + default POTCAR/vdW paths. "
+            "kestrel (slm.vasp.kestrel, /projects/2dmgcat) or perlmutter-cpu "
+            "(slm.vasp.perlmutter, /pscratch). Default: kestrel."
+        )
+    )
+    parser.add_argument(
         "--pp-path", default=None,
-        help="Path to VASP PBE PAW library (overrides VASP_PP_PATH env var)"
+        help="Path to VASP PBE PAW library (overrides --cluster default and VASP_PP_PATH)"
+    )
+    parser.add_argument(
+        "--vdw-kernel-path", default=None,
+        help="Path to vdw_kernel.bindat for beef-vdw (overrides --cluster default)"
     )
     parser.add_argument(
         "--single-point", action="store_true",
@@ -580,9 +716,24 @@ def main():
 
     out_dir = Path(args.out_dir)
 
-    # Resolve POTCAR library
-    pp_path_str = args.pp_path or os.environ.get("VASP_PP_PATH", "")
+    # Determine target molecule/adsorbate names.
+    #   priority: --molecules > --systems-dir > all registry keys
+    if args.molecules:
+        targets = args.molecules
+    elif args.systems_dir:
+        targets = derive_molecules_from_systems(Path(args.systems_dir))
+        print(f"Derived {len(targets)} molecule(s) from {args.systems_dir}: "
+              f"{' '.join(targets)}\n")
+    else:
+        targets = list(MOLECULE_REGISTRY.keys())
+
+    # Resolve POTCAR library: --pp-path > VASP_PP_PATH > per-cluster default.
+    pp_path_str = (args.pp_path or os.environ.get("VASP_PP_PATH", "")
+                   or CLUSTER_PP_PATH.get(args.cluster, ""))
     pp_root = Path(pp_path_str) if pp_path_str else None
+
+    # vdW kernel: --vdw-kernel-path > per-cluster default.
+    vdw_kernel_path = args.vdw_kernel_path or CLUSTER_VDW_KERNEL_PATH.get(args.cluster)
 
     if pp_root is None:
         print("WARNING: VASP_PP_PATH not set — POTCAR will not be built automatically.")
@@ -592,32 +743,40 @@ def main():
         print(f"Using POTCAR library: {pp_root}")
         print()
 
+    _, slurm_filename = SLURM_TEMPLATES[args.cluster]
     mode = "single-point" if args.single_point else "full relaxation"
     print(f"Functional:        {functional} -> subfolder '{subfolder}'")
-    print(f"Molecules:         {args.molecules}")
+    print(f"Cluster:           {args.cluster} ({slurm_filename})")
+    print(f"Molecules:         {' '.join(targets)}")
     print(f"Output directory:  {out_dir}/")
     print(f"Calculation mode:  {mode}")
     print(f"Force overwrite:   {args.force}")
     print()
 
     all_ok = True
-    for mol_name in args.molecules:
-        if mol_name not in MOLECULE_REGISTRY:
-            print(f"  ERROR: '{mol_name}' not in MOLECULE_REGISTRY. Skipping.")
+    for target in targets:
+        reg_key, cif_path = resolve_cif(target)
+        if cif_path is None:
+            print(f"  ERROR: '{target}' has no registry/CIF mapping. "
+                  f"Add it to MOLECULE_REGISTRY or FORMULA_TO_REGISTRY. Skipping.")
             all_ok = False
             continue
 
-        cif_path = MOLECULE_REGISTRY[mol_name]
+        alias = f" (CIF: {reg_key})" if reg_key != target else ""
         action = "[DRY-RUN]" if args.dry_run else "writing"
-        print(f"  {action}: {out_dir / mol_name / subfolder}/")
+        print(f"  {action}: {out_dir / target / subfolder}/{alias}")
 
+        # Output dir is named by `target` (the dft_jobs formula) so
+        # calc_binding_energy.py finds vasp_mol/<FORMULA>/<FUNC>/OUTCAR.
         result = setup_mol_dir(
-            mol_name, cif_path, out_dir,
+            target, cif_path, out_dir,
             pp_root=pp_root,
             functional=functional,
             single_point=args.single_point,
             dry_run=args.dry_run,
             force=args.force,
+            cluster=args.cluster,
+            vdw_kernel_path=vdw_kernel_path,
         )
 
         if result["status"] == "skipped":
@@ -634,7 +793,7 @@ def main():
         print(f"    species:  {' '.join(result['species'])}")
 
         if not args.dry_run:
-            files = ["POSCAR", "INCAR", "KPOINTS", "slm.vasp.kestrel"]
+            files = ["POSCAR", "INCAR", "KPOINTS", slurm_filename]
             if result["status"] == "ok":
                 files.insert(3, "POTCAR")
             if result.get("vdw_kernel_written"):
@@ -667,13 +826,13 @@ def main():
 
     print(f"{step}. Submit molecule jobs:")
     print()
-    for mol in args.molecules:
-        print(f"     cd {out_dir}/{mol}/{subfolder} && sbatch slm.vasp.kestrel && cd -")
+    for mol in targets:
+        print(f"     cd {out_dir}/{mol}/{subfolder} && sbatch {slurm_filename} && cd -")
     print()
     step += 1
     print(f"{step}. After jobs finish, extract E_mol from OUTCAR:")
     print()
-    for mol in args.molecules:
+    for mol in targets:
         print(f"     grep 'free  energy' {out_dir}/{mol}/{subfolder}/OUTCAR | tail -1")
     print()
     step += 1
