@@ -1,2 +1,43 @@
 __pycache__/
 *.py[cod]
+
+# --- Large, regenerated data trees (kept on the cluster/Mac, never in git) ---
+# Ignoring whole directories lets git PRUNE them from its untracked-file scan,
+# which is what makes `git status` / `git pull` slow on Perlmutter's Lustre fs.
+structure/
+runs/
+collected/
+slurm-logs/
+mlip_bench/
+dft_audit/
+
+# --- VASP job outputs (regenerated; POTCAR is license-restricted) -----------
+POTCAR
+WAVECAR
+CHGCAR
+CHG
+DOSCAR
+EIGENVAL
+PROCAR
+OSZICAR
+XDATCAR
+PCDAT
+REPORT
+IBZKPT
+vasprun.xml
+vaspout.h5
+WAVEDER
+TMPCAR
+CONTCAR
+std.out
+std.err
+
+# --- generated joblists / audit CSVs / backups ------------------------------
+joblist_*.txt
+dft_audit_*.csv
+dft_coverage.csv
+*.bak
+slurm-*.out
+slurm-*.err
+*.o[0-9]*
+*.e[0-9]*
