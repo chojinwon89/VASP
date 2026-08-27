@@ -1,0 +1,18 @@
+#!/bin/bash
+#SBATCH -J H2CO
+#SBATCH -A m5281
+#SBATCH -C cpu
+#SBATCH -q shared
+#SBATCH -n 32
+#SBATCH --mem=60G
+#SBATCH -t 04:00:00
+#SBATCH -o H2CO.out
+#SBATCH -e H2CO.err
+
+module load vasp-tpc/6.4.2-cpu
+
+export OMP_NUM_THREADS=1
+export OMP_PLACES=cores
+export OMP_PROC_BIND=spread
+
+srun --cpu-bind=cores vasp_std

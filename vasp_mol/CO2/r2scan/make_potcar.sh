@@ -1,0 +1,3 @@
+# Build POTCAR for CO2
+# Set VASP_PP_PATH first, then run:
+cat $VASP_PP_PATH/C/POTCAR $VASP_PP_PATH/O/POTCAR > POTCAR

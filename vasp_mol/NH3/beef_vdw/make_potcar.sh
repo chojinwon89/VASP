@@ -1,0 +1,3 @@
+# Build POTCAR for NH3
+# Set VASP_PP_PATH first, then run:
+cat $VASP_PP_PATH/N/POTCAR $VASP_PP_PATH/H/POTCAR > POTCAR

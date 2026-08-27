@@ -1,0 +1,3 @@
+# Build POTCAR for C2H4
+# Set VASP_PP_PATH first, then run:
+cat $VASP_PP_PATH/C/POTCAR $VASP_PP_PATH/H/POTCAR > POTCAR
