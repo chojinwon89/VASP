@@ -2,8 +2,11 @@
 """
 setup_slab_jobs.py
 ==================
-Generate VASP input files (POSCAR, INCAR, KPOINTS, POTCAR, slm.vasp.kestrel)
-for bare-slab reference energy calculations.
+Generate VASP input files (POSCAR, INCAR, KPOINTS, POTCAR, and a
+cluster-specific Slurm script) for bare-slab reference energy calculations.
+
+Use --cluster kestrel        -> writes slm.vasp.kestrel   (--account=ccpc)
+Use --cluster perlmutter-cpu -> writes slm.vasp.perlmutter (-A m5281 -C cpu)
 
 These slab energies (E_surf) are needed to compute the DFT adsorption energy:
     E_ads = E_total(slab+mol) - E_surf(slab) - E_mol(gas)
@@ -22,7 +25,7 @@ Output layout
     vasp_slab/
         Cu111/
             PBE/
-                POSCAR  INCAR  KPOINTS  POTCAR  slm.vasp.kestrel
+                POSCAR  INCAR  KPOINTS  POTCAR  slm.vasp.<cluster>
             PBE_D3/
                 ...
             r2scan/
@@ -60,7 +63,23 @@ from pathlib import Path
 from ase.build import fcc111, fcc100, fcc110, bcc110, bcc100, bcc111, hcp0001
 from ase import Atoms
 
+# Default POTCAR / vdW-kernel paths, per cluster.
+# Priority chain (highest first):
+#   --pp-path / --vdw-kernel-path flag
+#   > VASP_PP_PATH / VASP_VDW_KERNEL_PATH env var
+#   > per-cluster default below (keyed by --cluster)
+#   > generic fallback (DEFAULT_PP_PATH / DEFAULT_VDW_KERNEL_PATH)
+DEFAULT_PP_PATH = "/projects/2dmgcat/paw64/potpaw_PBE_64"
 DEFAULT_VDW_KERNEL_PATH = "/projects/2dmgcat/vdw_kernel.bindat"
+
+CLUSTER_PP_PATH = {
+    "kestrel":        "/projects/2dmgcat/paw64/potpaw_PBE_64",
+    "perlmutter-cpu": "/pscratch/sd/j/jcho5/paw64/potpaw_PBE_64",
+}
+CLUSTER_VDW_KERNEL_PATH = {
+    "kestrel":        "/projects/2dmgcat/vdw_kernel.bindat",
+    "perlmutter-cpu": "/pscratch/sd/j/jcho5/vdw_kernel.bindat",
+}
 
 
 # ---------------------------------------------------------------------------
@@ -174,6 +193,40 @@ module load vasp/6.3.2_openMP+tpc
 
 srun vasp_std
 """
+
+# ---------------------------------------------------------------------------
+# Slurm — Perlmutter template (NERSC, CPU nodes)
+# ---------------------------------------------------------------------------
+SLURM_TEMPLATE_PERLMUTTER_CPU = """\
+#!/bin/bash
+#SBATCH -J {job_name}
+#SBATCH -A m5281
+#SBATCH -C cpu
+#SBATCH -q regular
+#SBATCH -N 1
+#SBATCH --ntasks-per-node=128
+#SBATCH --cpus-per-task=2
+#SBATCH -t 12:00:00
+#SBATCH -o {job_name}.out
+#SBATCH -e {job_name}.err
+
+# NERSC CPU VASP build (license-gated). If yours differs, run
+# `module avail vasp` and edit this line.
+module load vasp-tpc/6.4.2-cpu
+
+export OMP_NUM_THREADS=1
+export OMP_PLACES=cores
+export OMP_PROC_BIND=spread
+
+# Full CPU node = 128 physical cores; pure MPI (OMP=1), no hyperthreading.
+srun --cpu-bind=cores vasp_std
+"""
+
+# cluster name -> (slurm template, filename written into each job dir)
+SLURM_TEMPLATES = {
+    "kestrel":        (SLURM_TEMPLATE, "slm.vasp.kestrel"),
+    "perlmutter-cpu": (SLURM_TEMPLATE_PERLMUTTER_CPU, "slm.vasp.perlmutter"),
+}
 
 # ---------------------------------------------------------------------------
 # POTCAR element map
@@ -361,7 +414,11 @@ def build_potcar(species, pp_root, out_path, dry_run=False):
 # Per-surface setup
 # ---------------------------------------------------------------------------
 
-def setup_slab_dir(surface_name, out_dir, pp_root, n_fixed, functional, dry_run=False, force=False):
+def setup_slab_dir(surface_name, out_dir, pp_root, n_fixed, functional,
+                   dry_run=False, force=False,
+                   slurm_template=SLURM_TEMPLATE,
+                   slurm_filename="slm.vasp.kestrel",
+                   vdw_kernel_path=None):
     """Build slab and write all VASP input files into out_dir/surface_name/subfolder/."""
 
     func_cfg = FUNCTIONAL_CONFIGS[functional]
@@ -444,14 +501,15 @@ def setup_slab_dir(surface_name, out_dir, pp_root, n_fixed, functional, dry_run=
         status["status"] = "partial"
 
     # Slurm
-    slurm_path = job_dir / "slm.vasp.kestrel"
+    slurm_path = job_dir / slurm_filename
     if not dry_run:
-        slurm_path.write_text(SLURM_TEMPLATE.format(job_name=surface_name[:40]))
+        slurm_path.write_text(slurm_template.format(job_name=surface_name[:40]))
         slurm_path.chmod(0o755)
 
     # vdw_kernel.bindat for beef-vdw
     if functional == "beef-vdw":
-        kernel_path = Path(DEFAULT_VDW_KERNEL_PATH)
+        kernel_path = Path(vdw_kernel_path) if vdw_kernel_path \
+            else Path(DEFAULT_VDW_KERNEL_PATH)
         if kernel_path.exists():
             if not dry_run:
                 shutil.copy2(kernel_path, job_dir / "vdw_kernel.bindat")
@@ -512,8 +570,30 @@ def main():
         help="Output root directory (default: ./vasp_slab)"
     )
     parser.add_argument(
+        "--cluster", default="kestrel",
+        choices=sorted(SLURM_TEMPLATES.keys()),
+        help=(
+            "Which cluster's Slurm submit script to write into each job dir. "
+            "'kestrel' (default) writes slm.vasp.kestrel (--account=ccpc); "
+            "'perlmutter-cpu' writes slm.vasp.perlmutter (-A m5281 -C cpu "
+            "-q regular). Also selects the per-cluster POTCAR / vdW-kernel "
+            "default paths."
+        ),
+    )
+    parser.add_argument(
         "--pp-path", default=None,
-        help="Path to VASP PBE PAW library (overrides VASP_PP_PATH env var)"
+        help=(
+            "Path to VASP PBE PAW library. Priority: --pp-path > VASP_PP_PATH "
+            "env var > per-cluster default > generic fallback."
+        ),
+    )
+    parser.add_argument(
+        "--vdw-kernel-path", default=None,
+        help=(
+            "Path to vdw_kernel.bindat for beef-vdw jobs. Priority: "
+            "--vdw-kernel-path > VASP_VDW_KERNEL_PATH env var > per-cluster "
+            "default > generic fallback."
+        ),
     )
     parser.add_argument(
         "--n-fixed", type=int, default=2,
@@ -537,19 +617,45 @@ def main():
     n_fixed = args.n_fixed
     out_dir = Path(args.out_dir)
 
-    # Resolve POTCAR library
-    pp_path_str = args.pp_path or os.environ.get("VASP_PP_PATH", "")
+    # Resolve which Slurm script to write for this cluster.
+    slurm_template, slurm_filename = SLURM_TEMPLATES[args.cluster]
+
+    # Resolve POTCAR library: --pp-path > VASP_PP_PATH env > per-cluster
+    # default > generic fallback.
+    cluster_pp_default = CLUSTER_PP_PATH.get(args.cluster, DEFAULT_PP_PATH)
+    pp_path_str = (args.pp_path
+                   or os.environ.get("VASP_PP_PATH", "")
+                   or cluster_pp_default)
     pp_root = Path(pp_path_str) if pp_path_str else None
 
-    if pp_root is None:
+    # Resolve vdW kernel: --vdw-kernel-path > VASP_VDW_KERNEL_PATH env >
+    # per-cluster default > generic fallback.
+    cluster_vdw_default = CLUSTER_VDW_KERNEL_PATH.get(args.cluster,
+                                                      DEFAULT_VDW_KERNEL_PATH)
+    vdw_kernel_path = (args.vdw_kernel_path
+                       or os.environ.get("VASP_VDW_KERNEL_PATH", "")
+                       or cluster_vdw_default)
+
+    if pp_root is not None and not pp_root.exists():
+        print(f"WARNING: POTCAR library not found at: {pp_root}")
+        print("         POTCAR will NOT be built automatically; "
+              "make_potcar.sh written instead.")
+        print("         Override with --pp-path or VASP_PP_PATH env var.")
+        print()
+        pp_root = None
+    elif pp_root is None:
         print("WARNING: VASP_PP_PATH not set — POTCAR will not be built automatically.")
         print("         make_potcar.sh will be written in each job directory instead.")
         print()
     else:
-        print(f"Using POTCAR library: {pp_root}")
+        source = ("--pp-path" if args.pp_path
+                  else "VASP_PP_PATH" if os.environ.get("VASP_PP_PATH")
+                  else f"{args.cluster} default")
+        print(f"Using POTCAR library ({source}): {pp_root}")
         print()
 
     print(f"Functional:        {functional} -> subfolder '{subfolder}'")
+    print(f"Cluster:           {args.cluster}  ->  submit script: {slurm_filename}")
     print(f"Surfaces:          {args.surfaces}")
     print(f"Output directory:  {out_dir}/")
     print(f"Fixed bottom layers: {n_fixed}")
@@ -568,6 +674,9 @@ def main():
             functional=functional,
             dry_run=args.dry_run,
             force=args.force,
+            slurm_template=slurm_template,
+            slurm_filename=slurm_filename,
+            vdw_kernel_path=vdw_kernel_path,
         )
 
         if result["status"] == "skipped":
@@ -585,7 +694,7 @@ def main():
         print(f"    species:  {' '.join(result['species'])}")
 
         if not args.dry_run:
-            files = ["POSCAR (SD)", "INCAR", "KPOINTS", "slm.vasp.kestrel"]
+            files = ["POSCAR (SD)", "INCAR", "KPOINTS", slurm_filename]
             if result["status"] == "ok":
                 files.insert(3, "POTCAR")
             if result.get("vdw_kernel_written"):
@@ -619,7 +728,7 @@ def main():
     print(f"{step}. Submit slab jobs:")
     print()
     for s in args.surfaces:
-        print(f"     cd {out_dir}/{s}/{subfolder} && sbatch slm.vasp.kestrel && cd -")
+        print(f"     cd {out_dir}/{s}/{subfolder} && sbatch {slurm_filename} && cd -")
     print()
     step += 1
     print(f"{step}. After jobs finish, extract E_surf from OUTCAR:")

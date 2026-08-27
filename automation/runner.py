@@ -79,8 +79,11 @@ def discover_job_dirs(jobs_root: Path):
     dirs = []
     for incar in jobs_root.rglob("INCAR"):
         d = incar.parent
-        required = ["POSCAR", "INCAR", "KPOINTS", "slm.vasp.kestrel"]
-        if all((d / x).exists() for x in required):
+        required = ["POSCAR", "INCAR", "KPOINTS"]
+        # Accept either cluster's Slurm submit script.
+        has_slurm = any((d / f).exists()
+                        for f in ("slm.vasp.kestrel", "slm.vasp.perlmutter"))
+        if has_slurm and all((d / x).exists() for x in required):
             dirs.append(d)
     return sorted(set(dirs))
 
