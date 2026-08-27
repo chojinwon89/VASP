@@ -1,3 +1,0 @@
-# Build POTCAR for NO
-# Set VASP_PP_PATH first, then run:
-cat $VASP_PP_PATH/N/POTCAR $VASP_PP_PATH/O/POTCAR > POTCAR

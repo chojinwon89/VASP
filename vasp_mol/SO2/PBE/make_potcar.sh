@@ -1,3 +1,0 @@
-# Build POTCAR for SO2
-# Set VASP_PP_PATH first, then run:
-cat $VASP_PP_PATH/S/POTCAR $VASP_PP_PATH/O/POTCAR > POTCAR

@@ -17,6 +17,11 @@ dft_audit/
 dft_jobs/*/*
 !dft_jobs/*/POSCAR
 
+# --- vasp_mol: generated molecule reference jobs. Regenerated from inputs/*.cif
+#     via setup_molecule_jobs.py --skip-existing on each cluster. Never tracked,
+#     so converged jobs on Kestrel never conflict with a git pull.
+vasp_mol/
+
 # --- VASP job outputs (regenerated; POTCAR is license-restricted) -----------
 POTCAR
 WAVECAR

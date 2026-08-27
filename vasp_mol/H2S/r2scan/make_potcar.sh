@@ -1,3 +1,0 @@
-# Build POTCAR for H2S
-# Set VASP_PP_PATH first, then run:
-cat $VASP_PP_PATH/S/POTCAR $VASP_PP_PATH/H/POTCAR > POTCAR
