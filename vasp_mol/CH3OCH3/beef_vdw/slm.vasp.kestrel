@@ -1,0 +1,19 @@
+#!/bin/bash
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=17
+#SBATCH --cpus-per-task=6
+#SBATCH --time=12:00:00
+#SBATCH --account=ccpc
+#SBATCH --job-name=CH3OCH3
+#SBATCH --output=CH3OCH3.out
+#SBATCH --error=CH3OCH3.err
+
+export OMP_NUM_THREADS=1
+export OMP_STACKSIZE=3G
+export OMP_PROC_BIND=spread
+export OMP_PLACES=cores
+ulimit -s unlimited
+
+module load vasp/6.3.2_openMP+tpc
+
+srun vasp_std
