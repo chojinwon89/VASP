@@ -57,9 +57,14 @@ from pathlib import Path
 from ase.io import read
 from ase import Atoms
 
+# Default POTCAR / vdW-kernel paths, per cluster (mirror setup_vasp_jobs.py).
+# Resolution order for each: --pp-path/--vdw-kernel-path flag
+#   > VASP_PP_PATH / VASP_VDW_KERNEL_PATH env var
+#   > per-cluster default below (keyed by --cluster)
+#   > generic fallback (DEFAULT_PP_PATH / DEFAULT_VDW_KERNEL_PATH)
+DEFAULT_PP_PATH = "/projects/2dmgcat/paw64/potpaw_PBE_64"
 DEFAULT_VDW_KERNEL_PATH = "/projects/2dmgcat/vdw_kernel.bindat"
 
-# Per-cluster POTCAR / vdW-kernel defaults (mirror setup_vasp_jobs.py).
 CLUSTER_PP_PATH = {
     "kestrel":        "/projects/2dmgcat/paw64/potpaw_PBE_64",
     "perlmutter-cpu": "/pscratch/sd/j/jcho5/paw64/potpaw_PBE_64",
@@ -235,21 +240,26 @@ FORMULA_TO_REGISTRY = {
 # POTCAR element map
 # ---------------------------------------------------------------------------
 POTCAR_MAP = {
-    "Cu": ["Cu_pv", "Cu"],
-    "C":  ["C"],
+    # Non-metals / common adsorbate elements (bare-element first, matching the
+    # potpaw_PBE_64 library layout used by setup_vasp_jobs.py).
     "H":  ["H"],
-    "O":  ["O"],
+    "C":  ["C"],
     "N":  ["N"],
+    "O":  ["O"],
     "S":  ["S"],
-    "Pt": ["Pt_pv", "Pt"],
-    "Pd": ["Pd_pv", "Pd"],
-    "Ni": ["Ni_pv", "Ni"],
-    "Ag": ["Ag_pv", "Ag"],
-    "Au": ["Au_pv", "Au"],
-    "Fe": ["Fe_pv", "Fe"],
-    "Co": ["Co_pv", "Co"],
-    "Zn": ["Zn_pv", "Zn"],
     "Al": ["Al"],
+    # Metals
+    "Cu": ["Cu", "Cu_pv"],
+    "Pt": ["Pt", "Pt_pv"],
+    "Pd": ["Pd", "Pd_pv"],
+    "Ni": ["Ni", "Ni_pv"],
+    "Ag": ["Ag", "Ag_pv"],
+    "Au": ["Au"],
+    "Ir": ["Ir", "Ir_pv"],
+    "Rh": ["Rh", "Rh_pv"],
+    "Fe": ["Fe", "Fe_pv"],
+    "Co": ["Co", "Co_pv"],
+    "Zn": ["Zn"],
 }
 
 # ---------------------------------------------------------------------------
@@ -708,6 +718,23 @@ def main():
         "--force", action="store_true",
         help="Regenerate job files even when OUTCAR already exists (default: skip finished jobs)."
     )
+    parser.add_argument(
+        "--skip-existing", action="store_true",
+        help=(
+            "Skip any molecule whose functional job dir is already fully set up "
+            "(has BOTH INCAR and POTCAR). A dir with an INCAR but a missing "
+            "POTCAR is re-generated so the POTCAR gets written. Use this for "
+            "incremental waves (mirror of setup_vasp_jobs.py)."
+        ),
+    )
+    parser.add_argument(
+        "--emit-joblist", default=None, metavar="PATH",
+        help=(
+            "Write the runnable job dirs CREATED this run to PATH (one per "
+            "line, POTCAR present), ready to submit. Combine with "
+            "--skip-existing to capture only the newly-created wave."
+        ),
+    )
     args = parser.parse_args()
 
     functional = args.functional
@@ -727,20 +754,37 @@ def main():
     else:
         targets = list(MOLECULE_REGISTRY.keys())
 
-    # Resolve POTCAR library: --pp-path > VASP_PP_PATH > per-cluster default.
+    # Resolve POTCAR library: --pp-path > VASP_PP_PATH env > per-cluster default
+    # > generic fallback (mirror setup_vasp_jobs.py).
+    cluster_pp_default = CLUSTER_PP_PATH.get(args.cluster, DEFAULT_PP_PATH)
     pp_path_str = (args.pp_path or os.environ.get("VASP_PP_PATH", "")
-                   or CLUSTER_PP_PATH.get(args.cluster, ""))
+                   or cluster_pp_default)
     pp_root = Path(pp_path_str) if pp_path_str else None
 
-    # vdW kernel: --vdw-kernel-path > per-cluster default.
-    vdw_kernel_path = args.vdw_kernel_path or CLUSTER_VDW_KERNEL_PATH.get(args.cluster)
+    # vdW kernel: --vdw-kernel-path > VASP_VDW_KERNEL_PATH env > per-cluster
+    # default > generic fallback.
+    cluster_vdw_default = CLUSTER_VDW_KERNEL_PATH.get(args.cluster,
+                                                      DEFAULT_VDW_KERNEL_PATH)
+    vdw_kernel_path = (args.vdw_kernel_path
+                       or os.environ.get("VASP_VDW_KERNEL_PATH", "")
+                       or cluster_vdw_default)
 
-    if pp_root is None:
+    if pp_root is not None and not pp_root.exists():
+        print(f"WARNING: POTCAR library not found at: {pp_root}")
+        print("         POTCAR will NOT be built automatically; "
+              "make_potcar.sh written instead.")
+        print("         Override with --pp-path or VASP_PP_PATH env var.")
+        print()
+        pp_root = None
+    elif pp_root is None:
         print("WARNING: VASP_PP_PATH not set — POTCAR will not be built automatically.")
         print("         make_potcar.sh will be written in each job directory instead.")
         print()
     else:
-        print(f"Using POTCAR library: {pp_root}")
+        source = ("--pp-path" if args.pp_path
+                  else "VASP_PP_PATH" if os.environ.get("VASP_PP_PATH")
+                  else f"{args.cluster} default")
+        print(f"Using POTCAR library ({source}): {pp_root}")
         print()
 
     _, slurm_filename = SLURM_TEMPLATES[args.cluster]
@@ -754,6 +798,9 @@ def main():
     print()
 
     all_ok = True
+    n_created = 0
+    n_skipped = 0
+    created_dirs = []
     for target in targets:
         reg_key, cif_path = resolve_cif(target)
         if cif_path is None:
@@ -762,9 +809,16 @@ def main():
             all_ok = False
             continue
 
+        job_dir = out_dir / target / subfolder
+        if args.skip_existing and (job_dir / "INCAR").exists() \
+                and (job_dir / "POTCAR").exists():
+            n_skipped += 1
+            continue
+
         alias = f" (CIF: {reg_key})" if reg_key != target else ""
         action = "[DRY-RUN]" if args.dry_run else "writing"
-        print(f"  {action}: {out_dir / target / subfolder}/{alias}")
+        print(f"  {action}: {job_dir}/{alias}")
+        n_created += 1
 
         # Output dir is named by `target` (the dft_jobs formula) so
         # calc_binding_energy.py finds vasp_mol/<FORMULA>/<FUNC>/OUTCAR.
@@ -799,6 +853,9 @@ def main():
             if result.get("vdw_kernel_written"):
                 files.append("vdw_kernel.bindat")
             print(f"    written:  {', '.join(files)}")
+            # Only list fully-runnable dirs (POTCAR present) in the joblist.
+            if (job_dir / "POTCAR").is_file():
+                created_dirs.append(job_dir)
 
         for w in result.get("warnings", []):
             print(f"    WARNING:  {w}")
@@ -806,8 +863,25 @@ def main():
 
         print()
 
+    # ---- Optionally emit a joblist of exactly what was created this run ------
+    if args.emit_joblist and not args.dry_run:
+        jl = Path(args.emit_joblist)
+        jl.write_text(
+            f"# {len(created_dirs)} runnable job dir(s) created by "
+            f"setup_molecule_jobs.py --functional {functional} this run\n"
+            + "".join(f"{d.as_posix()}\n" for d in created_dirs)
+        )
+        print("=" * 65)
+        print(f"Wrote {len(created_dirs)} job dir(s) -> {jl}")
+        print()
+
     # Summary
     print("=" * 65)
+    if args.skip_existing:
+        print(f"--skip-existing: created {n_created}, skipped "
+              f"{n_skipped} already-set-up molecule(s).")
+        if n_created == 0:
+            print("Nothing new to set up — all molecules already have inputs.")
     print("NEXT STEPS")
     print("=" * 65)
     print()
