@@ -810,8 +810,13 @@ def main():
             continue
 
         job_dir = out_dir / target / subfolder
-        if args.skip_existing and (job_dir / "INCAR").exists() \
-                and (job_dir / "POTCAR").exists():
+        # Skip if the job already finished (OUTCAR) or is already fully set up
+        # (INCAR+POTCAR). OUTCAR alone protects converged jobs even when POTCAR
+        # isn't present locally.
+        if args.skip_existing and (
+            (job_dir / "OUTCAR").exists()
+            or ((job_dir / "INCAR").exists() and (job_dir / "POTCAR").exists())
+        ):
             n_skipped += 1
             continue
 
