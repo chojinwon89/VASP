@@ -44,11 +44,19 @@ def read_incar_intent(incar: Path):
     return vals.get("NSW"), vals.get("IBRION")
 
 
+OUTCAR_NSW = re.compile(r"NSW\s*=\s*(\d+)")
+OUTCAR_IBRION = re.compile(r"IBRION\s*=\s*([-+]?\d+)")
+
+
 def scan_outcar(outcar: Path):
-    """Return (n_ionic_steps, reached_accuracy, finished) by streaming OUTCAR."""
+    """Stream OUTCAR once, returning:
+    (n_ionic_steps, reached_accuracy, finished, nsw, ibrion).
+    NSW/IBRION are parsed from the OUTCAR header (fallback when INCAR absent).
+    """
     n_ionic = 0
     reached = False
     finished = False
+    nsw = ibrion = None
     try:
         with outcar.open(errors="ignore") as fh:
             for line in fh:
@@ -59,23 +67,37 @@ def scan_outcar(outcar: Path):
                     reached = True
                 elif "General timing and accounting" in line:
                     finished = True
+                elif nsw is None and "NSW" in line:
+                    m = OUTCAR_NSW.search(line)
+                    if m:
+                        nsw = int(m.group(1))
+                elif ibrion is None and "IBRION" in line:
+                    m = OUTCAR_IBRION.search(line)
+                    if m:
+                        ibrion = int(m.group(1))
     except OSError:
-        return 0, False, False
-    return n_ionic, reached, finished
+        return 0, False, False, None, None
+    return n_ionic, reached, finished, nsw, ibrion
 
 
 def classify(job_dir: Path):
-    incar = job_dir / "INCAR"
-    nsw, ibrion = read_incar_intent(incar)
-    intent = "unknown"
-    if nsw is not None:
-        intent = "single-point" if (nsw == 0 or ibrion == -1) else "relax"
+    nsw, ibrion = read_incar_intent(job_dir / "INCAR")
 
     outcar = job_dir / "OUTCAR"
     if not outcar.exists():
+        intent = "unknown"
+        if nsw is not None:
+            intent = "single-point" if (nsw == 0 or ibrion == -1) else "relax"
         return intent, "no-outcar", 0, False
 
-    n_ionic, reached, finished = scan_outcar(outcar)
+    n_ionic, reached, finished, o_nsw, o_ibrion = scan_outcar(outcar)
+
+    # Prefer INCAR intent; fall back to OUTCAR header when INCAR is absent.
+    if nsw is None:
+        nsw, ibrion = o_nsw, o_ibrion
+    intent = "unknown"
+    if nsw is not None:
+        intent = "single-point" if (nsw == 0 or ibrion == -1) else "relax"
 
     if n_ionic == 0:
         outcome = "running/partial" if not finished else "empty-outcar"
@@ -89,8 +111,14 @@ def classify(job_dir: Path):
 
 
 def find_job_dirs(root: Path):
-    for incar in root.rglob("INCAR"):
-        yield incar.parent
+    """Any dir containing an OUTCAR (ran) or an INCAR (set up but not run)."""
+    seen = set()
+    for marker in ("OUTCAR", "INCAR"):
+        for f in root.rglob(marker):
+            d = f.parent
+            if d not in seen:
+                seen.add(d)
+                yield d
 
 
 def main():
