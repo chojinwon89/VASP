@@ -166,6 +166,43 @@ def read_energy_from_outcar(outcar_path: Path) -> float:
     return energy
 
 
+def count_element_atoms(outcar_path: Path, element: str) -> int:
+    """Count atoms of `element` in a VASP OUTCAR.
+
+    Reads the 'ions per type' line and the 'VRHFIN =El:' species order so the
+    slab metal count can be compared between an adsorption job and its clean
+    slab reference. Returns -1 if the count cannot be determined.
+    """
+    import gzip
+
+    resolved = _resolve_outcar(outcar_path)
+    if not resolved.exists():
+        return -1
+    opener = gzip.open if resolved.suffix == ".gz" else open
+
+    species: list[str] = []
+    ions: list[int] = []
+    with opener(resolved, "rt") as f:
+        for line in f:
+            if "VRHFIN =" in line:
+                # e.g. "   VRHFIN =Ag: d10 p1"
+                sym = line.split("=", 1)[1].split(":", 1)[0].strip()
+                species.append(sym)
+            elif "ions per type" in line:
+                try:
+                    ions = [int(x) for x in line.split("=", 1)[1].split()]
+                except (IndexError, ValueError):
+                    ions = []
+                break
+    if not species or not ions or len(species) != len(ions):
+        return -1
+    total = 0
+    for sym, n in zip(species, ions):
+        if sym == element:
+            total += n
+    return total
+
+
 # ---------------------------------------------------------------------------
 # Directory name parsing
 # ---------------------------------------------------------------------------
@@ -182,6 +219,17 @@ MOLECULE_ALIASES = {
 KNOWN_METALS = ["Cu", "Pt", "Pd", "Ni", "Ag", "Au", "Fe", "Co", "Zn", "Al",
                 "Rh", "Ir", "Ru", "Mo", "Mn", "Cr", "Ti", "V", "W"]
 KNOWN_FACETS = ["0001", "111", "110", "100", "001"]
+
+
+def _surface_metal(surface: str) -> str:
+    """Return the metal element symbol from a surface label like 'Ag100'."""
+    m = re.match(r"[A-Za-z]+", surface or "")
+    letters = m.group() if m else surface
+    if len(letters) >= 2 and letters[:2] in KNOWN_METALS:
+        return letters[:2]
+    if letters[:1] in KNOWN_METALS:
+        return letters[:1]
+    return letters[:2]
 
 
 def parse_surface_molecule(dir_name: str, molecule_first: bool = False):
@@ -406,7 +454,22 @@ def calc_binding_energies(best_dirs, slab_dir: Path, mol_dir: Path,
                 notes.append(f"mol: {e}")
                 row["status"] = "error"
 
-            # 4) E_ads
+            # 4) Slab-size consistency: the clean-slab reference must use the
+            #    same number of metal atoms as the slab inside the adsorption
+            #    job, or E_ads is meaningless. Many jobs use 24/36-atom slabs
+            #    while the references are 64-atom, so guard against mixing.
+            if row["status"] == "ok":
+                metal = _surface_metal(surface)
+                n_job = count_element_atoms(slab_mol_outcar, metal)
+                n_ref = count_element_atoms(slab_outcar, metal)
+                if n_job > 0 and n_ref > 0 and n_job != n_ref:
+                    row["status"] = "slab_mismatch"
+                    notes.append(
+                        f"slab size mismatch: job has {n_job} {metal}, "
+                        f"reference has {n_ref} {metal}"
+                    )
+
+            # 5) E_ads
             if row["status"] == "ok":
                 row["E_ads"] = row["E_slab_mol"] - row["E_slab"] - row["E_mol"]
             else:
