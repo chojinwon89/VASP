@@ -7,6 +7,10 @@ Usage:
     python scan_relaxation_status.py vasp_mol dft_jobs
     python scan_relaxation_status.py --csv status.csv vasp_mol
 
+The scan recurses (rglob), so it finds INCARs at any depth. On Kestrel the
+dft_jobs layout is dft_jobs/<sys>/poscar/best/<FUNC>/INCAR — just pass
+`dft_jobs` and every nested job dir is picked up automatically.
+
 Classification per job dir (a dir containing an INCAR):
   INTENT   (from INCAR):   single-point (NSW=0 or IBRION=-1) | relax (NSW>0)
   OUTCOME  (from OUTCAR):
