@@ -141,6 +141,10 @@ def main():
                     help="Actually run sbatch (default: just print the command).")
     ap.add_argument("--list-systems", action="store_true",
                     help="Also print the system name under each non-done state.")
+    ap.add_argument("--done-out", nargs="?", const="", default=None,
+                    metavar="FILE",
+                    help="Write the converged (done) job dirs to FILE "
+                         "(default name: joblist_<func>_done.txt) and list them.")
     args = ap.parse_args()
 
     root = Path(args.jobs_dir)
@@ -193,6 +197,18 @@ def main():
             for jd in per_state[st][:200]:
                 print(f"        {jd.parent.name}/{jd.name}")
     print()
+
+    # ------------------------------------------------ converged (done) listing
+    if args.done_out is not None:
+        done = per_state.get("done", [])
+        done_path = Path(args.done_out) if args.done_out else Path(
+            f"joblist_{args.functional}_done.txt")
+        done_path.write_text("".join(jd.as_posix() + "\n" for jd in done))
+        print(f"  converged (done): {len(done)} job(s) "
+              f"-> wrote {done_path}")
+        for jd in done:
+            print(f"        {jd.parent.name}/{jd.name}")
+        print()
     if args.restart_from_contcar:
         print(f"  restarted from CONTCAR: {restarted}")
     print(f"  TO RESUBMIT: {len(resubmit)} job(s)")
