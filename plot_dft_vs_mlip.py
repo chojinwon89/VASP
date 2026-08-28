@@ -323,6 +323,93 @@ def normalise_func(name: str) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Surface / molecule canonicalisation
+#
+# DFT job dirs use formula-style molecule names (C2H4, CH3CH2OH) and the
+# 100 facet, while the GOAD+MLIP summary.csv uses common names (ethene,
+# ethanol) and sometimes the 001 facet label. Canonicalise both so their
+# (surface, molecule) keys line up.
+# ---------------------------------------------------------------------------
+
+# Surface facet aliases: map every equivalent label to one canonical form.
+SURFACE_FACET_ALIASES = {
+    "001": "100",   # some tools label the (100) facet as 001
+}
+
+# Canonical molecule name for every alias we might see in either data source.
+# Keys are lower-cased; values are the canonical common name used for matching.
+MOLECULE_CANON = {
+    # ethene / ethylene
+    "c2h4":       "ethene",
+    "ethene":     "ethene",
+    "ethylene":   "ethene",
+    # ethane
+    "c2h6":       "ethane",
+    "ethane":     "ethane",
+    # ethanol
+    "ch3ch2oh":   "ethanol",
+    "c2h5oh":     "ethanol",
+    "ethanol":    "ethanol",
+    # methanol
+    "ch3oh":      "methanol",
+    "methanol":   "methanol",
+    # propene / propane / propanols
+    "c3h6":       "propene",
+    "propene":    "propene",
+    "propylene":  "propene",
+    "c3h8":       "propane",
+    "propane":    "propane",
+    "propanol":   "propanol",
+    "1-propanol": "propanol",
+    "n-propanol": "propanol",
+    "isopropanol": "isopropanol",
+    "2-propanol": "isopropanol",
+    "ipa":        "isopropanol",
+    # glycerol
+    "glycerol":   "glycerol",
+    # aldehydes / ketones / acids / others seen in DFT set
+    "ch3cho":     "acetaldehyde",
+    "acetaldehyde": "acetaldehyde",
+    "ch3och3":    "DME",
+    "dme":        "DME",
+    "h2co":       "formaldehyde",
+    "formaldehyde": "formaldehyde",
+    "hcooh":      "formic_acid",
+    "formic_acid": "formic_acid",
+    # small / inorganic
+    "co":         "CO",
+    "co2":        "CO2",
+    "ch4":        "methane",
+    "methane":    "methane",
+    "ch3":        "CH3",
+    "h2o":        "H2O",
+    "h2s":        "H2S",
+    "n2":         "N2",
+    "nh3":        "NH3",
+    "no":         "NO",
+    "so2":        "SO2",
+}
+
+
+def canon_surface(surface: str) -> str:
+    """Return a canonical surface label, normalising facet aliases (001->100)."""
+    s = (surface or "").strip()
+    import re as _re
+    m = _re.match(r"([A-Za-z]+)(\d+)$", s)
+    if not m:
+        return s
+    metal, facet = m.group(1), m.group(2)
+    facet = SURFACE_FACET_ALIASES.get(facet, facet)
+    return f"{metal}{facet}"
+
+
+def canon_molecule(name: str) -> str:
+    """Return a canonical molecule name; unknown names pass through unchanged."""
+    n = (name or "").strip()
+    return MOLECULE_CANON.get(n.lower(), n)
+
+
+# ---------------------------------------------------------------------------
 # Data loaders
 # ---------------------------------------------------------------------------
 
@@ -334,7 +421,8 @@ def load_dft_all(path: Path) -> dict:
             if row.get("status", "ok").strip() != "ok":
                 continue
             func = normalise_func(row.get("functional", "default"))
-            key  = (row["surface"].strip(), row["molecule"].strip())
+            key  = (canon_surface(row["surface"]),
+                    canon_molecule(row["molecule"]))
             try:
                 data[func][key] = float(row["E_ads"])
             except (ValueError, KeyError):
@@ -355,7 +443,8 @@ def load_ml_best(path: Path, calculators: list) -> dict:
             if state != "finished":
                 skipped += 1
                 continue
-            key = (row["surface"].strip(), row["adsorbate"].strip())
+            key = (canon_surface(row["surface"]),
+                   canon_molecule(row["adsorbate"]))
             try:
                 e = float(row["E_ads_eV"])
                 if e < best[calc][key]:
