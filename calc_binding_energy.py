@@ -216,6 +216,11 @@ MOLECULE_ALIASES = {
     "C2H5OH": "CH3CH2OH",
 }
 
+# Generous upper bound on |E_ads|. Physical molecular adsorption energies are
+# within a few eV of zero; anything larger indicates a corrupt/unconverged
+# reference energy and is flagged as bad_reference rather than trusted.
+ADS_ENERGY_MAX_ABS_EV = 5.0
+
 KNOWN_METALS = ["Cu", "Pt", "Pd", "Ni", "Ag", "Au", "Fe", "Co", "Zn", "Al",
                 "Rh", "Ir", "Ru", "Mo", "Mn", "Cr", "Ti", "V", "W"]
 KNOWN_FACETS = ["0001", "111", "110", "100", "001"]
@@ -469,9 +474,44 @@ def calc_binding_energies(best_dirs, slab_dir: Path, mol_dir: Path,
                         f"reference has {n_ref} {metal}"
                     )
 
+            # 4b) Physical sanity of the reference/job total energies. A
+            #     converged VASP total energy for a metal slab or a neutral
+            #     closed-shell molecule is negative. A positive (or absurdly
+            #     large) value means that OUTCAR is corrupt/unconverged, which
+            #     otherwise produces nonsense E_ads (e.g. +885 eV slab,
+            #     +11 eV CO2 gas). Flag and skip these rows.
+            if row["status"] == "ok":
+                bad = []
+                for label, val in (
+                    ("E_slab_mol", row["E_slab_mol"]),
+                    ("E_slab", row["E_slab"]),
+                    ("E_mol", row["E_mol"]),
+                ):
+                    if val is None or val >= 0.0:
+                        bad.append(f"{label}={val}")
+                if bad:
+                    row["status"] = "bad_reference"
+                    notes.append(
+                        "non-physical total energy (>= 0): " + ", ".join(bad)
+                    )
+
             # 5) E_ads
             if row["status"] == "ok":
-                row["E_ads"] = row["E_slab_mol"] - row["E_slab"] - row["E_mol"]
+                e_ads = row["E_slab_mol"] - row["E_slab"] - row["E_mol"]
+                # 5b) Physical plausibility of E_ads. Real molecular adsorption
+                #     energies sit within a few eV of zero. A value outside this
+                #     generous window means one of the reference energies is
+                #     wrong/unconverged (e.g. truncated gas-phase OUTCARs that
+                #     give |E_ads| of tens of eV). Flag instead of trusting it.
+                if abs(e_ads) > ADS_ENERGY_MAX_ABS_EV:
+                    row["status"] = "bad_reference"
+                    notes.append(
+                        f"implausible E_ads={e_ads:.3f} eV "
+                        f"(|E_ads| > {ADS_ENERGY_MAX_ABS_EV} eV)"
+                    )
+                    row["note"] = "; ".join(notes)
+                else:
+                    row["E_ads"] = e_ads
             else:
                 row["note"] = "; ".join(notes)
 
