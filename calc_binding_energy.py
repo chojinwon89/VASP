@@ -170,28 +170,53 @@ def read_energy_from_outcar(outcar_path: Path) -> float:
 # Directory name parsing
 # ---------------------------------------------------------------------------
 
-def parse_surface_molecule(dir_name: str):
-    """
-    Parse a directory name like 'Cu111_isopropanol' or 'Pt111_glycerol_seed0'
-    into (surface, molecule).
+# Molecule token aliases: dft_jobs uses formula-style tokens that do not
+# always match the vasp_mol/ reference directory names. Map job-dir token ->
+# vasp_mol/ directory name. Tokens with no gas-phase reference (radicals /
+# atoms not computed as isolated molecules) are intentionally left unmapped so
+# the run reports them as missing E_mol rather than silently mispairing.
+MOLECULE_ALIASES = {
+    "C2H5OH": "CH3CH2OH",
+}
 
-    Tries known surface names first (e.g. Cu111, Pt110, Au100 ...),
-    then falls back to splitting on the first underscore.
-    """
-    KNOWN_METALS = ["Cu", "Pt", "Pd", "Ni", "Ag", "Au", "Fe", "Co", "Zn", "Al"]
-    KNOWN_FACETS = ["111", "110", "100", "001"]
+KNOWN_METALS = ["Cu", "Pt", "Pd", "Ni", "Ag", "Au", "Fe", "Co", "Zn", "Al",
+                "Rh", "Ir", "Ru", "Mo", "Mn", "Cr", "Ti", "V", "W"]
+KNOWN_FACETS = ["0001", "111", "110", "100", "001"]
 
+
+def parse_surface_molecule(dir_name: str, molecule_first: bool = False):
+    """
+    Parse a directory name into (surface, molecule).
+
+    Default (surface-first) handles 'Cu111_isopropanol' / 'Pt111_glycerol_seed0'.
+    With ``molecule_first=True`` handles the dft_jobs layout 'C2H2_Ag100' or
+    'CH3OH_Pd111_bri' where the molecule token comes first and the surface may
+    be followed by an adsorption-site suffix (e.g. '_bri', '_top').
+
+    Tries known surface names anywhere in the name; falls back to splitting on
+    the first underscore.
+    """
+    # Locate a known <metal><facet> token anywhere in the name.
     for metal in KNOWN_METALS:
         for facet in KNOWN_FACETS:
             surface = f"{metal}{facet}"
-            if dir_name.startswith(surface + "_"):
-                remainder = dir_name[len(surface) + 1:]
-                molecule = remainder.split("_seed")[0]
-                return surface, molecule
+            if molecule_first:
+                needle = "_" + surface
+                idx = dir_name.find(needle)
+                if idx != -1:
+                    molecule = dir_name[:idx]
+                    return surface, molecule
+            else:
+                if dir_name.startswith(surface + "_"):
+                    remainder = dir_name[len(surface) + 1:]
+                    molecule = remainder.split("_seed")[0]
+                    return surface, molecule
 
-    # Fallback: split on first underscore
+    # Fallback: split on first underscore (order depends on molecule_first).
     parts = dir_name.split("_", 1)
     if len(parts) == 2:
+        if molecule_first:
+            return parts[1].split("_")[0], parts[0]
         return parts[0], parts[1].split("_seed")[0]
 
     return dir_name, "unknown"
@@ -262,7 +287,8 @@ def discover_system_dirs(best_dir: Path):
 
 
 def calc_binding_energies(best_dirs, slab_dir: Path, mol_dir: Path,
-                          functional: str = None, calc_type: str = "relax"):
+                          functional: str = None, calc_type: str = "relax",
+                          molecule_first: bool = False):
     """
     Walk one or more best directories, compute E_ads for each system.
 
@@ -291,7 +317,8 @@ def calc_binding_energies(best_dirs, slab_dir: Path, mol_dir: Path,
 
         for job_dir in job_dirs:
             system = job_dir.name
-            surface, molecule = parse_surface_molecule(system)
+            surface, molecule = parse_surface_molecule(system, molecule_first)
+            mol_ref = MOLECULE_ALIASES.get(molecule, molecule)
 
             row = {
                 "functional": func_key or "default",
@@ -332,13 +359,13 @@ def calc_binding_energies(best_dirs, slab_dir: Path, mol_dir: Path,
                         slab_dir / surface / functional / "OUTCAR",
                     )
                     mol_outcar = _pick(
-                        mol_dir / molecule / "singlepoint" / functional / "OUTCAR",
-                        mol_dir / molecule / functional / "OUTCAR",
+                        mol_dir / mol_ref / "singlepoint" / functional / "OUTCAR",
+                        mol_dir / mol_ref / functional / "OUTCAR",
                     )
                 else:
                     slab_mol_outcar = job_dir / functional / "OUTCAR"
                     slab_outcar     = slab_dir / surface  / functional / "OUTCAR"
-                    mol_outcar      = mol_dir  / molecule / functional / "OUTCAR"
+                    mol_outcar      = mol_dir  / mol_ref / functional / "OUTCAR"
             else:
                 if calc_type == "single-point":
                     slab_mol_outcar = _pick(
@@ -350,13 +377,13 @@ def calc_binding_energies(best_dirs, slab_dir: Path, mol_dir: Path,
                         slab_dir / surface / "OUTCAR",
                     )
                     mol_outcar = _pick(
-                        mol_dir / molecule / "singlepoint" / "OUTCAR",
-                        mol_dir / molecule / "OUTCAR",
+                        mol_dir / mol_ref / "singlepoint" / "OUTCAR",
+                        mol_dir / mol_ref / "OUTCAR",
                     )
                 else:
                     slab_mol_outcar = job_dir / "OUTCAR"
                     slab_outcar     = slab_dir / surface  / "OUTCAR"
-                    mol_outcar      = mol_dir  / molecule / "OUTCAR"
+                    mol_outcar      = mol_dir  / mol_ref / "OUTCAR"
 
             # 1) Slab + molecule energy
             try:
@@ -522,6 +549,14 @@ Examples
         )
     )
     parser.add_argument(
+        "--molecule-first", action="store_true",
+        help=(
+            "Job directories are named <molecule>_<surface>[_site] (the "
+            "dft_jobs layout, e.g. C2H2_Ag100, CH3OH_Pd111_bri) instead of "
+            "the default <surface>_<molecule>."
+        )
+    )
+    parser.add_argument(
         "--calc-type",
         choices=["relax", "single-point"],
         default="relax",
@@ -598,7 +633,8 @@ Examples
             print(f"{'='*60}")
             results = calc_binding_energies(best_dirs, slab_dir, mol_dir,
                                             functional=func,
-                                            calc_type=args.calc_type)
+                                            calc_type=args.calc_type,
+                                            molecule_first=args.molecule_first)
             print_table(results, functional=func)
             all_results.extend(results)
 
@@ -622,7 +658,8 @@ Examples
 
     results = calc_binding_energies(best_dirs, slab_dir, mol_dir,
                                     functional=args.functional,
-                                    calc_type=args.calc_type)
+                                    calc_type=args.calc_type,
+                                    molecule_first=args.molecule_first)
 
     if not results:
         print("No results computed.")

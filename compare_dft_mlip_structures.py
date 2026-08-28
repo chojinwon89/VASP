@@ -70,7 +70,27 @@ FUNC_NORMALISE = {
 FUNC_DIRS = {"pbe": "PBE", "pbe_d3": "PBE_D3", "r2scan": "r2scan",
              "beef_vdw": "beef_vdw"}
 
-KNOWN_FACETS = ["111", "110", "100", "001"]
+KNOWN_FACETS = ["0001", "111", "110", "100", "001"]
+
+# The MLIP .cif gallery uses common molecule names (Ag100_ethanol.cif) while the
+# dft_jobs directories use formula-style tokens (C2H5OH_Ag100). Normalise both
+# sides to a canonical key so DFT and MLIP structures can be matched. Add pairs
+# here as new molecules appear.
+MOLECULE_CANON = {
+    "c2h5oh": "ethanol", "ch3ch2oh": "ethanol", "ethanol": "ethanol",
+    "ch3oh": "methanol", "methanol": "methanol",
+    "c2h6": "ethane", "ethane": "ethane",
+    "c2h4": "ethene", "ethene": "ethene", "ethylene": "ethene",
+    "ch4": "methane", "methane": "methane",
+    "ch3cho": "acetaldehyde", "acetaldehyde": "acetaldehyde",
+    "ch3cooh": "acetic_acid", "acetic_acid": "acetic_acid",
+    "hcooh": "formic_acid", "formic_acid": "formic_acid",
+    "ch3och3": "dme", "dme": "dme",
+    "h2co": "formaldehyde", "formaldehyde": "formaldehyde",
+    "h2o": "water", "water": "water",
+    "co2": "co2", "co": "co", "no": "no", "n2": "n2", "nh3": "nh3",
+    "h2s": "h2s", "so2": "so2", "ch3": "ch3", "ch3o": "ch3o",
+}
 
 
 def normalise_func(name: str) -> str:
@@ -80,15 +100,32 @@ def normalise_func(name: str) -> str:
     return FUNC_NORMALISE.get(s, s)
 
 
-def parse_surface_molecule(name: str):
-    """Split 'Ag100_ethanol' -> ('Ag100', 'ethanol')."""
+def canon_molecule(name: str) -> str:
+    """Map a molecule token (formula or common name) to a canonical key."""
+    return MOLECULE_CANON.get(name.strip().lower(), name.strip().lower())
+
+
+def parse_surface_molecule(name: str, molecule_first: bool = False):
+    """Split into (surface, molecule).
+
+    Default surface-first: 'Ag100_ethanol' -> ('Ag100', 'ethanol').
+    molecule_first: 'C2H5OH_Ag100' or 'CH3OH_Pd111_bri' -> ('Ag100'/'Pd111', ...).
+    """
     for metal in sorted(METALS, key=len, reverse=True):
         for facet in KNOWN_FACETS:
             surf = f"{metal}{facet}"
-            if name.startswith(surf + "_"):
-                return surf, name[len(surf) + 1:]
+            if molecule_first:
+                needle = "_" + surf
+                idx = name.find(needle)
+                if idx != -1:
+                    return surf, name[:idx]
+            else:
+                if name.startswith(surf + "_"):
+                    return surf, name[len(surf) + 1:]
     parts = name.split("_", 1)
-    return (parts[0], parts[1]) if len(parts) == 2 else (name, "unknown")
+    if len(parts) != 2:
+        return name, "unknown"
+    return (parts[1].split("_")[0], parts[0]) if molecule_first else (parts[0], parts[1])
 
 
 def surface_metal(surface: str) -> str:
@@ -159,25 +196,26 @@ def _read(path: Path):
         return None
 
 
-def discover_dft_contcars(root: Path):
-    """Yield (surface, molecule, func_key, contcar_path)."""
+def discover_dft_contcars(root: Path, molecule_first: bool = True):
+    """Yield (surface, molecule, canon, func_key, contcar_path)."""
     for contcar in root.rglob("CONTCAR"):
         func_dir = contcar.parent.name
         func_key = normalise_func(func_dir)
         if func_key not in FUNC_DIRS:
             continue
         system = contcar.parent.parent.name
-        surface, molecule = parse_surface_molecule(system)
+        surface, molecule = parse_surface_molecule(system, molecule_first)
         if molecule == "unknown":
             continue
-        yield surface, molecule, func_key, contcar
+        yield surface, molecule, canon_molecule(molecule), func_key, contcar
 
 
 def index_mlip_cifs(mlip_dir: Path):
-    """Map (surface, molecule) -> preferred .cif path.
+    """Map (surface, canon_molecule) -> preferred .cif path.
 
     Filenames look like Ag100_ethanol_sevennet_omni.cif or Ag100_ethanol_5m.cif
-    or Ag100_ethanol.cif. Prefer sevennet_omni, then plain, then 5m.
+    or Ag100_ethanol.cif. Prefer sevennet_omni, then plain, then 5m. Keys are
+    canonicalised so formula-named DFT jobs match common-named .cif files.
     """
     def rank(name: str) -> int:
         if "sevennet_omni" in name:
@@ -201,7 +239,7 @@ def index_mlip_cifs(mlip_dir: Path):
         if molecule == "unknown":
             continue
         r = rank(stem)
-        key = (surface, molecule)
+        key = (surface, canon_molecule(molecule))
         if key not in best or r < best[key][0]:
             best[key] = (r, cif)
     return {k: v[1] for k, v in best.items()}
@@ -232,9 +270,9 @@ def main() -> int:
 
     rows = []
     n_seen = n_matched = 0
-    for surface, molecule, func, contcar in discover_dft_contcars(dft_root):
+    for surface, molecule, canon, func, contcar in discover_dft_contcars(dft_root):
         n_seen += 1
-        cif = mlip_index.get((surface, molecule))
+        cif = mlip_index.get((surface, canon))
         if cif is None:
             continue
         dft = _read(contcar)
