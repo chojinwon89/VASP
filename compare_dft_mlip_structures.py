@@ -82,6 +82,7 @@ MOLECULE_CANON = {
     "c2h6": "ethane", "ethane": "ethane",
     "c2h4": "ethene", "ethene": "ethene", "ethylene": "ethene",
     "ch4": "methane", "methane": "methane",
+    "c2h2": "acetylene", "acetylene": "acetylene",
     "ch3cho": "acetaldehyde", "acetaldehyde": "acetaldehyde",
     "ch3cooh": "acetic_acid", "acetic_acid": "acetic_acid",
     "hcooh": "formic_acid", "formic_acid": "formic_acid",
@@ -89,7 +90,15 @@ MOLECULE_CANON = {
     "h2co": "formaldehyde", "formaldehyde": "formaldehyde",
     "h2o": "water", "water": "water",
     "co2": "co2", "co": "co", "no": "no", "n2": "n2", "nh3": "nh3",
-    "h2s": "h2s", "so2": "so2", "ch3": "ch3", "ch3o": "ch3o",
+    "h2s": "h2s", "so2": "so2", "ch3": "ch3",
+    "ch3o": "methoxy", "methoxy": "methoxy",
+    "oh": "hydroxyl", "hydroxyl": "hydroxyl",
+    "hcn": "hcn",
+    "h": "atomich", "atomich": "atomich",
+    "o": "atomico", "atomico": "atomico",
+    "n": "atomicn", "atomicn": "atomicn",
+    "c": "atomicc", "atomicc": "atomicc",
+    "s": "atomics", "atomics": "atomics",
 }
 
 
