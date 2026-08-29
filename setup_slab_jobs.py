@@ -11,8 +11,13 @@ Use --cluster perlmutter-cpu -> writes slm.vasp.perlmutter (-A m5281 -C cpu)
 These slab energies (E_surf) are needed to compute the DFT adsorption energy:
     E_ads = E_total(slab+mol) - E_surf(slab) - E_mol(gas)
 
-The slabs are built from ASE using the same geometry as GOAD
-(4x4x4, 15 Ang vacuum). Bottom N layers are frozen via Selective Dynamics,
+The slabs are built from ASE using the SAME per-facet geometry as
+generate_surface_cifs.py (the slabs GOAD/MLIP and dft_jobs are built from),
+so the clean-slab reference matches the adsorption-cell metal count:
+    (111)/(0001) : (4, 4, 4) -> 64 atoms
+    (110)        : (3, 2, 4) -> 24 atoms
+    (100)        : (3, 3, 4) -> 36 atoms
+15 Ang vacuum. Bottom N layers are frozen via Selective Dynamics,
 matching the constraint used in batch_isopropanol.py.
 
 Supported metals and facets (matches generate_surface_cifs.py):
@@ -278,19 +283,25 @@ _A_HCP = {
 # ---------------------------------------------------------------------------
 SLAB_BUILDERS = {}
 
+# Supercell sizes MUST match generate_surface_cifs.py (the slabs GOAD/MLIP and
+# dft_jobs are built from) so the clean-slab reference has the same metal-atom
+# count as the adsorption cell:
+#   FCC/BCC (111), HCP (0001): (4, 4, 4) -> 64 atoms (orthogonal)
+#   FCC/BCC (110):             (3, 2, 4) -> 24 atoms
+#   FCC/BCC (100):             (3, 3, 4) -> 36 atoms
 # --- FCC: 111 (orthogonal), 110, 100 ---
 for _el, _a in _A_FCC.items():
     SLAB_BUILDERS[f"{_el}111"] = (fcc111, {"symbol": _el, "a": _a, "size": (4, 4, 4), "vacuum": 15.0, "orthogonal": True})
-    SLAB_BUILDERS[f"{_el}110"] = (fcc110, {"symbol": _el, "a": _a, "size": (4, 4, 4), "vacuum": 15.0})
-    SLAB_BUILDERS[f"{_el}100"] = (fcc100, {"symbol": _el, "a": _a, "size": (4, 4, 4), "vacuum": 15.0})
+    SLAB_BUILDERS[f"{_el}110"] = (fcc110, {"symbol": _el, "a": _a, "size": (3, 2, 4), "vacuum": 15.0})
+    SLAB_BUILDERS[f"{_el}100"] = (fcc100, {"symbol": _el, "a": _a, "size": (3, 3, 4), "vacuum": 15.0})
 
 # Cu001 alias (backwards compatibility)
-SLAB_BUILDERS["Cu001"] = (fcc100, {"symbol": "Cu", "a": _A_FCC["Cu"], "size": (4, 4, 4), "vacuum": 15.0})
+SLAB_BUILDERS["Cu001"] = (fcc100, {"symbol": "Cu", "a": _A_FCC["Cu"], "size": (3, 3, 4), "vacuum": 15.0})
 
 # --- BCC: 110, 100, 111 (orthogonal) ---
 for _el, _a in _A_BCC.items():
-    SLAB_BUILDERS[f"{_el}110"] = (bcc110, {"symbol": _el, "a": _a, "size": (4, 4, 4), "vacuum": 15.0})
-    SLAB_BUILDERS[f"{_el}100"] = (bcc100, {"symbol": _el, "a": _a, "size": (4, 4, 4), "vacuum": 15.0})
+    SLAB_BUILDERS[f"{_el}110"] = (bcc110, {"symbol": _el, "a": _a, "size": (3, 2, 4), "vacuum": 15.0})
+    SLAB_BUILDERS[f"{_el}100"] = (bcc100, {"symbol": _el, "a": _a, "size": (3, 3, 4), "vacuum": 15.0})
     SLAB_BUILDERS[f"{_el}111"] = (bcc111, {"symbol": _el, "a": _a, "size": (4, 4, 4), "vacuum": 15.0, "orthogonal": True})
 
 # --- HCP: 0001 (orthogonal) ---
