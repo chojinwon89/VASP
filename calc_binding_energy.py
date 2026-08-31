@@ -415,6 +415,16 @@ def calc_binding_energies(best_dirs, slab_dir: Path, mol_dir: Path,
                         mol_dir / mol_ref / "singlepoint" / functional / "OUTCAR",
                         mol_dir / mol_ref / functional / "OUTCAR",
                     )
+                elif calc_type == "fully-relaxed":
+                    # Relaxed slab+mol from the fully_relaxed/ fix for NSW=0 jobs;
+                    # references use the ordinary relax layout.
+                    slab_mol_outcar = _pick(
+                        job_dir / "singlepoint" / functional / "fully_relaxed" / "OUTCAR",
+                        job_dir / functional / "fully_relaxed" / "OUTCAR",
+                        job_dir / functional / "OUTCAR",
+                    )
+                    slab_outcar     = slab_dir / surface  / functional / "OUTCAR"
+                    mol_outcar      = mol_dir  / mol_ref / functional / "OUTCAR"
                 else:
                     slab_mol_outcar = job_dir / functional / "OUTCAR"
                     slab_outcar     = slab_dir / surface  / functional / "OUTCAR"
@@ -433,6 +443,14 @@ def calc_binding_energies(best_dirs, slab_dir: Path, mol_dir: Path,
                         mol_dir / mol_ref / "singlepoint" / "OUTCAR",
                         mol_dir / mol_ref / "OUTCAR",
                     )
+                elif calc_type == "fully-relaxed":
+                    slab_mol_outcar = _pick(
+                        job_dir / "singlepoint" / "fully_relaxed" / "OUTCAR",
+                        job_dir / "fully_relaxed" / "OUTCAR",
+                        job_dir / "OUTCAR",
+                    )
+                    slab_outcar     = slab_dir / surface  / "OUTCAR"
+                    mol_outcar      = mol_dir  / mol_ref / "OUTCAR"
                 else:
                     slab_mol_outcar = job_dir / "OUTCAR"
                     slab_outcar     = slab_dir / surface  / "OUTCAR"
@@ -575,7 +593,8 @@ def default_output_name(calc_type: str, all_functionals: bool,
     Single-point runs get a ``_singlepoint`` marker so they don't clobber the
     relaxation results, e.g. ``dft_binding_energies_singlepoint_all.csv``.
     """
-    sp = "_singlepoint" if calc_type == "single-point" else ""
+    sp = {"single-point": "_singlepoint",
+          "fully-relaxed": "_fullyrelaxed"}.get(calc_type, "")
     if all_functionals:
         return f"dft_binding_energies{sp}_all.csv"
     if functional:
@@ -661,7 +680,7 @@ Examples
     )
     parser.add_argument(
         "--calc-type",
-        choices=["relax", "single-point"],
+        choices=["relax", "single-point", "fully-relaxed"],
         default="relax",
         help=(
             "Where to read slab+mol OUTCARs from: relax -> <system>/<functional>/OUTCAR "
@@ -751,6 +770,9 @@ Examples
         if args.calc_type == "single-point":
             suffix = (f"/singlepoint/{args.functional}" if args.functional
                       else "/singlepoint")
+        elif args.calc_type == "fully-relaxed":
+            suffix = (f"/singlepoint/{args.functional}/fully_relaxed" if args.functional
+                      else "/singlepoint/fully_relaxed")
         else:
             suffix = (f"/{args.functional}" if args.functional else "")
         print(f"slab+mol jobs : {d}{suffix}")
