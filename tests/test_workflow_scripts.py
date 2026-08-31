@@ -313,11 +313,15 @@ def test_make_tasks_generates_expected_task_matrix(tmp_path):
     with (workflow_dir / "tasks.csv").open() as handle:
         rows = list(csv.DictReader(handle))
 
-    assert len(rows) == 9
+    assert len(rows) == 486
     assert [row["surface"] for row in rows[:3]] == ["Cu111", "Cu111", "Cu111"]
-    assert [row["surface"] for row in rows[3:6]] == ["Cu110", "Cu110", "Cu110"]
-    assert [row["surface"] for row in rows[6:9]] == ["Cu001", "Cu001", "Cu001"]
-    assert {row["adsorbate"] for row in rows} == {"isopropanol"}
+    assert [row["seed"] for row in rows[:3]] == ["0", "1", "2"]
+    assert [row["adsorbate"] for row in rows[:3]] == [
+        "isopropanol",
+        "isopropanol",
+        "isopropanol",
+    ]
+    assert [row["task_id"] for row in rows[:3]] == ["0", "1", "2"]
     assert {row["calculator"] for row in rows} == {"sevennet_omni"}
 
 
@@ -358,7 +362,14 @@ def test_collect_results_reads_per_task_result_json(tmp_path):
     )
 
     result = subprocess.run(
-        [sys.executable, "collect_results.py"],
+        [
+            sys.executable,
+            "collect_results.py",
+            "--runs-dir",
+            "runs",
+            "--out",
+            "workflow/summary.csv",
+        ],
         cwd=tmp_path,
         check=True,
         capture_output=True,

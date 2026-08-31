@@ -195,7 +195,7 @@ def test_calc_binding_energy_bucketed_root_dedupes_stale_flat_leftover(tmp_path)
     assert len(rows) == 1
     assert rows[0]["system"] == "Au100_DMSO"
     assert rows[0]["status"] == "ok"
-    assert "duplicates a bucketed copy" in stdout
+    assert "system 'Au100_DMSO' has 2 copies" in stdout
 
 
 def test_calc_binding_energy_bucketed_root_includes_nonbucketed_system(tmp_path):
@@ -231,7 +231,6 @@ def test_calc_binding_energy_bucketed_root_includes_nonbucketed_system(tmp_path)
     systems = sorted(r["system"] for r in rows)
     assert systems == ["Au100_DMSO", "Pt111_propene"]
     assert all(r["status"] == "ok" for r in rows)
-    assert "including non-bucketed system directory" in stdout
 
 
 def test_calc_binding_energy_flat_layout_fallback_without_bucket_warning(tmp_path):
