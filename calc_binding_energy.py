@@ -216,6 +216,32 @@ MOLECULE_ALIASES = {
     "C2H5OH": "CH3CH2OH",
 }
 
+# Fallback gas-phase reference energies (eV), keyed by canonical functional and
+# molecule directory name. Used ONLY when the vasp_mol/ OUTCAR is missing or
+# non-physical (>= 0 eV, i.e. the VASP gas job crashed/diverged). Seeded with
+# the good PBE values recovered from converged gas jobs; extend per functional
+# as converged references become available.
+GAS_REFERENCE_ENERGIES = {
+    "pbe": {
+        "H2":  -6.76663628,
+        "H2O": -14.21777517,
+        "H2S": -11.19909469,
+        "N2":  -16.62802491,
+        "NH3": -19.535201,
+        "NO":  -11.94617385,
+        "SO2": -17.04144795,
+        # Overrides for crashed gas jobs — replace with converged values.
+        "O2":  -9.86,
+        "NO2": -18.24,
+    },
+}
+
+
+def gas_reference_override(functional: str, molecule: str):
+    """Return a fallback gas energy (eV) for (functional, molecule), or None."""
+    func_key = normalise_func(functional) if functional else "pbe"
+    return GAS_REFERENCE_ENERGIES.get(func_key, {}).get(molecule)
+
 # Generous upper bound on |E_ads|. Physical molecular adsorption energies are
 # within a few eV of zero; anything larger indicates a corrupt/unconverged
 # reference energy and is flagged as bad_reference rather than trusted.
@@ -279,12 +305,16 @@ def parse_surface_molecule(dir_name: str, molecule_first: bool = False):
 # Main calculation (one functional)
 # ---------------------------------------------------------------------------
 
-def discover_system_dirs(best_dir: Path):
+def discover_system_dirs(best_dir: Path, calc_type: str = "relax"):
     """
     Discover system directories from a best-dir root, mirroring setup_vasp_jobs.py:
       (1) DIR itself is a system directory (contains POSCAR)
       (2) DIR contains C<n>/<system>/POSCAR
       (3) fallback (no C<n> buckets): DIR contains <system>/POSCAR
+
+    When a system appears in BOTH a C<n>/ bucket and non-bucketed at the root,
+    prefer whichever copy actually holds the OUTCAR for *calc_type* (the
+    fully_relaxed/ NSW-fix jobs live only in the non-bucketed copy).
     """
     def is_bucket_dir(path: Path) -> bool:
         return path.is_dir() and re.fullmatch(r"C\d+", path.name) is not None
@@ -296,6 +326,20 @@ def discover_system_dirs(best_dir: Path):
             (path / "POSCAR").exists() or (path / "singlepoint").is_dir()
         )
 
+    def has_calc_outcar(system_dir: Path) -> bool:
+        """True if system_dir holds a readable OUTCAR for the requested run."""
+        if calc_type == "fully-relaxed":
+            for cand in system_dir.glob("singlepoint/*/fully_relaxed/OUTCAR"):
+                if _resolve_outcar(cand).exists():
+                    return True
+            for cand in system_dir.glob("*/fully_relaxed/OUTCAR"):
+                if _resolve_outcar(cand).exists():
+                    return True
+            return (system_dir / "singlepoint" / "fully_relaxed").is_dir()
+        if calc_type == "single-point":
+            return (system_dir / "singlepoint").is_dir()
+        return (system_dir / "POSCAR").exists()
+
     system_dirs = []
     if (best_dir / "POSCAR").exists():
         system_dirs.append(best_dir)
@@ -305,34 +349,30 @@ def discover_system_dirs(best_dir: Path):
     bucket_dirs = [d for d in first_level_dirs if is_bucket_dir(d)]
 
     if bucket_dirs:
-        seen_systems = set()
+        # Collect every copy of each system (bucketed and non-bucketed), then
+        # pick one per system name preferring the copy that has the OUTCAR for
+        # the requested calc_type. Non-bucketed copies win ties.
+        candidates: dict[str, list[Path]] = {}
         for bucket_dir in bucket_dirs:
             for second_level_dir in sorted(bucket_dir.iterdir()):
                 if is_system_dir(second_level_dir):
-                    system_dirs.append(second_level_dir)
-                    seen_systems.add(second_level_dir.name)
-
-        # Also include non-bucketed system dirs sitting alongside the C<n>/
-        # buckets, unless the same system already exists in a bucket (in which
-        # case the bucketed copy wins to avoid double-counting).
+                    candidates.setdefault(second_level_dir.name, []).append(second_level_dir)
         for extra_dir in first_level_dirs:
-            if is_bucket_dir(extra_dir):
+            if is_bucket_dir(extra_dir) or not is_system_dir(extra_dir):
                 continue
-            if not is_system_dir(extra_dir):
-                continue
-            if extra_dir.name in seen_systems:
+            # Prepend so non-bucketed copies are preferred on ties.
+            candidates.setdefault(extra_dir.name, []).insert(0, extra_dir)
+
+        for name in sorted(candidates):
+            copies = candidates[name]
+            chosen = next((c for c in copies if has_calc_outcar(c)), copies[0])
+            if len(copies) > 1:
+                tag = "has" if has_calc_outcar(chosen) else "no"
                 print(
-                    "NOTE: non-bucketed system directory "
-                    f"'{extra_dir}' duplicates a bucketed copy; using the "
-                    "bucketed one and skipping this duplicate."
+                    f"NOTE: system '{name}' has {len(copies)} copies; using "
+                    f"'{chosen}' ({tag} {calc_type} OUTCAR)."
                 )
-                continue
-            print(
-                "NOTE: including non-bucketed system directory "
-                f"'{extra_dir}' alongside the bucketed C<n>/ directories."
-            )
-            system_dirs.append(extra_dir)
-            seen_systems.add(extra_dir.name)
+            system_dirs.append(chosen)
 
         return system_dirs
 
@@ -365,7 +405,7 @@ def calc_binding_energies(best_dirs, slab_dir: Path, mol_dir: Path,
     func_key = normalise_func(functional) if functional else None
 
     for best_dir in best_dirs:
-        job_dirs = discover_system_dirs(best_dir)
+        job_dirs = discover_system_dirs(best_dir, calc_type=calc_type)
 
         if not job_dirs:
             print(f"No system directories (with POSCAR) found under {best_dir}")
@@ -477,12 +517,37 @@ def calc_binding_energies(best_dirs, slab_dir: Path, mol_dir: Path,
                 notes.append(f"slab: {e}")
                 row["status"] = "error"
 
-            # 3) Gas molecule energy
+            # 3) Gas molecule energy. If the VASP gas OUTCAR is missing or
+            #    non-physical (>= 0 eV, i.e. crashed/diverged), fall back to a
+            #    known-good reference from GAS_REFERENCE_ENERGIES when available.
+            mol_read_err = None
             try:
                 row["E_mol"] = read_energy_from_outcar(mol_outcar)
             except (FileNotFoundError, ValueError) as e:
-                notes.append(f"mol: {e}")
-                row["status"] = "error"
+                mol_read_err = str(e)
+
+            need_override = (
+                row["E_mol"] is None or row["E_mol"] >= 0.0
+            )
+            if need_override:
+                override = gas_reference_override(functional, mol_ref)
+                if override is not None:
+                    reason = ("missing" if mol_read_err
+                              else f"non-physical E_mol={row['E_mol']}")
+                    row["E_mol"] = override
+                    notes.append(
+                        f"mol: used gas reference override {override} eV "
+                        f"({reason} in {mol_outcar})"
+                    )
+                elif mol_read_err:
+                    notes.append(f"mol: {mol_read_err}")
+                    row["status"] = "error"
+                else:
+                    notes.append(
+                        f"mol: non-physical E_mol={row['E_mol']} and no "
+                        f"gas reference override for '{mol_ref}'"
+                    )
+                    row["status"] = "error"
 
             # 4) Slab-size consistency: the clean-slab reference must use the
             #    same number of metal atoms as the slab inside the adsorption
