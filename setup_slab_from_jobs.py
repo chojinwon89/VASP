@@ -44,6 +44,25 @@ KNOWN_METALS = sorted(ssj.POTCAR_MAP.keys(), key=len, reverse=True)
 _ADSORBATE_ELEMENTS = {"C", "H", "O", "N", "S"}
 METAL_ELEMENTS = {m for m in ssj.POTCAR_MAP if m not in _ADSORBATE_ELEMENTS}
 
+
+def ssj_count(outcar: Path, element: str) -> int:
+    """Count atoms of `element` in a VASP OUTCAR via VRHFIN species order and
+    'ions per type'. Returns 0 if not found/unreadable."""
+    try:
+        text = outcar.read_text(errors="ignore")
+    except OSError:
+        return 0
+    species = re.findall(r"VRHFIN\s*=\s*([A-Za-z]+)", text)
+    m = re.search(r"ions per type\s*=\s*([\d ]+)", text)
+    if not species or not m:
+        return 0
+    counts = [int(x) for x in m.group(1).split()]
+    total = 0
+    for sp, c in zip(species, counts):
+        if sp == element:
+            total += c
+    return total
+
 _SURFACE_RE = re.compile(r"^([A-Z][a-z]?)(0001|100|110|111|001)")
 
 
@@ -209,6 +228,16 @@ def main():
         outcar = job_dir / "OUTCAR"
         if outcar.exists() and not args.force:
             print(f"skip  {tag:14s} ({n_metal} {metal}) OUTCAR exists")
+            n_skip += 1
+            continue
+
+        # A finished plain-name reference (e.g. copied from Perlmutter) may
+        # already cover this exact count; reuse it instead of recomputing.
+        plain_outcar = out_dir / surface / subfolder / "OUTCAR"
+        if (tag != surface and plain_outcar.exists() and not args.force
+                and ssj_count(plain_outcar, metal) == n_metal):
+            print(f"skip  {tag:14s} ({n_metal} {metal}) covered by "
+                  f"existing {surface}/{subfolder}")
             n_skip += 1
             continue
 
