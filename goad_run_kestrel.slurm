@@ -32,10 +32,13 @@ echo "Started: $(date)"
 echo "================================================================"
 
 # ---------- your workflow ----------
-echo "[1/2] prep_inputs.py"
-python -u prep_inputs.py
+echo "[1/3] generate_surface_cifs.py"
+python -u generate_surface_cifs.py
 
-echo "[2/2] batch_isopropanol.py"
+echo "[2/3] generate_molecule_cifs.py"
+python -u generate_molecule_cifs.py
+
+echo "[3/3] batch_isopropanol.py"
 python -u batch_isopropanol.py
 
 echo "================================================================"

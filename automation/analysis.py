@@ -22,6 +22,10 @@ def run_analysis(conn, cfg):
 
     # Build adsorption energies when all components exist
     # Eads = E(slab+mol) - E(slab) - E(mol)
+    # NOTE: slab energies are keyed by (functional, surface) only, so this
+    # pipeline cannot distinguish two supercell sizes of the same facet. Use
+    # calc_binding_energy.py (count-aware _n<count> matching) for mixed-size
+    # surfaces instead.
     slabs = {}
     mols = {}
     ads = []
