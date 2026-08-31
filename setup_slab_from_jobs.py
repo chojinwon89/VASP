@@ -103,6 +103,29 @@ def collect_representatives(best_dir: Path, wanted_surfaces=None):
     return reps
 
 
+def audit_counts(best_dir: Path, wanted_surfaces=None):
+    """Report, per surface, the distinct metal counts across ALL jobs.
+
+    Returns dict: surface -> {count: [job_dir_name, ...]}.
+    """
+    counts = {}
+    for job_dir in sorted(best_dir.glob("**/")):
+        parsed = parse_surface(job_dir.name)
+        if parsed is None:
+            continue
+        surface, metal = parsed
+        if wanted_surfaces and surface not in wanted_surfaces:
+            continue
+        atoms, _ = find_job_structure(job_dir)
+        if atoms is None:
+            continue
+        n_metal = sum(1 for s in atoms.get_chemical_symbols() if s == metal)
+        if n_metal == 0:
+            continue
+        counts.setdefault(surface, {}).setdefault(n_metal, []).append(job_dir.name)
+    return counts
+
+
 def main():
     ap = argparse.ArgumentParser(
         description=("Generate clean-slab references derived from the actual "
@@ -121,7 +144,32 @@ def main():
     ap.add_argument("--n-fixed", type=int, default=2)
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--force", action="store_true")
+    ap.add_argument("--audit", action="store_true",
+                    help="Only report distinct metal counts per surface; write nothing.")
     args = ap.parse_args()
+
+    if args.audit:
+        best_dir = Path(args.best_dir)
+        if not best_dir.exists():
+            raise SystemExit(f"best-dir not found: {best_dir}")
+        wanted = set(args.surfaces) if args.surfaces else None
+        counts = audit_counts(best_dir, wanted)
+        n_mixed = 0
+        for surface in sorted(counts):
+            by_count = counts[surface]
+            sizes = sorted(by_count)
+            njobs = sum(len(v) for v in by_count.values())
+            flag = ""
+            if len(sizes) > 1:
+                n_mixed += 1
+                flag = "  <-- MIXED SIZES"
+                examples = {c: by_count[c][:2] for c in sizes}
+                detail = "; ".join(f"{c}:{examples[c]}" for c in sizes)
+            else:
+                detail = f"{sizes[0]} ({njobs} jobs)"
+            print(f"{surface:8s} counts={sizes} {detail}{flag}")
+        print(f"\n{len(counts)} surfaces, {n_mixed} with MIXED metal counts.")
+        return
 
     functional = args.functional
     func_cfg = ssj.FUNCTIONAL_CONFIGS[functional]
