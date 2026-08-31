@@ -1,0 +1,48 @@
+======================================================================
+GOAD+MLIP vs DFT — consolidated accuracy report
+======================================================================
+Energy pairs: 80   MLIP geometry rows: 1578   struct-compare rows: 0
+
+ENERGY: per-functional (E_ads ML vs DFT, eV)
+--------------------------------------------
+functional  n   MAE    RMSE   bias(ML-DFT)  R2    
+----------  --  -----  -----  ------------  ------
+pbe         28  0.277  0.325  -0.031        0.623 
+pbe_d3      24  0.629  0.739  0.629         -0.540
+r2scan      28  0.519  0.653  0.383         0.247 
+
+ENERGY: per-molecule (functional=pbe)
+-------------------------------------
+molecule     n  MAE    bias  
+-----------  -  -----  ------
+CO2          4  0.400  -0.210
+glycerol     3  0.324  -0.000
+ethanol      3  0.278  0.056 
+isopropanol  3  0.267  -0.050
+propanol     3  0.260  -0.000
+ethane       3  0.259  0.027 
+propane      3  0.258  0.019 
+ethene       3  0.228  -0.002
+propene      3  0.178  -0.054
+
+ENERGY: per-metal (functional=pbe)
+----------------------------------
+metal  n   MAE    bias  
+-----  --  -----  ------
+Pt     9   0.383  0.383 
+Cu     10  0.337  -0.337
+Pd     9   0.104  -0.104
+
+GEOMETRY-QUALITY x ENERGY: energy error by MLIP geometry category (functional=pbe)
+----------------------------------------------------------------------------------
+mlip_category  n_pairs  MAE    bias  
+-------------  -------  -----  ------
+reasonable     22       0.259  0.020 
+borderline     6        0.344  -0.217
+
+GEOMETRY (atom-level): dft_mlip_structure_compare.csv not provided — run compare_dft_mlip_structures.py on the host that has the DFT CONTCARs (Perlmutter/Kestrel).
+
+VERDICT
+=======
+Best-agreeing functional: pbe  (MAE=0.277 eV, bias=-0.031 eV, R2=0.623, n=28).
+USABLE for coarse screening/ranking; expect ~0.2-0.3 eV scatter. Confirm close calls with DFT.
