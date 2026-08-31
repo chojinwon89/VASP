@@ -791,6 +791,14 @@ Examples
         "--no-output", action="store_true",
         help="Print results to screen only; do not write a CSV file."
     )
+    parser.add_argument(
+        "--only-complete", action="store_true",
+        help=(
+            "Drop rows with no slab+mol energy (jobs that were never run, e.g. "
+            "C<n>/-only systems without a fully_relaxed OUTCAR) so the CSV holds "
+            "only systems that actually produced energies."
+        )
+    )
     args = parser.parse_args()
 
     # Resolve the output path: explicit --output wins, otherwise derive a
@@ -833,6 +841,11 @@ Examples
             all_results.extend(results)
 
         print(f"\nTotal rows across all functionals: {len(all_results)}")
+        if args.only_complete:
+            before = len(all_results)
+            all_results = [r for r in all_results if r["E_slab_mol"] is not None]
+            print(f"--only-complete: kept {len(all_results)}/{before} rows "
+                  f"with a slab+mol energy.")
         if output_path:
             write_csv(all_results, output_path, include_functional=True)
         return
@@ -863,6 +876,12 @@ Examples
         sys.exit(0)
 
     print_table(results, functional=args.functional)
+
+    if args.only_complete:
+        before = len(results)
+        results = [r for r in results if r["E_slab_mol"] is not None]
+        print(f"--only-complete: kept {len(results)}/{before} rows "
+              f"with a slab+mol energy.")
 
     if output_path:
         write_csv(results, output_path,
