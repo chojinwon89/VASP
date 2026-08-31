@@ -71,10 +71,11 @@ def find_job_structure(job_dir: Path):
 
 
 def collect_representatives(best_dir: Path, wanted_surfaces=None):
-    """Map surface -> (Atoms slab-only, metal, source_path) using one job each.
+    """Map (surface, n_metal) -> (Atoms slab-only, metal, source_path, n_metal).
 
-    Picks, per surface, the job with the most metal atoms (the representative
-    full slab), so partial/broken cells don't win.
+    Emits one representative per DISTINCT metal count per surface, because the
+    same surface can appear with different supercell sizes depending on the
+    adsorbate (e.g. Ag100 jobs come as both 36 and 64 metal atoms).
     """
     reps = {}
     for job_dir in sorted(best_dir.glob("**/")):
@@ -97,9 +98,9 @@ def collect_representatives(best_dir: Path, wanted_surfaces=None):
         slab = atoms[keep]
         n_metal = len(slab)
 
-        prev = reps.get(surface)
-        if prev is None or n_metal > prev[3]:
-            reps[surface] = (slab, metal, src, n_metal)
+        key = (surface, n_metal)
+        if key not in reps:
+            reps[key] = (slab, metal, src, n_metal)
     return reps
 
 
@@ -193,29 +194,37 @@ def main():
     if not reps:
         raise SystemExit(f"No matching job structures found under {best_dir}")
 
+    # Which surfaces have more than one distinct count -> tag dir with _n<count>.
+    surf_counts = {}
+    for (surface, n_metal) in reps:
+        surf_counts.setdefault(surface, set()).add(n_metal)
+
     n_ok = n_skip = n_part = 0
-    for surface in sorted(reps):
-        slab, metal, src, n_metal = reps[surface]
-        job_dir = out_dir / surface / subfolder
+    for (surface, n_metal) in sorted(reps):
+        slab, metal, src, _ = reps[(surface, n_metal)]
+        # Only append _n<count> when the surface is ambiguous, so single-size
+        # surfaces keep their plain name for backward compatibility.
+        tag = f"{surface}_n{n_metal}" if len(surf_counts[surface]) > 1 else surface
+        job_dir = out_dir / tag / subfolder
         outcar = job_dir / "OUTCAR"
         if outcar.exists() and not args.force:
-            print(f"skip  {surface:8s} ({n_metal} {metal}) OUTCAR exists")
+            print(f"skip  {tag:14s} ({n_metal} {metal}) OUTCAR exists")
             n_skip += 1
             continue
 
-        print(f"write {surface:8s} ({n_metal} {metal}) from {src}")
+        print(f"write {tag:14s} ({n_metal} {metal}) from {src}")
         if args.dry_run:
             continue
 
         job_dir.mkdir(parents=True, exist_ok=True)
 
-        comment = (f"{surface} slab | {n_metal} {metal} | derived from job | "
+        comment = (f"{tag} slab | {n_metal} {metal} | derived from job | "
                    f"bottom {args.n_fixed} fixed")
         poscar_text = ssj.make_selective_dynamics_poscar(
             slab, args.n_fixed, comment)
         (job_dir / "POSCAR").write_text(poscar_text)
         (job_dir / "INCAR").write_text(
-            ssj.INCAR_TEMPLATE.format(system=surface, xc_block=xc_block))
+            ssj.INCAR_TEMPLATE.format(system=tag, xc_block=xc_block))
         (job_dir / "KPOINTS").write_text(ssj.KPOINTS_TEMPLATE)
 
         if pp_root is not None:
@@ -227,11 +236,11 @@ def main():
         else:
             cat_cmd = f"$VASP_PP_PATH/{ssj.POTCAR_MAP.get(metal, [metal])[0]}/POTCAR"
             (job_dir / "make_potcar.sh").write_text(
-                f"# Build POTCAR for {surface}\ncat {cat_cmd} > POTCAR\n")
+                f"# Build POTCAR for {tag}\ncat {cat_cmd} > POTCAR\n")
             n_part += 1
 
         slurm_path = job_dir / slurm_filename
-        slurm_path.write_text(slurm_template.format(job_name=surface[:40]))
+        slurm_path.write_text(slurm_template.format(job_name=tag[:40]))
         slurm_path.chmod(0o755)
 
         if functional == "beef-vdw":

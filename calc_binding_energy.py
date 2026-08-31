@@ -263,28 +263,29 @@ def _surface_metal(surface: str) -> str:
     return letters[:2]
 
 
-def find_slab_ref_by_metal_count(slab_dir: Path, metal: str, n_job: int,
-                                  functional: str = None):
-    """Find a clean-slab reference OUTCAR whose metal-atom count == n_job.
+def find_slab_ref_by_metal_count(slab_dir: Path, surface: str, metal: str,
+                                  n_job: int, functional: str = None):
+    """Find the clean-slab reference for this exact SURFACE whose metal count
+    equals n_job.
 
-    The facet label on an adsorption job (e.g. 'Ag100') can be mislabeled
-    relative to its actual slab size, so matching purely by label produces
-    spurious slab_mismatch errors. Instead, scan all clean-slab references for
-    the same metal and return the OUTCAR whose metal count equals the job's.
+    The same surface can appear with several supercell sizes depending on the
+    adsorbate (e.g. Ag100 jobs come as 36 and 64 metal atoms), so references
+    are generated one per (surface, count) into count-tagged dirs named
+    '<surface>_n<count>' (with the plain '<surface>' kept for single-size
+    surfaces). This matches by the SAME facet only — never a different facet
+    that merely happens to share the atom count.
 
     Returns (outcar_path, ref_surface_name) or (None, None) if none matches.
     """
     if n_job <= 0:
         return None, None
-    for ref_surface_dir in sorted(slab_dir.glob(f"{metal}*")):
+    # Candidate reference dirs for this facet: plain name plus _n<count> tags.
+    candidates = [slab_dir / surface, slab_dir / f"{surface}_n{n_job}"]
+    for ref_surface_dir in candidates:
         if not ref_surface_dir.is_dir():
             continue
-        if _surface_metal(ref_surface_dir.name) != metal:
-            continue
-        if functional:
-            cand = ref_surface_dir / functional / "OUTCAR"
-        else:
-            cand = ref_surface_dir / "OUTCAR"
+        cand = (ref_surface_dir / functional / "OUTCAR") if functional \
+            else (ref_surface_dir / "OUTCAR")
         if not _resolve_outcar(cand).exists():
             continue
         if count_element_atoms(cand, metal) == n_job:
@@ -587,19 +588,18 @@ def calc_binding_energies(best_dirs, slab_dir: Path, mol_dir: Path,
                 n_job = count_element_atoms(slab_mol_outcar, metal)
                 n_ref = count_element_atoms(slab_outcar, metal)
                 if n_job > 0 and n_ref > 0 and n_job != n_ref:
-                    # Facet labels can be swapped (e.g. an 'Ag100' job that
-                    # actually holds a 64-atom 111 slab). Rescue by selecting
-                    # the clean-slab reference whose metal count matches the job.
+                    # This facet has multiple supercell sizes; pick the SAME
+                    # facet's count-tagged reference (<surface>_n<count>) that
+                    # matches the job's metal count. Never cross facets.
                     alt_outcar, alt_surface = find_slab_ref_by_metal_count(
-                        slab_dir, metal, n_job, functional
+                        slab_dir, surface, metal, n_job, functional
                     )
                     if alt_outcar is not None:
                         try:
                             row["E_slab"] = read_energy_from_outcar(alt_outcar)
                             notes.append(
                                 f"slab ref matched by count: {n_job} {metal} "
-                                f"from vasp_slab/{alt_surface} "
-                                f"(job labeled {surface})"
+                                f"from vasp_slab/{alt_surface}"
                             )
                         except (FileNotFoundError, ValueError) as e:
                             row["status"] = "slab_mismatch"
@@ -609,7 +609,7 @@ def calc_binding_energies(best_dirs, slab_dir: Path, mol_dir: Path,
                         notes.append(
                             f"slab size mismatch: job has {n_job} {metal}, "
                             f"reference has {n_ref} {metal}, and no "
-                            f"vasp_slab/{metal}* reference has {n_job} {metal}"
+                            f"vasp_slab/{surface}_n{n_job} reference exists"
                         )
 
             # 4b) Physical sanity of the reference/job total energies. A
