@@ -289,6 +289,13 @@ def discover_system_dirs(best_dir: Path):
     def is_bucket_dir(path: Path) -> bool:
         return path.is_dir() and re.fullmatch(r"C\d+", path.name) is not None
 
+    def is_system_dir(path: Path) -> bool:
+        # A system dir either has a top-level POSCAR (relax/single-point runs)
+        # or a singlepoint/ subdir (fully_relaxed layout, no top-level POSCAR).
+        return path.is_dir() and (
+            (path / "POSCAR").exists() or (path / "singlepoint").is_dir()
+        )
+
     system_dirs = []
     if (best_dir / "POSCAR").exists():
         system_dirs.append(best_dir)
@@ -301,7 +308,7 @@ def discover_system_dirs(best_dir: Path):
         seen_systems = set()
         for bucket_dir in bucket_dirs:
             for second_level_dir in sorted(bucket_dir.iterdir()):
-                if second_level_dir.is_dir() and (second_level_dir / "POSCAR").exists():
+                if is_system_dir(second_level_dir):
                     system_dirs.append(second_level_dir)
                     seen_systems.add(second_level_dir.name)
 
@@ -311,7 +318,7 @@ def discover_system_dirs(best_dir: Path):
         for extra_dir in first_level_dirs:
             if is_bucket_dir(extra_dir):
                 continue
-            if not (extra_dir / "POSCAR").exists():
+            if not is_system_dir(extra_dir):
                 continue
             if extra_dir.name in seen_systems:
                 print(
@@ -330,11 +337,11 @@ def discover_system_dirs(best_dir: Path):
         return system_dirs
 
     for first_level_dir in first_level_dirs:
-        if (first_level_dir / "POSCAR").exists():
+        if is_system_dir(first_level_dir):
             system_dirs.append(first_level_dir)
             continue
         for second_level_dir in sorted(first_level_dir.iterdir()):
-            if second_level_dir.is_dir() and (second_level_dir / "POSCAR").exists():
+            if is_system_dir(second_level_dir):
                 system_dirs.append(second_level_dir)
     return system_dirs
 
