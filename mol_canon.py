@@ -103,16 +103,25 @@ def canon_molecule(name: str) -> str:
 
 
 def match_keys(name: str) -> set[str]:
-    """Candidate lookup keys for a molecule token: {canonical, raw-lower}.
+    """Candidate lookup keys for a molecule token: {canonical, raw-lower, formulae}.
 
     Use when joining data sources that may spell a molecule differently
-    (formula vs common name).  The canonical map is a superset, so this pair is
-    enough to bridge any two spellings of the same species.
+    (formula vs common name).  Besides the canonical token and the raw
+    (lower-cased) token, the formula spellings registered in ``FORMULA_OF`` are
+    included so a *common-name* token ("methane") also bridges to a
+    *formula*-named artifact ("CH4") and vice-versa -- otherwise the expansion
+    is only one-way (formula->name) and a gallery file such as ``Rh111_CH4.cif``
+    is never found when the system is listed as ``methane``.
     """
     if name is None:
         return {""}
     raw = name.strip().lower()
-    return {canon_molecule(name), raw}
+    canon = canon_molecule(name)
+    keys = {canon, raw}
+    for formula in FORMULA_OF.get(canon, []):
+        keys.add(formula)
+        keys.add(formula.lower())
+    return keys
 
 
 def vasp_mol_candidates(name: str) -> list[str]:
