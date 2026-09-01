@@ -262,33 +262,44 @@ def _surface_metal(surface: str) -> str:
     return letters[:2]
 
 
-def find_slab_ref_by_metal_count(slab_dir: Path, surface: str, metal: str,
+def find_slab_ref_by_metal_count(slab_dirs, surface: str, metal: str,
                                   n_job: int, functional: str = None):
     """Find the clean-slab reference for this exact SURFACE whose metal count
-    equals n_job.
+    equals n_job, searching every provided slab dir.
 
     The same surface can appear with several supercell sizes depending on the
     adsorbate (e.g. Ag100 jobs come as 36 and 64 metal atoms), so references
     are generated one per (surface, count) into count-tagged dirs named
     '<surface>_n<count>' (with the plain '<surface>' kept for single-size
-    surfaces). This matches by the SAME facet only — never a different facet
-    that merely happens to share the atom count.
+    surfaces). Those references may also be split across trees (e.g. the plain
+    64-atom slabs in vasp_slab_kestrel and the 36-atom _n<count> re-runs in
+    vasp_slab), and may be laid out with a functional subdir or flat — all
+    combinations are searched. This matches by the SAME facet only — never a
+    different facet that merely happens to share the atom count.
 
     Returns (outcar_path, ref_surface_name) or (None, None) if none matches.
     """
     if n_job <= 0:
         return None, None
-    # Candidate reference dirs for this facet: plain name plus _n<count> tags.
-    candidates = [slab_dir / surface, slab_dir / f"{surface}_n{n_job}"]
-    for ref_surface_dir in candidates:
-        if not ref_surface_dir.is_dir():
-            continue
-        cand = (ref_surface_dir / functional / "OUTCAR") if functional \
-            else (ref_surface_dir / "OUTCAR")
-        if not _resolve_outcar(cand).exists():
-            continue
-        if count_element_atoms(cand, metal) == n_job:
-            return cand, ref_surface_dir.name
+    if isinstance(slab_dirs, (str, Path)):
+        slab_dirs = [Path(slab_dirs)]
+    for slab_dir in slab_dirs:
+        slab_dir = Path(slab_dir)
+        # Prefer the count-tagged dir, then the plain surface dir.
+        for name in (f"{surface}_n{n_job}", surface):
+            ref_surface_dir = slab_dir / name
+            if not ref_surface_dir.is_dir():
+                continue
+            # Try the functional subdir first, then a flat OUTCAR.
+            cands = []
+            if functional:
+                cands.append(ref_surface_dir / functional / "OUTCAR")
+            cands.append(ref_surface_dir / "OUTCAR")
+            for cand in cands:
+                if not _resolve_outcar(cand).exists():
+                    continue
+                if count_element_atoms(cand, metal) == n_job:
+                    return cand, f"{slab_dir.name}/{ref_surface_dir.name}"
     return None, None
 
 
@@ -415,7 +426,7 @@ def discover_system_dirs(best_dir: Path, calc_type: str = "relax"):
     return system_dirs
 
 
-def calc_binding_energies(best_dirs, slab_dir: Path, mol_dir: Path,
+def calc_binding_energies(best_dirs, slab_dirs, mol_dir: Path,
                           functional: str = None, calc_type: str = "relax",
                           molecule_first: bool = False):
     """
@@ -431,6 +442,10 @@ def calc_binding_energies(best_dirs, slab_dir: Path, mol_dir: Path,
         E_slab_mol, E_slab, E_mol, E_ads, status, note
     """
     results = []
+    if isinstance(slab_dirs, (str, Path)):
+        slab_dirs = [Path(slab_dirs)]
+    else:
+        slab_dirs = [Path(s) for s in slab_dirs]
     func_key = normalise_func(functional) if functional else None
 
     for best_dir in best_dirs:
@@ -478,15 +493,24 @@ def calc_binding_energies(best_dirs, slab_dir: Path, mol_dir: Path,
                         return cand
                 return candidates[0]
 
+            def _slab(*layouts) -> Path:
+                """First existing clean-slab OUTCAR across ALL --slab-dir trees.
+                Each layout is the path segments after <slab_dir>/<surface>;
+                every layout is tried under every slab dir, so plain <surface>
+                dirs in one tree and count-tagged <surface>_n<count> re-runs in
+                another are all found."""
+                return _pick(*[sd.joinpath(surface, *seg)
+                               for sd in slab_dirs for seg in layouts])
+
             if functional:
                 if calc_type == "single-point":
                     slab_mol_outcar = _pick(
                         job_dir / "singlepoint" / functional / "OUTCAR",
                         job_dir / functional / "OUTCAR",
                     )
-                    slab_outcar = _pick(
-                        slab_dir / surface / "singlepoint" / functional / "OUTCAR",
-                        slab_dir / surface / functional / "OUTCAR",
+                    slab_outcar = _slab(
+                        ("singlepoint", functional, "OUTCAR"),
+                        (functional, "OUTCAR"),
                     )
                     mol_outcar = _pick(*[
                         p for d in mol_refs for p in (
@@ -502,12 +526,12 @@ def calc_binding_energies(best_dirs, slab_dir: Path, mol_dir: Path,
                         job_dir / functional / "fully_relaxed" / "OUTCAR",
                         job_dir / functional / "OUTCAR",
                     )
-                    slab_outcar     = slab_dir / surface  / functional / "OUTCAR"
+                    slab_outcar     = _slab((functional, "OUTCAR"))
                     mol_outcar      = _pick(*[
                         mol_dir / d / functional / "OUTCAR" for d in mol_refs])
                 else:
                     slab_mol_outcar = job_dir / functional / "OUTCAR"
-                    slab_outcar     = slab_dir / surface  / functional / "OUTCAR"
+                    slab_outcar     = _slab((functional, "OUTCAR"))
                     mol_outcar      = _pick(*[
                         mol_dir / d / functional / "OUTCAR" for d in mol_refs])
             else:
@@ -516,9 +540,9 @@ def calc_binding_energies(best_dirs, slab_dir: Path, mol_dir: Path,
                         job_dir / "singlepoint" / "OUTCAR",
                         job_dir / "OUTCAR",
                     )
-                    slab_outcar = _pick(
-                        slab_dir / surface / "singlepoint" / "OUTCAR",
-                        slab_dir / surface / "OUTCAR",
+                    slab_outcar = _slab(
+                        ("singlepoint", "OUTCAR"),
+                        ("OUTCAR",),
                     )
                     mol_outcar = _pick(*[
                         p for d in mol_refs for p in (
@@ -532,12 +556,12 @@ def calc_binding_energies(best_dirs, slab_dir: Path, mol_dir: Path,
                         job_dir / "fully_relaxed" / "OUTCAR",
                         job_dir / "OUTCAR",
                     )
-                    slab_outcar     = slab_dir / surface  / "OUTCAR"
+                    slab_outcar     = _slab(("OUTCAR",))
                     mol_outcar      = _pick(*[
                         mol_dir / d / "OUTCAR" for d in mol_refs])
                 else:
                     slab_mol_outcar = job_dir / "OUTCAR"
-                    slab_outcar     = slab_dir / surface  / "OUTCAR"
+                    slab_outcar     = _slab(("OUTCAR",))
                     mol_outcar      = _pick(*[
                         mol_dir / d / "OUTCAR" for d in mol_refs])
 
@@ -600,14 +624,14 @@ def calc_binding_energies(best_dirs, slab_dir: Path, mol_dir: Path,
                     # facet's count-tagged reference (<surface>_n<count>) that
                     # matches the job's metal count. Never cross facets.
                     alt_outcar, alt_surface = find_slab_ref_by_metal_count(
-                        slab_dir, surface, metal, n_job, functional
+                        slab_dirs, surface, metal, n_job, functional
                     )
                     if alt_outcar is not None:
                         try:
                             row["E_slab"] = read_energy_from_outcar(alt_outcar)
                             notes.append(
                                 f"slab ref matched by count: {n_job} {metal} "
-                                f"from vasp_slab/{alt_surface}"
+                                f"from {alt_surface}"
                             )
                         except (FileNotFoundError, ValueError) as e:
                             row["status"] = "slab_mismatch"
@@ -617,7 +641,7 @@ def calc_binding_energies(best_dirs, slab_dir: Path, mol_dir: Path,
                         notes.append(
                             f"slab size mismatch: job has {n_job} {metal}, "
                             f"reference has {n_ref} {metal}, and no "
-                            f"vasp_slab/{surface}_n{n_job} reference exists"
+                            f"{surface}_n{n_job} reference found in any slab dir"
                         )
 
             # 4b) Physical sanity of the reference/job total energies. A
@@ -781,8 +805,12 @@ Examples
         help="Directories containing slab+molecule VASP jobs (default: poscar/best)"
     )
     parser.add_argument(
-        "--slab-dir", default="vasp_slab",
-        help="Directory containing clean slab VASP jobs (default: vasp_slab)"
+        "--slab-dir", nargs="+", default=["vasp_slab"], metavar="DIR",
+        help=("One or more directories with clean slab VASP jobs "
+              "(default: vasp_slab). Searched in order, so count-tagged "
+              "references (<surface>_n<count>) split across trees -- e.g. "
+              "vasp_slab holding the 36-atom _n36 re-runs and vasp_slab_kestrel "
+              "holding the plain 64-atom slabs -- are all found.")
     )
     parser.add_argument(
         "--mol-dir", default="vasp_mol",
@@ -868,11 +896,11 @@ Examples
             args.calc_type, args.all_functionals, args.functional))
 
     best_dirs = [Path(d) for d in args.best_dirs]
-    slab_dir  = Path(args.slab_dir)
+    slab_dirs = [Path(d) for d in args.slab_dir]
     mol_dir   = Path(args.mol_dir)
 
     # Validate base directories
-    missing = [str(d) for d in [*best_dirs, slab_dir, mol_dir] if not d.exists()]
+    missing = [str(d) for d in [*best_dirs, *slab_dirs, mol_dir] if not d.exists()]
     if missing:
         print("ERROR: The following directories were not found:")
         for m in missing:
@@ -889,7 +917,7 @@ Examples
             print(f"\n{'='*60}")
             print(f"Processing functional: {func}  →  {normalise_func(func)}")
             print(f"{'='*60}")
-            results = calc_binding_energies(best_dirs, slab_dir, mol_dir,
+            results = calc_binding_energies(best_dirs, slab_dirs, mol_dir,
                                             functional=func,
                                             calc_type=args.calc_type,
                                             molecule_first=args.molecule_first)
@@ -917,12 +945,12 @@ Examples
         else:
             suffix = (f"/{args.functional}" if args.functional else "")
         print(f"slab+mol jobs : {d}{suffix}")
-    print(f"slab refs     : {slab_dir}"
+    print(f"slab refs     : {', '.join(str(s) for s in slab_dirs)}"
           + (f"/<surface>/{args.functional}" if args.functional else ""))
     print(f"molecule refs : {mol_dir}"
           + (f"/<molecule>/{args.functional}" if args.functional else ""))
 
-    results = calc_binding_energies(best_dirs, slab_dir, mol_dir,
+    results = calc_binding_energies(best_dirs, slab_dirs, mol_dir,
                                     functional=args.functional,
                                     calc_type=args.calc_type,
                                     molecule_first=args.molecule_first)
