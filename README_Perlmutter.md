@@ -299,31 +299,45 @@ first so it wins on any duplicate system (dedup keeps the earliest root).
 python analyze_dft_mlip_accuracy.py --pairs analysis_out/dft_vs_mlip_pairs.csv \
   --out-dir analysis_out                                       # dft_mlip_accuracy_report.txt
 
-python mlip_contact_geometry.py --mlip-dir structure --out analysis_out/mlip_geom.csv
+# MLIP relaxed bond distance / site — needs the gallery .cif, so run it where the
+# gallery lives (usually the laptop).
+python mlip_contact_geometry.py --gallery <gallery> --out analysis_out/mlip_geom.csv
 
+# DFT relaxed bond distance / pair / site — needs ONLY the CONTCARs (no gallery),
+# so it runs on the cluster. This is what fills the "DFT contact" line + the
+# MLIP-minus-DFT Δd on dft_comparison.html.
+python dft_contact_geometry.py \
+  --dft-jobs poscar/best --dft-jobs poscar/best2 --dft-jobs dft_jobs \
+  --targets analysis_out/dft_vs_mlip_pairs.csv \
+  --out analysis_out/dft_geom.csv                             # DFT bond dist / pair / site
+
+# Optional: also want per-atom RMSD + max displacement vs the MLIP structure?
+# compare_dft_mlip_structures.py gives those too, but additionally needs the gallery.
 python compare_dft_mlip_structures.py \
   --dft-jobs poscar/best --dft-jobs poscar/best2 --dft-jobs dft_jobs \
-  --mlip-dir structure --out dft_mlip_structure_compare.csv    # DFT bond dist / site / Δd / RMSD
+  --mlip-dir <gallery> --out dft_mlip_structure_compare.csv   # + Δd / RMSD (needs gallery)
 
 python render_dft_structures.py \
   --dft-jobs poscar/best --dft-jobs poscar/best2 --dft-jobs dft_jobs \
-  --targets analysis_out/mlip_geom.csv --out-dir dft_png       # DFT final-structure PNGs
+  --targets analysis_out/dft_vs_mlip_pairs.csv --out-dir dft_png   # DFT final-structure PNGs
 ```
 
 ### 6d. Rebuild + publish
 
 Run where the `bond-distance-review` clone + `GH_TOKEN` live (usually the laptop — Lustre
-`git` is slow). `scp` back `analysis_out/*.csv`, `dft_mlip_structure_compare.csv`, `dft_png/` first.
+`git` is slow). `scp` back `analysis_out/*.csv` (incl. `dft_geom.csv`) and `dft_png/` first.
 
 ```bash
 python build_dft_pages.py \
-  --analysis-dir analysis_out --gallery structure \
+  --analysis-dir analysis_out --gallery <gallery> \
   --out-dir /path/to/bond-distance-review \
-  --struct-compare dft_mlip_structure_compare.csv --dft-png-dir dft_png
+  --struct-compare analysis_out/dft_geom.csv --dft-png-dir dft_png
 cd /path/to/bond-distance-review && git add -A && git commit -m "Refresh DFT pages" && git push
 ```
 
-The status banner on `dft_comparison.html` reports coverage as
+`--struct-compare` accepts either `dft_geom.csv` (DFT bond distance + site, no gallery
+needed) or `dft_mlip_structure_compare.csv` (also Δd + RMSD). The status banner on
+`dft_comparison.html` reports coverage as
 `DFT GEOMETRY x/N · DFT IMAGES y/N`; both climb as CONTCARs land. Omit `--struct-compare`
 / `--dft-png-dir` to publish the MLIP-only side (banner shows `0/N`) before DFT finishes.
 
