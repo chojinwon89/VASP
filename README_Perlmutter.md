@@ -252,18 +252,30 @@ poscar/best + poscar/best2   vasp_slab            vasp_mol
 
 ### 6a. (cluster) Regenerate DFT adsorption energies from the corrected slabs
 
-`--calc-type fully-relaxed` reads slab+mol OUTCARs from `<system>/<FUNC>/fully_relaxed/OUTCAR`
-(and `singlepoint/<FUNC>/fully_relaxed/…`). The count-matcher pulls each clean-slab
-reference from `vasp_slab/<surface>` or `vasp_slab/<surface>_n<count>` with the SAME metal count.
+`--calc-type fully-relaxed` reads slab+mol OUTCARs from `<system>/<FUNC>/fully_relaxed/OUTCAR`,
+falling back to `<system>/<FUNC>/OUTCAR` (the `dft_jobs` layout). The count-matcher pulls each
+clean-slab reference from `vasp_slab/<surface>` or `vasp_slab/<surface>_n<count>` with the SAME
+metal count. Directory names are **auto-detected** as surface-first (`Au111_H2O`, poscar/best)
+or molecule-first (`H2O_Au111`, dft_jobs), so all trees can be listed in one run — no
+`--molecule-first` flag needed.
 
 ```bash
 python calc_binding_energy.py \
-  --best-dirs poscar/best poscar/best2 \
+  --best-dirs poscar/best poscar/best2 dft_jobs \
   --slab-dir vasp_slab --mol-dir vasp_mol \
   --all-functionals --functionals PBE PBE_D3 r2scan beef_vdw \
   --calc-type fully-relaxed --only-complete \
   --output analysis_out/dft_binding_energies_all.csv
 ```
+
+> **Naming caveat:** `dft_jobs` names molecules by **formula** (`H2O`, `C2H6`, `SO2`), while
+> `poscar/best` and the MLIP runs use **common names** (`ethane`, `ethanol`). The geometry
+> page canonicalises formula↔name so both match, but the **energy parity** pairs on the raw
+> molecule string — so a `dft_jobs` organic only lands on the parity plot if MLIP ran that same
+> molecule under the same spelling. `dft_jobs` mainly *expands DFT-only + geometry* coverage
+> (H2O/CO/SO2/NH3/… that MLIP never ran won't appear on the parity plot — correctly, as there is
+> no MLIP counterpart). Ask if you want formula→common-name canonicalisation so overlapping
+> organics pair too.
 
 ### 6b. (cluster) Pair DFT with MLIP → the pairs CSV + parity plot
 
@@ -278,6 +290,9 @@ python plot_dft_vs_mlip.py \
 
 ### 6c. (cluster) Accuracy report + geometry artifacts
 
+`--dft-jobs` is repeatable on both geometry tools and auto-detects name order; list `poscar/best`
+first so it wins on any duplicate system (dedup keeps the earliest root).
+
 ```bash
 python analyze_dft_mlip_accuracy.py --pairs analysis_out/dft_vs_mlip_pairs.csv \
   --out-dir analysis_out                                       # dft_mlip_accuracy_report.txt
@@ -285,11 +300,11 @@ python analyze_dft_mlip_accuracy.py --pairs analysis_out/dft_vs_mlip_pairs.csv \
 python mlip_contact_geometry.py --mlip-dir structure --out analysis_out/mlip_geom.csv
 
 python compare_dft_mlip_structures.py \
-  --dft-jobs poscar/best --dft-jobs poscar/best2 \
+  --dft-jobs poscar/best --dft-jobs poscar/best2 --dft-jobs dft_jobs \
   --mlip-dir structure --out dft_mlip_structure_compare.csv    # DFT bond dist / site / Δd / RMSD
 
 python render_dft_structures.py \
-  --dft-jobs poscar/best --dft-jobs poscar/best2 \
+  --dft-jobs poscar/best --dft-jobs poscar/best2 --dft-jobs dft_jobs \
   --targets analysis_out/mlip_geom.csv --out-dir dft_png       # DFT final-structure PNGs
 ```
 

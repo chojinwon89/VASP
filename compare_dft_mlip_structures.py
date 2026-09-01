@@ -115,22 +115,31 @@ def canon_molecule(name: str) -> str:
 
 
 def parse_surface_molecule(name: str, molecule_first: bool = False):
-    """Split into (surface, molecule).
+    """Split into (surface, molecule), auto-detecting the name order.
 
-    Default surface-first: 'Ag100_ethanol' -> ('Ag100', 'ethanol').
-    molecule_first: 'C2H5OH_Ag100' or 'CH3OH_Pd111_bri' -> ('Ag100'/'Pd111', ...).
+    Surface-first  'Ag100_ethanol'                    -> ('Ag100', 'ethanol').
+    Molecule-first 'C2H5OH_Ag100' / 'H2O_Au111' / 'CH3OH_Pd111_bri'
+                                                       -> ('Ag100'/'Au111'/'Pd111', ...).
+
+    The order is detected from where the known <metal><facet> token sits, so
+    surface-first (poscar/best) and molecule-first (dft_jobs) trees mix freely
+    in one run. ``molecule_first`` only steers the no-known-surface fallback.
     """
-    for metal in sorted(METALS, key=len, reverse=True):
+    metals = sorted(METALS, key=len, reverse=True)
+    # 1) Surface-first: the name starts with a known <metal><facet> token.
+    for metal in metals:
         for facet in KNOWN_FACETS:
             surf = f"{metal}{facet}"
-            if molecule_first:
-                needle = "_" + surf
-                idx = name.find(needle)
-                if idx != -1:
-                    return surf, name[:idx]
-            else:
-                if name.startswith(surf + "_"):
-                    return surf, name[len(surf) + 1:]
+            if name.startswith(surf + "_"):
+                return surf, name[len(surf) + 1:].split("_seed")[0]
+    # 2) Molecule-first: a known surface token appears after an underscore
+    #    (drops any trailing adsorption-site suffix, e.g. '_top', '_bri').
+    for metal in metals:
+        for facet in KNOWN_FACETS:
+            surf = f"{metal}{facet}"
+            idx = name.find("_" + surf)
+            if idx != -1:
+                return surf, name[:idx]
     parts = name.split("_", 1)
     if len(parts) != 2:
         return name, "unknown"
@@ -267,8 +276,12 @@ def index_mlip_cifs(mlip_dir: Path):
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--dft-jobs", default="dft_jobs",
-                    help="Root of finished DFT relaxations (default dft_jobs).")
+    ap.add_argument("--dft-jobs", action="append", default=None, metavar="ROOT",
+                    help="Root of finished DFT relaxations. Repeatable, e.g. "
+                         "--dft-jobs poscar/best --dft-jobs poscar/best2 "
+                         "--dft-jobs dft_jobs. Surface-first ('Au111_H2O') and "
+                         "molecule-first ('H2O_Au111') trees are auto-detected. "
+                         "Default: dft_jobs.")
     ap.add_argument("--mlip-dir", required=True,
                     help="Directory with MLIP relaxed .cif structures "
                          "(the bond-distance-review gallery).")
@@ -276,10 +289,11 @@ def main() -> int:
                     help="Output CSV path.")
     args = ap.parse_args()
 
-    dft_root = Path(args.dft_jobs)
+    dft_roots = [Path(d) for d in (args.dft_jobs or ["dft_jobs"])]
     mlip_dir = Path(args.mlip_dir)
-    if not dft_root.is_dir():
-        sys.exit(f"--dft-jobs not found: {dft_root}")
+    missing = [str(d) for d in dft_roots if not d.is_dir()]
+    if missing:
+        sys.exit("--dft-jobs not found: " + ", ".join(missing))
     if not mlip_dir.is_dir():
         sys.exit(f"--mlip-dir not found: {mlip_dir}")
 
@@ -289,37 +303,45 @@ def main() -> int:
 
     rows = []
     n_seen = n_matched = 0
-    for surface, molecule, canon, func, contcar in discover_dft_contcars(dft_root):
-        n_seen += 1
-        cif = mlip_index.get((surface, canon))
-        if cif is None:
-            continue
-        dft = _read(contcar)
-        mlip = _read(cif)
-        if dft is None or mlip is None:
-            continue
+    seen_keys: set[tuple[str, str, str]] = set()
+    for dft_root in dft_roots:
+        for surface, molecule, canon, func, contcar in discover_dft_contcars(dft_root):
+            n_seen += 1
+            # Prefer the first root that provides a given (surface, molecule,
+            # functional) -- pass poscar/best before dft_jobs to prioritise it.
+            dedup_key = (surface, canon, func)
+            if dedup_key in seen_keys:
+                continue
+            cif = mlip_index.get((surface, canon))
+            if cif is None:
+                continue
+            dft = _read(contcar)
+            mlip = _read(cif)
+            if dft is None or mlip is None:
+                continue
 
-        metal = surface_metal(surface)
-        d_dft, pair_dft, _, _ = min_metal_adsorbate_contact(dft, metal)
-        d_ml, pair_ml, _, _ = min_metal_adsorbate_contact(mlip, metal)
-        rmsd, max_disp, disp_atom = per_atom_rmsd(dft, mlip)
+            metal = surface_metal(surface)
+            d_dft, pair_dft, _, _ = min_metal_adsorbate_contact(dft, metal)
+            d_ml, pair_ml, _, _ = min_metal_adsorbate_contact(mlip, metal)
+            rmsd, max_disp, disp_atom = per_atom_rmsd(dft, mlip)
 
-        n_matched += 1
-        rows.append({
-            "surface": surface,
-            "molecule": molecule,
-            "functional": func,
-            "min_dist_dft": None if d_dft is None else round(d_dft, 3),
-            "pair_dft": pair_dft,
-            "min_dist_mlip": None if d_ml is None else round(d_ml, 3),
-            "pair_mlip": pair_ml,
-            "d_min_dist": (None if (d_dft is None or d_ml is None)
-                           else round(d_dft - d_ml, 3)),
-            "rmsd": None if rmsd is None else round(rmsd, 3),
-            "max_disp": None if max_disp is None else round(max_disp, 3),
-            "max_disp_atom": disp_atom,
-            "mlip_cif": cif.name,
-        })
+            seen_keys.add(dedup_key)
+            n_matched += 1
+            rows.append({
+                "surface": surface,
+                "molecule": molecule,
+                "functional": func,
+                "min_dist_dft": None if d_dft is None else round(d_dft, 3),
+                "pair_dft": pair_dft,
+                "min_dist_mlip": None if d_ml is None else round(d_ml, 3),
+                "pair_mlip": pair_ml,
+                "d_min_dist": (None if (d_dft is None or d_ml is None)
+                               else round(d_dft - d_ml, 3)),
+                "rmsd": None if rmsd is None else round(rmsd, 3),
+                "max_disp": None if max_disp is None else round(max_disp, 3),
+                "max_disp_atom": disp_atom,
+                "mlip_cif": cif.name,
+            })
 
     if not rows:
         sys.exit("No matched DFT/MLIP structure pairs found. Check paths.")

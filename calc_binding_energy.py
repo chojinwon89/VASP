@@ -295,33 +295,33 @@ def find_slab_ref_by_metal_count(slab_dir: Path, surface: str, metal: str,
 
 def parse_surface_molecule(dir_name: str, molecule_first: bool = False):
     """
-    Parse a directory name into (surface, molecule).
+    Parse a directory name into (surface, molecule), auto-detecting the order.
 
-    Default (surface-first) handles 'Cu111_isopropanol' / 'Pt111_glycerol_seed0'.
-    With ``molecule_first=True`` handles the dft_jobs layout 'C2H2_Ag100' or
-    'CH3OH_Pd111_bri' where the molecule token comes first and the surface may
-    be followed by an adsorption-site suffix (e.g. '_bri', '_top').
+    Surface-first  'Cu111_isopropanol' / 'Pt111_glycerol_seed0'  -> ('Cu111', ...).
+    Molecule-first 'C2H2_Ag100' / 'H2O_Au111' / 'CH3OH_Pd111_bri' -> ('Ag100'/'Au111'/'Pd111', ...).
 
-    Tries known surface names anywhere in the name; falls back to splitting on
-    the first underscore.
+    The order is detected from where the known <metal><facet> token sits, so
+    surface-first (poscar/best) and molecule-first (dft_jobs, e.g. 'H2O_Au111')
+    trees can be mixed in a single run without a global flag. ``molecule_first``
+    only steers the fallback when no known surface token is present.
     """
-    # Locate a known <metal><facet> token anywhere in the name.
+    # 1) Surface-first: the name starts with a known <metal><facet> token.
     for metal in KNOWN_METALS:
         for facet in KNOWN_FACETS:
             surface = f"{metal}{facet}"
-            if molecule_first:
-                needle = "_" + surface
-                idx = dir_name.find(needle)
-                if idx != -1:
-                    molecule = dir_name[:idx]
-                    return surface, molecule
-            else:
-                if dir_name.startswith(surface + "_"):
-                    remainder = dir_name[len(surface) + 1:]
-                    molecule = remainder.split("_seed")[0]
-                    return surface, molecule
+            if dir_name.startswith(surface + "_"):
+                molecule = dir_name[len(surface) + 1:].split("_seed")[0]
+                return surface, molecule
+    # 2) Molecule-first: a known surface token appears after an underscore
+    #    (drops any trailing adsorption-site suffix, e.g. '_top', '_bri').
+    for metal in KNOWN_METALS:
+        for facet in KNOWN_FACETS:
+            surface = f"{metal}{facet}"
+            idx = dir_name.find("_" + surface)
+            if idx != -1:
+                return surface, dir_name[:idx]
 
-    # Fallback: split on first underscore (order depends on molecule_first).
+    # 3) Fallback: split on first underscore (order per molecule_first hint).
     parts = dir_name.split("_", 1)
     if len(parts) == 2:
         if molecule_first:
