@@ -54,6 +54,8 @@ try:
 except ImportError:
     sys.exit("ASE is required. On Perlmutter use the base `python` (has ASE).")
 
+from mol_canon import canon_molecule
+
 
 # --- metals we treat as the "surface" side of a contact -------------------
 METALS = {
@@ -73,33 +75,9 @@ FUNC_DIRS = {"pbe": "PBE", "pbe_d3": "PBE_D3", "r2scan": "r2scan",
 KNOWN_FACETS = ["0001", "111", "110", "100", "001"]
 
 # The MLIP .cif gallery uses common molecule names (Ag100_ethanol.cif) while the
-# dft_jobs directories use formula-style tokens (C2H5OH_Ag100). Normalise both
-# sides to a canonical key so DFT and MLIP structures can be matched. Add pairs
-# here as new molecules appear.
-MOLECULE_CANON = {
-    "c2h5oh": "ethanol", "ch3ch2oh": "ethanol", "ethanol": "ethanol",
-    "ch3oh": "methanol", "methanol": "methanol",
-    "c2h6": "ethane", "ethane": "ethane",
-    "c2h4": "ethene", "ethene": "ethene", "ethylene": "ethene",
-    "ch4": "methane", "methane": "methane",
-    "c2h2": "acetylene", "acetylene": "acetylene",
-    "ch3cho": "acetaldehyde", "acetaldehyde": "acetaldehyde",
-    "ch3cooh": "acetic_acid", "acetic_acid": "acetic_acid",
-    "hcooh": "formic_acid", "formic_acid": "formic_acid",
-    "ch3och3": "dme", "dme": "dme",
-    "h2co": "formaldehyde", "formaldehyde": "formaldehyde",
-    "h2o": "water", "water": "water",
-    "co2": "co2", "co": "co", "no": "no", "n2": "n2", "nh3": "nh3",
-    "h2s": "h2s", "so2": "so2", "ch3": "ch3",
-    "ch3o": "methoxy", "methoxy": "methoxy",
-    "oh": "hydroxyl", "hydroxyl": "hydroxyl",
-    "hcn": "hcn",
-    "h": "atomich", "atomich": "atomich",
-    "o": "atomico", "atomico": "atomico",
-    "n": "atomicn", "atomicn": "atomicn",
-    "c": "atomicc", "atomicc": "atomicc",
-    "s": "atomics", "atomics": "atomics",
-}
+# dft_jobs directories use formula-style tokens (C2H5OH_Ag100). Both sides are
+# normalised to a canonical key via mol_canon.canon_molecule (imported above) so
+# DFT and MLIP structures match. Add new species in mol_canon.py, not here.
 
 
 def normalise_func(name: str) -> str:
@@ -107,11 +85,6 @@ def normalise_func(name: str) -> str:
     while "__" in s:
         s = s.replace("__", "_")
     return FUNC_NORMALISE.get(s, s)
-
-
-def canon_molecule(name: str) -> str:
-    """Map a molecule token (formula or common name) to a canonical key."""
-    return MOLECULE_CANON.get(name.strip().lower(), name.strip().lower())
 
 
 def parse_surface_molecule(name: str, molecule_first: bool = False):

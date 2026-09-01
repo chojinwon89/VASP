@@ -39,8 +39,8 @@ except ImportError:
 from compare_dft_mlip_structures import (
     min_metal_adsorbate_contact,
     surface_metal,
-    canon_molecule,
 )
+from mol_canon import canon_molecule, match_keys  # noqa: F401
 
 
 def coarse_site(atoms, metal, j_ads, tol=0.45):
@@ -85,10 +85,17 @@ def main() -> int:
     rows = []
     n_missing = 0
     for surface, molecule in sorted(systems):
-        cif = gallery / f"{surface}_{molecule}.cif"
-        if not cif.exists():
+        # Look the gallery .cif up by any spelling of the molecule (formula or
+        # common name) so a formula-named pairs row still finds Ag100_ethane.cif.
+        cif = None
+        for key in (molecule, *match_keys(molecule)):
+            cand = gallery / f"{surface}_{key}.cif"
+            if cand.exists():
+                cif = cand
+                break
+        if cif is None:
             n_missing += 1
-            print(f"  ! missing cif: {cif.name}", file=sys.stderr)
+            print(f"  ! missing cif: {surface}_{molecule}.cif", file=sys.stderr)
             continue
         atoms = ase_read(str(cif))
         metal = surface_metal(surface)

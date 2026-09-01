@@ -68,6 +68,8 @@ import re
 import sys
 from pathlib import Path
 
+from mol_canon import canon_molecule, vasp_mol_candidates
+
 
 # ---------------------------------------------------------------------------
 # Functional name normalisation  (directory name → canonical key)
@@ -207,14 +209,11 @@ def count_element_atoms(outcar_path: Path, element: str) -> int:
 # Directory name parsing
 # ---------------------------------------------------------------------------
 
-# Molecule token aliases: dft_jobs uses formula-style tokens that do not
-# always match the vasp_mol/ reference directory names. Map job-dir token ->
-# vasp_mol/ directory name. Tokens with no gas-phase reference (radicals /
-# atoms not computed as isolated molecules) are intentionally left unmapped so
-# the run reports them as missing E_mol rather than silently mispairing.
-MOLECULE_ALIASES = {
-    "C2H5OH": "CH3CH2OH",
-}
+# Molecule token aliases: dft_jobs uses formula-style tokens (C2H6, CH3CH2OH)
+# that may not match the vasp_mol/ reference directory names (which may use
+# formulas OR common names). Gas-reference resolution now tries every candidate
+# from mol_canon.vasp_mol_candidates(token) -- e.g. C2H6 -> ['C2H6', 'ethane']
+# -- so the reference is found whichever spelling the vasp_mol/ dirs use.
 
 # Fallback gas-phase reference energies (eV), keyed by canonical functional and
 # molecule directory name. Used ONLY when the vasp_mol/ OUTCAR is missing or
@@ -448,7 +447,8 @@ def calc_binding_energies(best_dirs, slab_dir: Path, mol_dir: Path,
         for job_dir in job_dirs:
             system = job_dir.name
             surface, molecule = parse_surface_molecule(system, molecule_first)
-            mol_ref = MOLECULE_ALIASES.get(molecule, molecule)
+            mol_refs = vasp_mol_candidates(molecule)   # ['C2H6','ethane'] etc.
+            mol_canon_name = canon_molecule(molecule)
 
             row = {
                 "functional": func_key or "default",
@@ -488,10 +488,12 @@ def calc_binding_energies(best_dirs, slab_dir: Path, mol_dir: Path,
                         slab_dir / surface / "singlepoint" / functional / "OUTCAR",
                         slab_dir / surface / functional / "OUTCAR",
                     )
-                    mol_outcar = _pick(
-                        mol_dir / mol_ref / "singlepoint" / functional / "OUTCAR",
-                        mol_dir / mol_ref / functional / "OUTCAR",
-                    )
+                    mol_outcar = _pick(*[
+                        p for d in mol_refs for p in (
+                            mol_dir / d / "singlepoint" / functional / "OUTCAR",
+                            mol_dir / d / functional / "OUTCAR",
+                        )
+                    ])
                 elif calc_type == "fully-relaxed":
                     # Relaxed slab+mol from the fully_relaxed/ fix for NSW=0 jobs;
                     # references use the ordinary relax layout.
@@ -501,11 +503,13 @@ def calc_binding_energies(best_dirs, slab_dir: Path, mol_dir: Path,
                         job_dir / functional / "OUTCAR",
                     )
                     slab_outcar     = slab_dir / surface  / functional / "OUTCAR"
-                    mol_outcar      = mol_dir  / mol_ref / functional / "OUTCAR"
+                    mol_outcar      = _pick(*[
+                        mol_dir / d / functional / "OUTCAR" for d in mol_refs])
                 else:
                     slab_mol_outcar = job_dir / functional / "OUTCAR"
                     slab_outcar     = slab_dir / surface  / functional / "OUTCAR"
-                    mol_outcar      = mol_dir  / mol_ref / functional / "OUTCAR"
+                    mol_outcar      = _pick(*[
+                        mol_dir / d / functional / "OUTCAR" for d in mol_refs])
             else:
                 if calc_type == "single-point":
                     slab_mol_outcar = _pick(
@@ -516,10 +520,12 @@ def calc_binding_energies(best_dirs, slab_dir: Path, mol_dir: Path,
                         slab_dir / surface / "singlepoint" / "OUTCAR",
                         slab_dir / surface / "OUTCAR",
                     )
-                    mol_outcar = _pick(
-                        mol_dir / mol_ref / "singlepoint" / "OUTCAR",
-                        mol_dir / mol_ref / "OUTCAR",
-                    )
+                    mol_outcar = _pick(*[
+                        p for d in mol_refs for p in (
+                            mol_dir / d / "singlepoint" / "OUTCAR",
+                            mol_dir / d / "OUTCAR",
+                        )
+                    ])
                 elif calc_type == "fully-relaxed":
                     slab_mol_outcar = _pick(
                         job_dir / "singlepoint" / "fully_relaxed" / "OUTCAR",
@@ -527,11 +533,13 @@ def calc_binding_energies(best_dirs, slab_dir: Path, mol_dir: Path,
                         job_dir / "OUTCAR",
                     )
                     slab_outcar     = slab_dir / surface  / "OUTCAR"
-                    mol_outcar      = mol_dir  / mol_ref / "OUTCAR"
+                    mol_outcar      = _pick(*[
+                        mol_dir / d / "OUTCAR" for d in mol_refs])
                 else:
                     slab_mol_outcar = job_dir / "OUTCAR"
                     slab_outcar     = slab_dir / surface  / "OUTCAR"
-                    mol_outcar      = mol_dir  / mol_ref / "OUTCAR"
+                    mol_outcar      = _pick(*[
+                        mol_dir / d / "OUTCAR" for d in mol_refs])
 
             # 1) Slab + molecule energy
             try:
@@ -560,7 +568,7 @@ def calc_binding_energies(best_dirs, slab_dir: Path, mol_dir: Path,
                 row["E_mol"] is None or row["E_mol"] >= 0.0
             )
             if need_override:
-                override = gas_reference_override(functional, mol_ref)
+                override = gas_reference_override(functional, mol_canon_name)
                 if override is not None:
                     reason = ("missing" if mol_read_err
                               else f"non-physical E_mol={row['E_mol']}")
@@ -575,7 +583,7 @@ def calc_binding_energies(best_dirs, slab_dir: Path, mol_dir: Path,
                 else:
                     notes.append(
                         f"mol: non-physical E_mol={row['E_mol']} and no "
-                        f"gas reference override for '{mol_ref}'"
+                        f"gas reference override for '{mol_canon_name}'"
                     )
                     row["status"] = "error"
 

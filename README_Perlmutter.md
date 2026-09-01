@@ -268,14 +268,16 @@ python calc_binding_energy.py \
   --output analysis_out/dft_binding_energies_all.csv
 ```
 
-> **Naming caveat:** `dft_jobs` names molecules by **formula** (`H2O`, `C2H6`, `SO2`), while
-> `poscar/best` and the MLIP runs use **common names** (`ethane`, `ethanol`). The geometry
-> page canonicalises formula↔name so both match, but the **energy parity** pairs on the raw
-> molecule string — so a `dft_jobs` organic only lands on the parity plot if MLIP ran that same
-> molecule under the same spelling. `dft_jobs` mainly *expands DFT-only + geometry* coverage
-> (H2O/CO/SO2/NH3/… that MLIP never ran won't appear on the parity plot — correctly, as there is
-> no MLIP counterpart). Ask if you want formula→common-name canonicalisation so overlapping
-> organics pair too.
+> **Molecule naming (`C2H6` ≡ `ethane`).** `dft_jobs` names molecules by **formula**
+> (`H2O`, `C2H6`, `SO2`); `poscar/best` and the MLIP runs use **common names**
+> (`ethane`, `ethanol`). A single shared map — [`mol_canon.py`](mol_canon.py) — canonicalises
+> both spellings for **every** tool (energy, geometry, images, website), so a formula-named
+> `dft_jobs` organic now pairs with its common-named MLIP counterpart on the **energy parity
+> plot** as well as the geometry table. The gas-phase reference lookup also tries each spelling
+> (`C2H6` → `vasp_mol/C2H6`, then `vasp_mol/ethane`), so it finds the reference whichever naming
+> `vasp_mol/` uses. To add or fix a species, edit `MOLECULE_CANON` in `mol_canon.py` once — do
+> not add per-script maps. Small molecules with no MLIP run (H2O/CO/SO2/NH3/…) still only expand
+> DFT-only + geometry coverage — correctly, since there is no MLIP counterpart to pair against.
 
 ### 6b. (cluster) Pair DFT with MLIP → the pairs CSV + parity plot
 
@@ -345,6 +347,7 @@ The status banner on `dft_comparison.html` reports coverage as
 | `compare_dft_mlip_structures.py` | DFT CONTCAR vs MLIP geometry table (bond dist / site / Δd / RMSD per functional) |
 | `render_dft_structures.py` | Render DFT final-structure PNGs for the website (`dft_png/`) |
 | `build_dft_pages.py` | Generate the two live DFT pages (energy parity + geometry gallery) |
+| `mol_canon.py` | Shared molecule-name canonicalisation (`C2H6`≡`ethane`, …) imported by all of the above — edit species here, once |
 
 ## Quick recipe (steady state)
 

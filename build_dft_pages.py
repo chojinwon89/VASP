@@ -36,28 +36,21 @@ from collections import defaultdict
 from pathlib import Path
 
 from analyze_dft_mlip_accuracy import load_pairs, regression_stats, parse_metal
-from compare_dft_mlip_structures import canon_molecule
+from mol_canon import canon_molecule, match_keys as mol_match_keys
 
 FUNCS = ["pbe", "pbe_d3", "r2scan", "beef_vdw"]
 FUNC_LABEL = {"pbe": "PBE", "pbe_d3": "PBE+D3", "r2scan": "r²SCAN",
               "beef_vdw": "BEEF-vdW"}
 
-MOL_LABEL = {"CO2": "CO₂"}
-
-# Formula aliases so a struct-compare CSV that used formulas (C3H8O3) still
-# matches the page's common-name systems (glycerol). Mirrors render_dft_structures.
-FORMULA_ALIAS = {
-    "c3h8": "propane", "c3h6": "propene", "c3h8o3": "glycerol",
-    "c2h6": "ethane", "c2h4": "ethene", "co2": "co2",
+# Pretty display labels (subscripts) for formula-style tokens.
+MOL_LABEL = {
+    "CO2": "CO₂", "H2O": "H₂O", "SO2": "SO₂", "NH3": "NH₃", "H2S": "H₂S",
+    "N2": "N₂", "NO2": "NO₂", "O2": "O₂", "H2": "H₂", "CH4": "CH₄",
+    "CH3": "CH₃", "CH2": "CH₂",
 }
 
-
-def mol_match_keys(mol):
-    raw = str(mol).strip().lower()
-    keys = {canon_molecule(mol), raw}
-    if raw in FORMULA_ALIAS:
-        keys.add(FORMULA_ALIAS[raw])
-    return keys
+# Molecule-name canonicalisation (formula <-> common name) is centralised in
+# mol_canon; mol_match_keys returns the set of spellings a token may match.
 MOL_CLASS = {
     "ethane": "alkane", "propane": "alkane",
     "ethene": "alkene", "propene": "alkene",
@@ -392,16 +385,26 @@ def page_structure(pairs, geom, struct, gallery, out_dir, dft_png_dir=None):
     png_dir = out_dir / "dftcmp" / "png"
     png_dir.mkdir(parents=True, exist_ok=True)
     have_img, have_img_dft = {}, {}
+
+    def _find_png(base_dir, surf, mol, suffix):
+        """First existing <surf>_<key><suffix>.png trying every molecule spelling."""
+        if not base_dir:
+            return None
+        for key in (mol, *mol_match_keys(mol)):
+            cand = Path(base_dir) / f"{surf}_{key}{suffix}.png"
+            if cand.exists():
+                return cand
+        return None
+
     for surf, mol in keys:
-        src = Path(gallery) / f"{surf}_{mol}.png"
-        if src.exists():
+        src = _find_png(gallery, surf, mol, "")
+        if src:
             shutil.copy(src, png_dir / f"{surf}_{mol}_mlip.png")
             have_img[(surf, mol)] = f"dftcmp/png/{surf}_{mol}_mlip.png"
-        if dft_png_dir:
-            dsrc = Path(dft_png_dir) / f"{surf}_{mol}_dft.png"
-            if dsrc.exists():
-                shutil.copy(dsrc, png_dir / f"{surf}_{mol}_dft.png")
-                have_img_dft[(surf, mol)] = f"dftcmp/png/{surf}_{mol}_dft.png"
+        dsrc = _find_png(dft_png_dir, surf, mol, "_dft")
+        if dsrc:
+            shutil.copy(dsrc, png_dir / f"{surf}_{mol}_dft.png")
+            have_img_dft[(surf, mol)] = f"dftcmp/png/{surf}_{mol}_dft.png"
 
     def _struct(surf, mol):
         for k in mol_match_keys(mol):

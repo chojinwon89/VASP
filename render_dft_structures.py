@@ -43,28 +43,12 @@ from pathlib import Path
 from ase.io import read, write
 
 from compare_dft_mlip_structures import (
-    FUNC_DIRS, normalise_func, parse_surface_molecule, canon_molecule,
+    FUNC_DIRS, normalise_func, parse_surface_molecule,
 )
+from mol_canon import canon_molecule, match_keys  # noqa: F401  (canon re-exported)
 
 # Which functional to prefer when several relaxations exist for one system.
 FUNC_PRIORITY = ["pbe", "pbe_d3", "r2scan", "beef_vdw"]
-
-# A few unambiguous formula aliases for organics not in compare's MOLECULE_CANON.
-# (propanol vs isopropanol share C3H8O, so formulas are only used where unique;
-# common-name directories -- as in the gallery -- match directly regardless.)
-FORMULA_ALIAS = {
-    "c3h8": "propane", "c3h6": "propene", "c3h8o3": "glycerol",
-    "c2h6": "ethane", "c2h4": "ethene", "co2": "co2",
-}
-
-
-def match_keys(mol: str):
-    """Candidate lookup keys for a molecule token: canon, raw-lower, alias."""
-    raw = mol.strip().lower()
-    keys = {canon_molecule(mol), raw}
-    if raw in FORMULA_ALIAS:
-        keys.add(FORMULA_ALIAS[raw])
-    return keys
 
 
 def find_func_and_system(contcar: Path):
