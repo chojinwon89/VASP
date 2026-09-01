@@ -95,6 +95,12 @@ CSS = """
  .controls{display:flex;gap:10px;align-items:center;margin:10px 0;flex-wrap:wrap;}
  select,input{background:var(--card);color:var(--fg);border:1px solid var(--line);
    border-radius:8px;padding:6px 9px;font-size:13px;}
+ .controls button{background:var(--card);color:var(--fg);border:1px solid var(--line);
+   border-radius:8px;padding:6px 11px;font-size:13px;cursor:pointer;}
+ .controls button:hover{border-color:#4bb97a;color:#fff;}
+ .controls.filterbar{position:sticky;top:0;z-index:10;background:var(--bg);
+   padding:9px 0;border-bottom:1px solid var(--line);margin:4px 0 10px;}
+ .g.hide{display:none;}
  table.data{width:100%;border-collapse:collapse;font-size:12px;}
  table.data th,table.data td{padding:6px 8px;border-bottom:1px solid var(--line);
    text-align:right;white-space:nowrap;}
@@ -121,6 +127,7 @@ CSS = """
 NAV = ('<a href="index.html">&larr; gallery</a> &middot; '
        '<a href="dft_vs_goad_energy.html">binding energy</a> &middot; '
        '<a href="dft_comparison.html">structure &amp; geometry</a> &middot; '
+       '<a href="method_validation.html" style="color:#7fe3a6">method validation</a> &middot; '
        '<a href="dft_energy.html">single-point DFT vs ML</a> &middot; '
        '<a href="mlip_benchmark.html" style="color:#d0a3ff">SevenNet vs MatterSim</a> &middot; '
        '<a href="flagged.html" style="color:#ff9a9a">likely failures</a>')
@@ -470,7 +477,7 @@ def page_structure(pairs, geom, struct, gallery, out_dir, dft_png_dir=None):
         mini.append("</table>")
 
         cards.append(f"""
-   <div class="g">
+   <div class="g" data-surf="{esc(surf)}" data-mol="{esc(mol)}">
      <h3>{esc(surf)} &middot; {mlabel(mol)} <span class="tag">{MOL_CLASS.get(mol,'')}</span></h3>
      <div class="m">{geom_line}</div>
      <div class="pair">
@@ -498,8 +505,44 @@ def page_structure(pairs, geom, struct, gallery, out_dir, dft_png_dir=None):
    &ge;3&rarr;hollow). For weakly physisorbed alkanes the site is indicative only; the
    <b>bond distance</b> and <b>contact pair</b> are the robust metrics.</div>
 """
+    surfs = sorted({s for s, _ in keys})
+    mols = sorted({m for _, m in keys})
+    surf_opts = "".join(f'<option value="{esc(s)}">{esc(s)}</option>' for s in surfs)
+    mol_opts = "".join(f'<option value="{esc(m)}">{mlabel(m)}</option>' for m in mols)
+    controls = (
+        '<div class="controls filterbar" id="filterbar">'
+        f'<label>slab / surface <select id="fsurf"><option value="">all</option>{surf_opts}</select></label>'
+        f'<label>molecule <select id="fmol"><option value="">all</option>{mol_opts}</select></label>'
+        '<input id="fq" placeholder="type surface or molecule&hellip;" size="20">'
+        '<button id="freset" type="button">reset</button>'
+        '<span class="legend" id="fcnt"></span>'
+        '</div>'
+    )
+    script = """
+<script>
+(function(){
+  var fs=document.getElementById('fsurf'),fm=document.getElementById('fmol'),
+      fq=document.getElementById('fq'),cnt=document.getElementById('fcnt'),
+      cards=[].slice.call(document.querySelectorAll('.grid .g'));
+  function apply(){
+    var s=fs.value,m=fm.value,q=fq.value.trim().toLowerCase(),n=0;
+    for(var i=0;i<cards.length;i++){
+      var c=cards[i],cs=c.getAttribute('data-surf')||'',cm=c.getAttribute('data-mol')||'';
+      var ok=(!s||cs===s)&&(!m||cm===m)&&(!q||(cs+' '+cm).toLowerCase().indexOf(q)>-1);
+      c.classList.toggle('hide',!ok); if(ok)n++;
+    }
+    cnt.textContent=n+' / '+cards.length+' systems shown';
+  }
+  fs.onchange=apply;fm.onchange=apply;fq.oninput=apply;
+  document.getElementById('freset').onclick=function(){fs.value='';fm.value='';fq.value='';apply();};
+  apply();
+})();
+</script>
+"""
     body = status + f'<h2>Per-system structure &amp; geometry ({len(keys)} systems)</h2>' \
-                    f'<div class="grid">{"".join(cards)}</div>'
+                    + controls \
+                    + f'<div class="grid">{"".join(cards)}</div>' \
+                    + script
     write_page(out_dir / "dft_comparison.html",
                "GOAD+SevenNet vs DFT — structure & geometry",
                "GOAD+SevenNet vs DFT &mdash; structure &amp; geometry",
