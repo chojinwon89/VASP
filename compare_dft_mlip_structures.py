@@ -206,13 +206,23 @@ def _read(path: Path):
 
 
 def discover_dft_contcars(root: Path, molecule_first: bool = True):
-    """Yield (surface, molecule, canon, func_key, contcar_path)."""
+    """Yield (surface, molecule, canon, func_key, contcar_path).
+
+    Walks up from each CONTCAR to find the functional directory, so both
+    ``<system>/<FUNC>/CONTCAR`` and ``<system>/<FUNC>/<sub>/CONTCAR`` (e.g. a
+    trailing ``fully_relaxed`` or ``single-point`` directory) are discovered.
+    """
     for contcar in root.rglob("CONTCAR"):
-        func_dir = contcar.parent.name
-        func_key = normalise_func(func_dir)
-        if func_key not in FUNC_DIRS:
+        parts = contcar.parent.parts
+        func_key = system = None
+        for i in range(len(parts) - 1, -1, -1):
+            fk = normalise_func(parts[i])
+            if fk in FUNC_DIRS:
+                func_key = fk
+                system = parts[i - 1] if i - 1 >= 0 else None
+                break
+        if func_key is None or not system:
             continue
-        system = contcar.parent.parent.name
         surface, molecule = parse_surface_molecule(system, molecule_first)
         if molecule == "unknown":
             continue
