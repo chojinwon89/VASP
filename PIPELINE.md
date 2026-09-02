@@ -1,4 +1,4 @@
-# README_Perlmutter — GOAD + SevenNet → DFT validation pipeline
+# PIPELINE — GOAD + SevenNet → DFT validation pipeline
 
 End-to-end directions for the MLIP-vs-DFT benchmark, from producing the missing
 SevenNet (GOAD) structures through running full VASP geometry optimizations and
@@ -8,7 +8,8 @@ inline.
 The benchmark grid is **477 well-known physical systems** = 25 molecules × 7
 non-magnetic metals {Ag, Au, Cu, Ir, Pd, Pt, Rh} × 3 facets {100, 110, 111}
 (the 6 radicals C2H2/CH3O/H/HCN/O/OH only on their 13 in-scope surfaces). The
-`deoxy` group is out of scope.
+`deoxy` group is out of scope. Live site:
+<https://chojinwon89.github.io/bond-distance-review/>.
 
 Two independent stages, each with its own job array:
 
@@ -16,6 +17,58 @@ Two independent stages, each with its own job array:
 Stage A: MLIP gap-fill (GOAD/SevenNet, GPU)   -> relaxed CIF per surface+molecule
 Stage B: DFT geometry optimization (VASP, CPU) -> PBE / PBE-D3 / r2scan / beef-vdw
 ```
+
+---
+
+## One command: `pipeline.py`
+
+`pipeline.py` is a thin conductor that chains the exact scripts documented in the
+sections below into named **stages**, so you rarely have to run them by hand.
+It does not re-implement any science — each stage just shells out to the same
+tool. See every stage with `python pipeline.py list`:
+
+| Stage | Where | What it runs |
+|---|---|---|
+| `structures` | local | `generate_surface_cifs.py` + `generate_molecule_cifs.py` (§ inputs) |
+| `coverage` | local | `workflow/check_dft_coverage.py` — what is missing? (advisory gate) |
+| `mlip-tasks` | cluster | emit the GOAD/SevenNet gap-fill task lists (Stage A, §2) |
+| `mlip-collect` | cluster | collect best seed → import to gallery → stage POSCARs → verify (§2c) |
+| `dft-setup` | cluster | `setup_vasp_jobs.py` for all 4 functionals (Stage B, §3a) |
+| `dft-submit` | cluster | build the per-functional VASP job lists (§3b) |
+| `dft-fix` | cluster | detect + resubmit failed/unconverged DFT jobs (§4) |
+| `auto` | cluster | autonomous submit→check→INCAR-patch→retry loop (`automation/`, below) |
+| `energies` | cluster | DFT E_ads → MLIP-vs-DFT pairs + parity plot + accuracy report (§5, §6) |
+| `geometry` | local | MLIP + DFT contact-geometry CSVs + DFT final-structure PNGs (§6c) |
+| `website` | local | rebuild the live DFT + method-validation pages (§6d) |
+
+```bash
+python pipeline.py list                       # show all stages
+python pipeline.py status                      # coverage gate (what is missing?)
+python pipeline.py all --dry-run               # print the whole plan, run nothing
+python pipeline.py all                          # run the canonical chain in order
+python pipeline.py run dft-setup dft-submit    # run selected stages
+python pipeline.py run website --pages-dir /path/to/bond-distance-review
+```
+
+On a host without `sbatch` (e.g. the laptop) the cluster stages are **previewed**
+instead of executed, and `all` stops at the first one — so `all` runs the local
+structure/website stages on the Mac and the full chain on the cluster. Flags:
+`--dry-run`, `--cluster {perlmutter-cpu,kestrel}`, `--jobs-dir`, `--gallery`,
+`--analysis-dir`, `--pages-dir`, `--continue-on-error`.
+
+## Repository & data map
+
+| Location | What |
+|---|---|
+| `github.com/chojinwon89/VASP` (`main`) | all workflow code, DFT tooling, staged `dft_jobs/` POSCARs, `DFT_results/MANIFEST.csv` |
+| `github.com/chojinwon89/bond-distance-review` → [live site](https://chojinwon89.github.io/bond-distance-review/) | the public website (DFT/MLIP galleries + method-validation page) |
+| Perlmutter `/pscratch/sd/j/jcho5/VASP` | new DFT full-relax runs (Stage B) + MLIP gap-fill (Stage A) |
+| Kestrel `/scratch/jcho5/goad-global-optimization` | older single-point DFT + some RPBE relaxes (audited) |
+
+`structure/` (the MLIP gallery, ~333 MB) and the GOAD `runs/` tree live on the
+cluster / Mac, **not** in git — only the ~2 MB `dft_jobs/` POSCAR tree and the
+MANIFEST are committed. The GOAD engine itself (the Tkinter GA app) is documented
+separately in [`GOAD_ENGINE.md`](GOAD_ENGINE.md).
 
 ---
 
@@ -378,3 +431,110 @@ sbatch --array=0-$((N-1))%20 perlmutter/vasp_dft_array_cpu.slurm joblist_pbe.txt
 # after it drains:
 python workflow/resubmit_dft.py --jobs-dir dft_jobs --functional pbe --submit
 ```
+
+Or let the conductor do it: `python pipeline.py run dft-setup dft-submit dft-fix
+--cluster perlmutter-cpu`.
+
+---
+
+## Reference jobs (clean slab + gas molecule)
+
+`E_ads` needs a clean-slab and a gas-phase reference for every functional:
+
+```
+E_ads = E_total(slab+mol) - E_surf(clean slab) - E_mol(gas)
+```
+
+```bash
+for f in pbe pbe-d3 r2scan beef-vdw; do
+  python setup_slab_jobs.py     --functional "$f"   # -> vasp_slab/<surface>/<FUNC>/
+  python setup_molecule_jobs.py --functional "$f"   # -> vasp_mol/<molecule>/<FUNC>/
+done
+```
+
+`setup_slab_jobs.py` writes Selective-Dynamics slab POSCARs; `setup_molecule_jobs.py`
+writes a molecule in a 20 Å box (Γ-point, `ISMEAR=0`). Both **skip** a dir that
+already has an `OUTCAR` (use `--force` to regenerate) and copy `vdw_kernel.bindat`
+for beef-vdw. `calc_binding_energy.py` (stage `energies`) matches each slab+mol job
+to the clean slab with the **same metal-atom count** — that count-tagged
+`vasp_slab/<surface>_n<count>/` matching is what keeps `E_ads` references valid.
+
+## Adding a new molecule or surface
+
+The grid is defined by the input CIFs and the shared name map — add there, then
+re-run the pipeline:
+
+1. **Molecule** — add its builder to `generate_molecule_cifs.py` (ASE `g2` name,
+   or a SMILES if RDKit is installed) and register every spelling
+   (`ethane`≡`C2H6`) in **`mol_canon.py`** (`MOLECULE_CANON`). Edit species there
+   **once** — every tool (energy, geometry, images, website) imports it.
+2. **Surface** — add the metal/facet to `generate_surface_cifs.py`. A brand-new
+   metal must also be added to the `METALS` set used by the distance analysis.
+3. Regenerate inputs and structures, then continue as normal:
+   ```bash
+   python pipeline.py run structures            # writes inputs/*.cif
+   python pipeline.py status                     # new systems show as missing_no_cif
+   # Stage A (mlip-tasks, mlip-collect) fills them, then Stage B runs DFT.
+   ```
+
+`generate_molecule_cifs.py` needs RDKit only for the SMILES-built organics; the
+ASE-named + single-atom adsorbates build without it (handy on the laptop).
+
+## Autonomous error-recovery loop (`automation/`)
+
+`pipeline.py run auto` drives `automation/runner.py`, a self-contained loop that:
+
+- discovers job dirs under `jobs_root` (INCAR+POSCAR+KPOINTS+slurm),
+- submits new/failed jobs via `sbatch`,
+- checks convergence from `OUTCAR` ("reached required accuracy"),
+- on failure applies a **rule-based INCAR patch** (`error_handlers.py` matches
+  `OUTCAR`/`vasp.out` against `config.yaml` `failure_rules`, e.g. `zbrent`,
+  `edddav`) and re-submits up to `max_retries`,
+- writes a summary CSV + adsorption-energy table (`analysis.py`).
+
+```bash
+python automation/runner.py --config automation/config.yaml --once   # one pass
+python automation/runner.py --config automation/config.yaml           # continuous
+```
+
+Point `jobs_root` in `config.yaml` at your staged tree. This covers the DFT
+**submission** stage only; the lighter `resubmit_dft.py` (stage `dft-fix`) is the
+one-shot "classify every OUTCAR and resubmit what still needs it" tool.
+
+---
+
+## Appendix — cluster onboarding (Perlmutter / Kestrel)
+
+**One-time Perlmutter setup**
+
+```bash
+cd $PSCRATCH && git clone https://github.com/chojinwon89/VASP.git && cd VASP
+export GOAD_ENV=/global/common/software/m5281/goad-env   # persistent env
+bash perlmutter/setup_perlmutter_env.sh
+# both perlmutter/*.slurm already set  #SBATCH -A m5281  — edit to change project.
+```
+
+Clone + run `runs/` under `$PSCRATCH` (not `$HOME`, which is 40 GB quota-limited).
+VASP on Perlmutter is license-gated (the `vasp` unix group; request via a NERSC
+ticket); CPU build `vasp-tpc/6.4.2-cpu`.
+
+**NERSC gotchas (read once)**
+
+- **QOS is mandatory** — the scripts set `-q shared`; omitting `-q` drops you into
+  `debug` (30 min, 8-node cap).
+- 1–2 GPU jobs must use `shared` (1 A100 = ¼ node-hour).
+- Submit limit = 5000 (`shared`/`regular`); keep `--max-in-flight ≤ 4900`.
+- `MaxArraySize` caps the array *index* (~1000) — the `--chunk 200` default keeps
+  indices small.
+- CPU and GPU hours are **separate allocations** (check in [Iris](https://iris.nersc.gov)).
+- `$PSCRATCH` is purged after ~8 weeks idle — copy results you want to keep to
+  `$CFS/m5281/` (run `collect_results.py` first).
+- `preempt` QOS (`--requeue`) is 4× cheaper and fine here since tasks are
+  restartable — worth it for large sweeps.
+
+**Kestrel differences** — module `vasp/6.3.2_openMP+tpc`; POTCAR
+`/projects/2dmgcat/paw64/potpaw_PBE_64` and vdw kernel
+`/projects/2dmgcat/vdw_kernel.bindat` (both `--cluster kestrel` defaults); submit
+with `perlmutter/…`→`vasp_dft_array_kestrel.slurm`, and add `--cluster kestrel` to
+`setup_vasp_jobs.py` / `resubmit_dft.py`.
+

@@ -219,6 +219,6 @@ Thanks for reporting the single-point behavior issue. This feedback helps improv
 **Compatibility**: Python 3.8+, ASE, RDKit, MatterSim
 **License**: MIT
 
-For more information, see README.md or QUICK_START.md
+For more information, see GOAD_ENGINE.md or QUICK_START.md
 
 ````

@@ -83,6 +83,8 @@ VASP_VDW_KERNEL_PATH environment variable (--vdw-kernel-path takes priority
 over both).
 """
 
+from __future__ import annotations
+
 import argparse
 import os
 import re

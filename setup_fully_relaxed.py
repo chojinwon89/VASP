@@ -47,6 +47,8 @@ Submit the created jobs (kestrel example)
     done
 """
 
+from __future__ import annotations
+
 import argparse
 import re
 import shutil
