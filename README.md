@@ -13,7 +13,7 @@ The repo holds two things:
 | | |
 |---|---|
 | **The benchmark pipeline** | structure creation → MLIP relaxation → DFT geometry optimization → binding energy → MLIP-vs-DFT comparison → website. Documented in **[`PIPELINE.md`](PIPELINE.md)**. |
-| **The GOAD engine** | the upstream Tkinter genetic-algorithm app that produces the adsorption structures. Documented in **[`GOAD_ENGINE.md`](GOAD_ENGINE.md)** (see also [`QUICK_START.md`](QUICK_START.md)). |
+| **The GOAD engine** | the upstream Tkinter genetic-algorithm app that produces the adsorption structures. Documented in **[`GOAD_ENGINE.md`](GOAD_ENGINE.md)** (see also [`QUICK_START.md`](QUICK_START.md)). How the GA finds the lowest-energy structure — and how that differs from a DFT relaxation — is explained in **[`GOAD_ALGORITHM.md`](GOAD_ALGORITHM.md)**. |
 
 ## Quick start
 

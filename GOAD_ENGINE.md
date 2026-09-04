@@ -2,6 +2,10 @@
 
 Welcome to GOAD v1 (Global Optimization with Adsorbed species using ASE Design), a comprehensive Python application for optimizing molecular adsorption configurations on crystal surfaces using genetic algorithms.
 
+> **How does the genetic algorithm actually find the lowest-energy structure, and
+> how is that different from a DFT geometry optimization?** See
+> [`GOAD_ALGORITHM.md`](GOAD_ALGORITHM.md).
+
 ## Quick Start
 
 **New to GOAD?** Check out [`QUICK_START.md`](QUICK_START.md) for:
