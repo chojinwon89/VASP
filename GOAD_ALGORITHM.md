@@ -134,14 +134,141 @@ second.**
 
 ---
 
-## 4. How this differs from a DFT geometry optimization
+## 4. The equations GOAD actually uses
+
+Everything above reduces to a handful of formulas that live in the engine
+(`goad_v1/ga/genetic_algorithm.py`). This section collects them.
+
+**(1) The objective — a global minimization over the genome.** GOAD looks for the
+genome $\mathbf{g}$ that minimizes the adsorption energy, where the genome is the
+compact vector from §2:
+
+$$
+\mathbf{g}^{\star}=\arg\min_{\mathbf{g}}\;E_{\text{ads}}(\mathbf{g}),
+\qquad
+\mathbf{g}=(\underbrace{x,y,z}_{\text{position}},\;
+\underbrace{\alpha,\beta,\gamma}_{\text{orientation}},\;
+\underbrace{\theta_{1},\dots,\theta_{N}}_{\text{torsions}})\in\mathbb{R}^{6+N}.
+$$
+
+The dimensionality is **6 + N**, not $3M$ for $M$ atoms — that reduction is what
+makes a global search affordable.
+
+**(2) The fitness — a single-point adsorption energy with the surface fixed.**
+
+$$
+E_{\text{ads}}=E_{\text{slab+mol}}-E_{\text{slab}}-E_{\text{mol}},
+$$
+
+evaluated once per candidate (no relaxation) with `FixAtoms` on every slab atom,
+using an MLIP (SevenNet-OMNI) for all three terms. $E_{\text{slab}}$ and
+$E_{\text{mol}}$ are precomputed constants, so scoring a candidate costs **one**
+MLIP energy call. Lower $E_{\text{ads}}$ = fitter.
+
+**(3) Genome → coordinates — the rigid-body placement operator.** A genome is
+turned into atomic positions by centring the molecule, rotating it with a ZYX
+Euler matrix, then translating it to $(x,y,z)$:
+
+$$
+\mathbf{r}_i' = R(\alpha,\beta,\gamma)\,(\mathbf{r}_i-\mathbf{r}_{\text{com}})+\mathbf{t},
+\qquad \mathbf{t}=(x,y,z),
+$$
+
+$$
+R=R_z(\gamma)\,R_y(\beta)\,R_x(\alpha),\quad
+R_x=\begin{bmatrix}1&0&0\\0&\cos\alpha&-\sin\alpha\\0&\sin\alpha&\cos\alpha\end{bmatrix},\;
+R_y=\begin{bmatrix}\cos\beta&0&\sin\beta\\0&1&0\\-\sin\beta&0&\cos\beta\end{bmatrix},\;
+R_z=\begin{bmatrix}\cos\gamma&-\sin\gamma&0\\\sin\gamma&\cos\gamma&0\\0&0&1\end{bmatrix}.
+$$
+
+**(4) Chemically-biased initialization.** In generation 0 the height $z$ is set so
+the lowest reactive atom sits at its known bond distance above the top surface
+layer $z_{\text{surf}}^{\max}$:
+
+$$
+\min_i z_i^{\text{reactive}} = z_{\text{surf}}^{\max}+d,
+\qquad
+d=\begin{cases}2.3\ \text{Å} & \text{if the molecule has O},\\[2pt]
+2.1\ \text{Å} & \text{otherwise (C / fallback).}\end{cases}
+$$
+
+**(5) Selection + elitism.** Parents are chosen by a size-5 **tournament** (fittest
+of five random candidates wins), and the best $e{=}5$ individuals survive each
+generation untouched:
+
+$$
+\text{parent}=\arg\min_{i\in\mathcal{T}}E_i,\quad \mathcal{T}\subset\{1,\dots,P\},\;|\mathcal{T}|=5;
+\qquad \text{elite: keep top } e=5.
+$$
+
+**(6) Crossover** (applied with probability $p_c=0.7$): the child takes position
+from parent $A$, orientation from parent $B$, and each torsion from either parent
+by a coin flip $u\sim\mathcal{U}(0,1)$:
+
+$$
+\mathbf{p}_c=\mathbf{p}_A,\qquad
+\boldsymbol{\omega}_c=\boldsymbol{\omega}_B,\qquad
+\theta_i^{\,c}=\begin{cases}\theta_i^{A}& u<0.5\\ \theta_i^{B}& u\ge0.5.\end{cases}
+$$
+
+**(7) Mutation** (applied with probability $1-p_c=0.3$): one gene block is nudged
+by Gaussian noise —
+
+$$
+\mathbf{p}\leftarrow \mathbf{p}+\mathcal{N}(0,\sigma_p^2 \mathbf{I}),\;\sigma_p=0.5\ \text{Å};
+\quad
+\boldsymbol{\omega}\leftarrow(\boldsymbol{\omega}+\mathcal{N}(0,\sigma_o^2\mathbf{I}))\bmod 360^\circ,\;\sigma_o=10^\circ;
+$$
+
+$$
+\theta_i\leftarrow(\theta_i+\mathcal{N}(0,\sigma_t^2))\bmod 360^\circ,\;\sigma_t=20^\circ,
+$$
+
+with the height kept inside the interaction window after every move:
+
+$$
+z\leftarrow \operatorname{clip}\!\big(z,\; z_{\text{surf}}^{\max}+b,\; z_{\text{surf}}^{\max}+h_{\max}\big).
+$$
+
+**(8) Early stopping.** The run halts once the best energy stops improving:
+
+$$
+\text{stop when } E_{\text{best}} \text{ fails to improve by } >\tau
+\text{ for } 30 \text{ consecutive generations},\quad \tau=10^{-3}\ \text{eV}.
+$$
+
+**(9) Post-GA local relaxation.** The GA winner is finally relaxed with BFGS until
+the largest atomic force falls below the threshold:
+
+$$
+F_{\max}=\max_i\lVert \mathbf{f}_i\rVert=\max_i\lVert-\nabla_{\mathbf{r}_i}E\rVert\le 0.02\ \text{eV/Å}.
+$$
+
+This is the *only* stage that uses forces — and it is a **local** move.
+
+> **Default constants** (all overridable): population $P=30$, generations $\le200$,
+> $p_c=0.7$, elite $e=5$, tournament $=5$, $\sigma_p=0.5$ Å, $\sigma_o=10^\circ$,
+> $\sigma_t=20^\circ$, early-stop $30$ gens / $10^{-3}$ eV, BFGS $F_{\max}=0.02$ eV/Å.
+
+---
+
+## 5. How this differs from a DFT geometry optimization
 
 A DFT "relaxation" or "geometry optimization" is a **local optimizer**. Given a
-starting structure, it computes the forces (the gradient `−∇E` of the PES,
+starting structure $\mathbf{x}_0$, it computes the forces (the gradient `−∇E` of the PES,
 obtained by solving the Kohn–Sham equations self-consistently) and steps the
-atoms **downhill** until the forces vanish. It stops at the **nearest local
-minimum** — the bottom of whatever valley the starting guess was already in. It
-never crosses a barrier and never asks "is there a deeper valley elsewhere?"
+atoms **downhill** until the forces vanish:
+
+$$
+\mathbf{x}_0 \;\xrightarrow{\text{follow } -\nabla E}\; \mathbf{x}^{\ast}
+\quad\text{with}\quad \nabla E(\mathbf{x}^{\ast})=0,
+$$
+
+which is the **nearest local minimum** — the bottom of whatever valley the
+starting guess was already in. It never crosses a barrier and never asks "is
+there a deeper valley elsewhere?" Contrast this with GOAD's global objective in
+§4-(1): $\mathbf{g}^{\star}=\arg\min_{\mathbf{g}}E_{\text{ads}}(\mathbf{g})$ over the
+*whole* landscape.
 
 ```
  Local (DFT relaxation): one ball, released once, rolls to the nearest bottom.
@@ -187,7 +314,7 @@ on its own. That is exactly the job GOAD's GA does, cheaply, with an MLIP.
 
 ---
 
-## 5. Why this matters for the benchmark
+## 6. Why this matters for the benchmark
 
 The whole pipeline is: **GOAD's GA (global search, MLIP energies) picks the basin
 → a local relaxation settles the geometry → DFT is the reference of record.** This
