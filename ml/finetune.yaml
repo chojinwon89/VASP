@@ -1,0 +1,40 @@
+# SevenNet fine-tuning config (TEMPLATE — verify keys against your installed sevenn).
+#
+# The most reliable way to get a schema-correct file for YOUR sevenn version is:
+#     sevenn_preset fine_tune > ml/finetune.yaml
+# then merge the values below into it. Key ideas that matter more than exact keys:
+#   * CONTINUE from a pretrained checkpoint (transfer learning), do not train from scratch.
+#   * Use a SMALL learning rate (1e-4) so you refine rather than overwrite the base model.
+#   * Keep a high force-loss weight — forces are most of the physics and most of your labels.
+#   * Match the graph cutoff (5.0 Å) used by sevenn_graph_build.
+#
+# First-pass recommendation: fine-tune the single-fidelity `7net-omat` (OMat24 / PBE+D3-like)
+# on your PBE+D3 data. It is the cleanest match and avoids multi-fidelity bookkeeping.
+# Fine-tuning the multi-fidelity `7net-mf-ompa` you run in production is possible but
+# needs per-frame `modal` tags — treat that as a later, advanced step.
+
+model:
+  cutoff: 5.0                 # must equal the sevenn_graph_build cutoff
+
+train:
+  optimizer: adam
+  optim_param:
+    lr: 0.0001               # small LR = fine-tune, not retrain
+  scheduler: linear
+  force_loss_weight: 1.0     # forces dominate the label budget
+  stress_loss_weight: 0.01   # set 0 if you did not save stress
+  energy_loss_weight: 1.0
+  batch_size: 4
+  epoch: 100
+  # Early-stop / checkpointing knobs live here in recent sevenn; see the preset.
+
+data:
+  data_format: ase
+  load_dataset_path: ['ml/data/train.sevenn_data']   # from sevenn_graph_build
+  load_validset_path: ['ml/data/valid.sevenn_data']
+
+continue:
+  checkpoint: '7net-omat'    # base model to specialize (or a path to a .pth)
+  reset_optimizer: true
+  reset_scheduler: true
+  reset_epoch: true
