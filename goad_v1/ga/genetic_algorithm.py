@@ -53,6 +53,8 @@ import logging
 
 from ..calculator_manager import CalculatorManager
 from ..utils.torsion_handler import TorsionHandler
+from .. import magnetism
+from .. import hybrid
 
 logger = logging.getLogger(__name__)
 
@@ -206,7 +208,17 @@ class GeneticAlgorithm:
                  o_target_z: float = 2.3,
                  c_target_z: float = 2.1,
                  early_stop_patience: int = 30,
-                 early_stop_tol: float = 0.001):
+                 early_stop_tol: float = 0.001,
+                 seed_magmoms: bool = True,
+                 afm: bool = True,
+                 binding_guard: bool = True,
+                 detach_cutoff: float = 3.0,
+                 refiner_type: Optional[str] = None,
+                 refiner_calc=None,
+                 refiner_surface_energy: Optional[float] = None,
+                 refiner_molecule_energy: Optional[float] = None,
+                 refine_fmax: float = 0.05,
+                 refine_steps: int = 60):
         """
         Initialize GA.
 
@@ -321,6 +333,55 @@ class GeneticAlgorithm:
         # Vertical search-space parameters for mutation clamping
         self.surface_buffer = 2.0   # Å  COM minimum above surface_z_max
         self.max_height     = 5.0   # Å  COM maximum above surface_z_max
+
+        # ── Magnetic-surface awareness ──────────────────────────────────
+        # Seed physically-motivated initial magnetic moments so a spin-aware
+        # relaxation (CHGNet / DFT) can form the magnetic ground state that
+        # drives chemisorption on Cr/Mn/Fe/Co/Ni. Harmless for non-magnetic
+        # systems and for spin-agnostic MLIPs (the moments simply travel with
+        # the structure). See goad_v1/magnetism.py for the physics caveat.
+        self.seed_magmoms = seed_magmoms
+        self.afm = afm
+        self.binding_guard = binding_guard
+        self.detach_cutoff = detach_cutoff
+        self.n_surface_atoms = len(self.surface)
+        self.magnetic_surface = magnetism.is_magnetic_surface(self.surface)
+
+        # Hybrid explorer/refiner scoring: the GA searches with this
+        # (calculator) as the EXPLORER; if a refiner is configured, the best
+        # bound structure is re-scored with the accurate refiner in
+        # _get_results. Resolves the "spin-aware but low large-molecule
+        # accuracy" dilemma (see goad_v1/hybrid.py).
+        self.refiner_type = refiner_type
+        self.refiner_calc = refiner_calc
+        self.refiner_surface_energy = (
+            refiner_surface_energy if refiner_surface_energy is not None
+            else surface_energy)
+        self.refiner_molecule_energy = (
+            refiner_molecule_energy if refiner_molecule_energy is not None
+            else molecule_energy)
+        self.refine_fmax = refine_fmax
+        self.refine_steps = refine_steps
+
+        if self.seed_magmoms:
+            magnetism.seed_initial_magmoms(self.surface, afm=self.afm)
+            magnetism.seed_initial_magmoms(self.molecule, afm=self.afm)
+
+        if self.magnetic_surface:
+            els = ", ".join(sorted(magnetism.magnetic_elements_in(self.surface)))
+            logger.info(f"Magnetic surface detected: {els}")
+            plan = hybrid.plan_calculators(self.surface, self.molecule,
+                                           self.calculator_type)
+            for line in plan["rationale"]:
+                logger.info("calculator plan: " + line)
+            for line in plan["warnings"]:
+                logger.warning("calculator plan: " + line)
+            if (self.refiner_type is None and self.refiner_calc is None
+                    and plan["refiner"]):
+                logger.warning(
+                    f"Suggestion: set refiner_type='{plan['refiner']}' to score "
+                    f"the binding energy with an accurate model "
+                    f"(molecule size: {plan['molecule_size']}).")
 
     # ------------------------------------------------------------------
     # Surface analysis & search-radius default
@@ -762,6 +823,7 @@ class GeneticAlgorithm:
             'fitness_history': self.fitness_history,
             'generations':     self.generations,
             'population_size': self.population_size,
+            'magnetic_surface': self.magnetic_surface,
         }
 
         logger.info(f"Best E_ads found: {self.best_energy:.4f} eV")
@@ -778,4 +840,82 @@ class GeneticAlgorithm:
                     + " ".join(f"{t:.1f}" for t in self.best_individual['torsions'])
                 )
 
+        # ── Binding-integrity guard + magnetic-moment capture ───────────
+        best_structure = results['best_structure']
+        if best_structure is not None:
+            mag = magnetism.capture_magmoms(best_structure, metal_only=True)
+            results['surface_magmom'] = mag
+            if mag is not None:
+                logger.info(f"Captured surface magnetisation: "
+                            f"total={mag['total']:.2f} μB, "
+                            f"|Σ|={mag['abs_total']:.2f} μB, "
+                            f"max|m|={mag['max_abs']:.2f} μB")
+
+            if self.binding_guard:
+                status = magnetism.binding_status(
+                    best_structure, self.n_surface_atoms,
+                    detach_cutoff=self.detach_cutoff)
+                results['min_adsorbate_surface_distance'] = status['min_contact']
+                results['binding_detached'] = status['detached']
+                d = status['min_contact']
+                d_str = "n/a" if d is None else f"{d:.2f} Å"
+                if status['detached']:
+                    msg = (f"BINDING FAILED: best structure is detached "
+                           f"(nearest surface–adsorbate contact = {d_str} "
+                           f"> {self.detach_cutoff:.1f} Å).")
+                    if self.magnetic_surface and not magnetism.is_spin_aware(
+                            self.calculator_type):
+                        _, note = magnetism.recommend_calculator(
+                            self.surface, self.calculator_type)
+                        msg += " " + (note or "")
+                    results['binding_warning'] = msg
+                    logger.warning(msg)
+                else:
+                    logger.info(f"Binding OK: nearest surface–adsorbate "
+                                f"contact = {d_str}.")
+
+            # ── Hybrid refiner: accurate binding energy for the bound geom ──
+            self._refine_best_binding(results, best_structure)
+
         return results
+
+    def _refine_best_binding(self, results: Dict, best_structure) -> None:
+        """Re-score the best bound structure with the accurate refiner model.
+
+        Only runs when a refiner is configured and the explorer geometry is
+        bound. Attaches refined_energy / refined_e_ads / phantom_binding etc.
+        to ``results``. Never raises: refiner load/relax failures are logged.
+        """
+        if self.refiner_type is None and self.refiner_calc is None:
+            return
+        if results.get('binding_detached'):
+            logger.info("Skipping energy refinement: explorer geometry is "
+                        "detached (nothing bound to refine).")
+            return
+        try:
+            calc = self.refiner_calc
+            if calc is None:
+                calc = CalculatorManager.get_calculator(self.refiner_type)
+            ref = hybrid.refine_binding_energy(
+                best_structure, self.n_surface_atoms, calc,
+                surface_energy=self.refiner_surface_energy,
+                molecule_energy=self.refiner_molecule_energy,
+                detach_cutoff=self.detach_cutoff,
+                fmax=self.refine_fmax, steps=self.refine_steps)
+        except Exception as e:  # noqa: BLE001 - refinement is best-effort
+            logger.warning(f"Binding-energy refinement failed: {e}")
+            results['refine_error'] = str(e)
+            return
+
+        results['refined_energy'] = ref['refined_energy']
+        results['refined_e_ads'] = ref['refined_e_ads']
+        results['refined_structure'] = ref['refined_structure']
+        results['refined_min_contact'] = ref['refined_min_contact']
+        results['refined_detached'] = ref['refined_detached']
+        results['phantom_binding'] = ref['phantom_binding']
+        logger.info(f"Refined E_ads ({self.refiner_type or 'refiner'}): "
+                    f"{ref['refined_e_ads']:.4f} eV "
+                    f"(explorer E_ads: {self.best_energy:.4f} eV)")
+        if ref['phantom_binding']:
+            results['binding_warning'] = ref['recommendation']
+            logger.warning(ref['recommendation'])
